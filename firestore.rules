@@ -1,0 +1,157 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function currentUser() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && currentUser().role == "admin";
+    }
+
+    function isStudent() {
+      return isSignedIn()
+        && currentUser().role == "student"
+        && currentUser().get("accessDisabled", false) == false;
+    }
+
+    function currentStudentId() {
+      return currentUser().studentId;
+    }
+
+    function isOwnStudent(studentId) {
+      return isStudent() && currentStudentId() == studentId;
+    }
+
+    function currentStudentCourseId() {
+      return get(
+        /databases/$(database)/documents/students/$(currentStudentId())
+      ).data.courseId;
+    }
+
+    function invitationPath(invitationId) {
+      return /databases/$(database)/documents/studentInvitations/$(invitationId);
+    }
+
+    function studentPath(studentId) {
+      return /databases/$(database)/documents/students/$(studentId);
+    }
+
+    function isVerifiedInvitationClaim(userId) {
+      let profile = request.resource.data;
+      let invitation = get(invitationPath(profile.invitationId)).data;
+      let invitationAfter = getAfter(invitationPath(profile.invitationId)).data;
+      let student = get(studentPath(profile.studentId)).data;
+
+      return isSignedIn()
+        && request.auth.uid == userId
+        && request.auth.token.get("email_verified", false) == true
+        && profile.keys().hasAll([
+          "role",
+          "studentId",
+          "name",
+          "email",
+          "invitationId",
+          "accessDisabled"
+        ])
+        && profile.keys().hasOnly([
+          "role",
+          "studentId",
+          "name",
+          "email",
+          "invitationId",
+          "accessDisabled"
+        ])
+        && profile.role == "student"
+        && profile.accessDisabled == false
+        && profile.studentId == invitation.studentId
+        && profile.email == invitation.email
+        && profile.email == request.auth.token.email
+        && profile.name == invitation.name
+        && profile.name == student.name
+        && invitation.status == "ready"
+        && invitationAfter.status == "claimed"
+        && invitationAfter.claimedUid == userId;
+    }
+
+    function isInvitationClaim(invitationId) {
+      let changedKeys = request.resource.data.diff(resource.data).affectedKeys();
+
+      return isSignedIn()
+        && request.auth.token.get("email_verified", false) == true
+        && resource.data.status == "ready"
+        && resource.data.email == request.auth.token.email
+        && changedKeys.hasOnly(["status", "claimedUid", "claimedAt"])
+        && request.resource.data.status == "claimed"
+        && request.resource.data.claimedUid == request.auth.uid
+        && request.resource.data.claimedAt == request.time
+        && getAfter(
+          /databases/$(database)/documents/users/$(request.auth.uid)
+        ).data.invitationId == invitationId;
+    }
+
+    match /users/{userId} {
+      allow read: if isAdmin() || (isSignedIn() && request.auth.uid == userId);
+      allow create: if isAdmin() || isVerifiedInvitationClaim(userId);
+      allow update, delete: if isAdmin();
+    }
+
+    match /studentInvitations/{invitationId} {
+      allow get: if isAdmin() || resource.data.status == "ready";
+      allow list: if isAdmin();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || isInvitationClaim(invitationId);
+    }
+
+    match /groups/{groupId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /students/{studentId} {
+      allow read: if isAdmin() || isOwnStudent(studentId);
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /courses/{courseId} {
+      allow read: if isAdmin() || (isStudent() && courseId == currentStudentCourseId());
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /units/{unitId} {
+      allow read: if isAdmin() || (
+        isStudent() && resource.data.courseId == currentStudentCourseId()
+      );
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /progress/{progressId} {
+      allow read: if isAdmin() || isOwnStudent(resource.data.studentId);
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /goals/{goalId} {
+      allow read: if isAdmin() || (
+        isOwnStudent(resource.data.studentId) && resource.data.studentVisible == true
+      );
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /teacherNotes/{noteId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /achievements/{achievementId} {
+      allow read: if isAdmin() || isOwnStudent(resource.data.studentId);
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,16 @@
+.firebase/
+functions/node_modules/
+.firebaserc
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+
+# Never commit server-side Firebase credentials.
+*service-account*.json
+serviceAccountKey.json
+
+# Local editor and OS files.
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

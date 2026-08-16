@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Registration — Student Progress Tracker</title>
+    <link rel="stylesheet" href="./css/styles.css">
+    <link rel="stylesheet" href="./css/register.css">
+  </head>
+  <body>
+    <main class="registration-shell">
+      <article class="registration-card">
+        <p class="registration-eyebrow">Student invitation</p>
+        <h1>Create your account</h1>
+        <p data-register-state role="status" aria-live="polite">Loading invitation…</p>
+
+        <div data-register-content hidden>
+          <section class="invitation-summary" aria-label="Invitation details">
+            <span data-register-initial aria-hidden="true">S</span>
+            <div><strong data-register-name></strong><small data-register-email></small></div>
+          </section>
+
+          <form data-register-form>
+            <label for="register-password">Password</label>
+            <input id="register-password" name="password" type="password" minlength="8" autocomplete="new-password" required>
+
+            <label for="register-password-confirm" data-register-confirm-label>Confirm password</label>
+            <input id="register-password-confirm" name="passwordConfirm" type="password" minlength="8" autocomplete="new-password" data-register-confirm required>
+
+            <button class="button-primary" type="submit" data-register-submit>Create account</button>
+            <button class="text-button" type="button" data-register-mode>I already have an account</button>
+            <button class="text-button" type="button" data-register-reset hidden>Forgot password?</button>
+          </form>
+
+          <section class="registration-step" data-register-verification hidden>
+            <h2>Verify your email</h2>
+            <p>Firebase sent a verification email. Open it, confirm your address, then return here.</p>
+            <button class="button-primary" type="button" data-register-check-verification>I verified my email</button>
+            <button type="button" data-register-resend-verification>Resend verification email</button>
+            <button class="text-button" type="button" data-register-sign-out>Use another account</button>
+          </section>
+
+          <section class="registration-step" data-register-wrong-account hidden>
+            <h2>Another account is signed in</h2>
+            <p>Currently signed in as <strong data-register-current-email></strong>. Open this link in a private window, or sign out here.</p>
+            <button type="button" data-register-wrong-sign-out>Sign out and continue</button>
+          </section>
+
+          <p data-register-message role="status" aria-live="polite"></p>
+        </div>
+
+        <a href="./login.html">Back to login</a>
+      </article>
+    </main>
+
+    <script type="module" src="./js/pages/register-page.js"></script>
+  </body>
+</html>

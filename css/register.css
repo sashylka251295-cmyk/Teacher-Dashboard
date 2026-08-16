@@ -1,0 +1,162 @@
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 12% 16%, rgb(231 239 226 / 80%), transparent 20rem),
+    radial-gradient(circle at 88% 82%, rgb(238 232 246 / 75%), transparent 22rem),
+    var(--color-canvas);
+}
+
+.registration-shell {
+  display: grid;
+  min-height: 100vh;
+  padding: clamp(1rem, 4vw, 3rem);
+  place-items: center;
+}
+
+.registration-card {
+  width: min(34rem, 100%);
+  padding: clamp(1.5rem, 5vw, 3rem);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-dialog);
+  background: rgb(255 253 248 / 94%);
+  box-shadow: var(--shadow-dialog);
+}
+
+.registration-eyebrow {
+  margin-bottom: var(--space-1);
+  color: var(--color-green);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.registration-card > p[role="status"],
+[data-register-message] {
+  min-height: 1.4rem;
+  color: var(--color-ink-soft);
+}
+
+.invitation-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: var(--space-5) 0;
+  padding: var(--space-4);
+  border-radius: var(--radius-card);
+  background: var(--color-green-soft);
+}
+
+.invitation-summary > span {
+  display: grid;
+  width: 3rem;
+  height: 3rem;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  background: var(--color-green);
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+}
+
+.invitation-summary > div {
+  display: grid;
+}
+
+.invitation-summary small {
+  color: var(--color-muted);
+}
+
+[data-register-form] {
+  display: grid;
+  gap: var(--space-2);
+}
+
+[data-register-form][hidden] {
+  display: none;
+}
+
+[data-register-form] label:not(:first-child) {
+  margin-top: var(--space-2);
+}
+
+[data-register-form] button:first-of-type {
+  margin-top: var(--space-3);
+}
+
+.text-button {
+  min-height: auto;
+  padding: var(--space-2);
+  border: 0;
+  color: var(--color-green-dark);
+  background: transparent;
+}
+
+.registration-step {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface-raised);
+}
+
+.registration-step[hidden] {
+  display: none;
+}
+
+.registration-step h2,
+.registration-step p {
+  margin-bottom: 0;
+}
+
+[data-register-message][data-message-type="error"] {
+  padding: var(--space-3);
+  border-radius: var(--radius-button);
+  color: var(--color-danger);
+  background: var(--color-danger-soft);
+}
+
+.registration-card > a {
+  display: inline-block;
+  margin-top: var(--space-4);
+}
+
+.registration-shell {
+  position: relative;
+  overflow: hidden;
+}
+
+.registration-shell::before {
+  position: absolute;
+  z-index: 0;
+  left: max(2rem, calc(50% - 36rem));
+  bottom: -2rem;
+  width: min(35vw, 30rem);
+  height: min(35vw, 30rem);
+  background: url("../assets/images/decor-open-book-botanical.png.png") center bottom / contain no-repeat;
+  content: "";
+  opacity: 0.84;
+  pointer-events: none;
+}
+
+.registration-card {
+  position: relative;
+  z-index: 1;
+}
+
+@media (min-width: 64rem) {
+  .registration-card {
+    transform: translateX(11rem);
+  }
+}
+
+@media (max-width: 52rem) {
+  .registration-shell::before {
+    left: -3rem;
+    bottom: -4rem;
+    width: 18rem;
+    height: 18rem;
+    opacity: 0.14;
+  }
+}

@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Learning — Student Progress Tracker</title>
+    <link rel="stylesheet" href="./css/styles.css">
+    <link rel="stylesheet" href="./css/student.css">
+  </head>
+  <body data-student-theme="neutral">
+    <main class="student-shell" data-protected-content data-theme="neutral" hidden>
+      <header class="student-header">
+        <div>
+          <p class="student-eyebrow">My learning space</p>
+          <h1 data-student-page-title>Dashboard</h1>
+        </div>
+        <div class="student-account">
+          <span class="student-avatar student-avatar--small" data-avatar-frame>
+            <img data-student-avatar alt="" hidden>
+            <span data-student-initial aria-hidden="true">S</span>
+          </span>
+          <span><strong data-student-account-name>Student</strong><small data-theme-label>Neutral theme</small></span>
+          <button type="button" data-logout>Log out</button>
+        </div>
+      </header>
+
+      <aside class="student-sidebar">
+        <a class="student-brand" href="#dashboard" data-student-link="dashboard">
+          <span class="student-brand__mark" aria-hidden="true">L</span>
+          <span data-brand-name>Learning Studio</span>
+        </a>
+        <nav class="student-nav" aria-label="Student Progress">
+          <a href="#dashboard" data-student-link="dashboard"><span aria-hidden="true"><img src="./assets/images/icon-dashboard.png.png" alt=""></span>Dashboard</a>
+          <a href="#progress" data-student-link="progress"><span aria-hidden="true"><img src="./assets/images/empty-progress.png.png" alt=""></span>My Progress</a>
+          <a href="#achievements" data-student-link="achievements"><span aria-hidden="true"><img src="./assets/images/achievement-small.png.png" alt=""></span>Achievements</a>
+        </nav>
+        <div class="student-sidebar__message">
+          <p class="student-eyebrow">Keep growing</p>
+          <p data-theme-message>Your learning journey, clearly organized.</p>
+        </div>
+      </aside>
+
+      <p class="student-state" data-student-state role="status" aria-live="polite">Loading your learning space…</p>
+
+      <div class="student-content" data-student-content hidden>
+        <section class="student-page student-dashboard" id="dashboard" data-student-section="dashboard">
+          <header class="student-welcome">
+            <span class="student-avatar student-avatar--large" data-avatar-frame>
+              <img data-student-avatar alt="" hidden>
+              <span data-student-initial aria-hidden="true">S</span>
+            </span>
+            <div>
+              <p class="student-eyebrow">Welcome back</p>
+              <h2>Hello, <span data-student-name>Student</span>!</h2>
+              <p>Continue building your English skills, one unit at a time.</p>
+              <p class="student-course-line"><span>Current course</span><strong data-student-course>—</strong></p>
+            </div>
+            <div class="course-art" data-course-art aria-hidden="true">
+              <img data-course-image alt="" hidden>
+              <span data-course-initial>C</span>
+            </div>
+          </header>
+
+          <div class="student-summary-grid">
+            <article class="student-summary-card student-summary-card--overall">
+              <p>Overall Progress</p>
+              <strong data-student-overall>—</strong>
+              <small>Across units with progress</small>
+            </article>
+            <article class="student-summary-card student-summary-card--strongest">
+              <p>Strongest Area</p>
+              <strong data-student-strongest>—</strong>
+              <small>Your current strength</small>
+            </article>
+            <article class="student-summary-card student-summary-card--goal">
+              <p>Current Goal</p>
+              <strong data-student-goal-title>—</strong>
+              <small data-student-goal-status>No active goal</small>
+            </article>
+            <article class="student-summary-card student-summary-card--units">
+              <p>Units in Course</p>
+              <strong data-student-unit-count>0</strong>
+              <small data-student-progress-count>No progress yet</small>
+            </article>
+          </div>
+
+          <div class="student-dashboard-grid">
+            <section class="student-panel" aria-labelledby="dashboard-skills-heading">
+              <div class="student-panel__heading"><div><p class="student-eyebrow">Your strengths</p><h3 id="dashboard-skills-heading">Progress by Skill</h3></div><a href="#progress" data-student-link="progress">View details</a></div>
+              <div class="skill-list" data-dashboard-skills></div>
+              <p class="student-empty" data-dashboard-skills-empty hidden>No progress data yet.</p>
+            </section>
+
+            <section class="student-panel" aria-labelledby="dashboard-achievements-heading">
+              <div class="student-panel__heading"><div><p class="student-eyebrow">Milestones</p><h3 id="dashboard-achievements-heading">Recent Achievements</h3></div><a href="#achievements" data-student-link="achievements">View all</a></div>
+              <ul class="achievement-preview" data-achievement-preview></ul>
+              <p class="student-empty" data-achievement-preview-empty hidden>No achievements yet. Your next milestone is ahead.</p>
+            </section>
+          </div>
+        </section>
+
+        <section class="student-page student-progress-page" id="progress" data-student-section="progress" hidden>
+          <div class="student-page-heading">
+            <div><p class="student-eyebrow">Learning journey</p><h2>My Progress</h2><p>See how your skills are developing across the course.</p></div>
+          </div>
+
+          <div class="progress-overview">
+            <article><span>Overall</span><strong data-progress-overall>—</strong></article>
+            <article><span>Current Course</span><strong data-progress-course>—</strong></article>
+            <article><span>Strongest Area</span><strong data-progress-strongest>—</strong></article>
+          </div>
+
+          <div class="student-progress-grid">
+            <section class="student-panel" aria-labelledby="skills-progress-heading">
+              <div class="student-panel__heading"><div><p class="student-eyebrow">Skill averages</p><h3 id="skills-progress-heading">Skills Progress</h3></div></div>
+              <div class="skill-list" data-progress-skills></div>
+              <p class="student-empty" data-progress-skills-empty hidden>No skill progress yet.</p>
+            </section>
+
+            <section class="student-panel" aria-labelledby="unit-progress-heading">
+              <div class="student-panel__heading"><div><p class="student-eyebrow">Course path</p><h3 id="unit-progress-heading">Unit Progress</h3></div></div>
+              <div class="unit-grid" data-unit-progress></div>
+              <p class="student-empty" data-unit-progress-empty hidden>No course units yet.</p>
+            </section>
+          </div>
+
+          <section class="student-panel student-matrix-panel" aria-labelledby="student-matrix-heading">
+            <div class="student-panel__heading"><div><p class="student-eyebrow">Skills × units</p><h3 id="student-matrix-heading">Progress Matrix</h3></div></div>
+            <div class="student-matrix" data-student-progress-matrix></div>
+            <p class="student-empty" data-student-progress-empty hidden>No progress has been recorded yet.</p>
+          </section>
+        </section>
+
+        <section class="student-page student-achievements-page" id="achievements" data-student-section="achievements" hidden>
+          <div class="student-page-heading">
+            <div><p class="student-eyebrow">Your milestones</p><h2>Achievements</h2><p>Celebrate the meaningful steps in your learning journey.</p></div>
+            <div class="achievement-count"><strong data-achievement-count>0</strong><span>earned</span></div>
+          </div>
+          <ul class="achievement-grid" data-achievement-list></ul>
+          <div class="student-empty student-empty--large" data-achievement-empty hidden>
+            <strong>Your first achievement is still ahead.</strong>
+            <span>Keep learning and your milestones will appear here.</span>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <p data-page-status role="status" aria-live="polite">Checking access…</p>
+    <script type="module" src="./js/pages/student-page.js"></script>
+  </body>
+</html>

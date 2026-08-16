@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In — Student Progress Tracker</title>
+    <link rel="stylesheet" href="./css/styles.css">
+    <link rel="stylesheet" href="./css/login.css">
+  </head>
+  <body class="login-page">
+    <main class="login-shell">
+      <section class="login-story" aria-labelledby="login-story-title">
+        <div class="login-story__shade" aria-hidden="true"></div>
+        <div class="login-story__copy">
+          <p class="login-eyebrow">A little progress every day</p>
+          <h1 id="login-story-title">A welcoming place to learn and grow</h1>
+          <p>Follow your progress, work towards your goals, and celebrate every step forward.</p>
+        </div>
+      </section>
+
+      <section class="login-panel" aria-labelledby="login-title">
+        <div class="login-panel__decor" aria-hidden="true">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+
+        <div class="login-card">
+          <div class="login-brand" aria-label="Student Progress Tracker">
+            <span class="login-brand__mark" aria-hidden="true">
+              <svg viewBox="0 0 48 48" role="img">
+                <path d="M10 12.5c5.4 0 10.1 1.5 14 4.5v22c-3.9-3-8.6-4.5-14-4.5V12.5Z"></path>
+                <path d="M38 12.5c-5.4 0-10.1 1.5-14 4.5v22c3.9-3 8.6-4.5 14-4.5V12.5Z"></path>
+                <path class="login-brand__leaf" d="M24 15.5c.8-4.7 3.5-7.5 8-8.5-.5 4.8-3.2 7.6-8 8.5Z"></path>
+              </svg>
+            </span>
+            <span>
+              <strong>Student Progress</strong>
+              <small>learning tracker</small>
+            </span>
+          </div>
+
+          <div class="login-heading">
+            <p class="login-eyebrow">Welcome back</p>
+            <h2 id="login-title">Good to see you again</h2>
+            <p>Sign in to your learning space.</p>
+          </div>
+
+          <form class="login-form" data-login-form novalidate>
+            <div class="login-field">
+              <label for="email">Email</label>
+              <div class="login-input">
+                <svg aria-hidden="true" viewBox="0 0 24 24">
+                  <path d="M3.5 6.5h17v11h-17z"></path>
+                  <path d="m4 7 8 6 8-6"></path>
+                </svg>
+                <input id="email" name="email" type="email" autocomplete="email" placeholder="name@example.com" required>
+              </div>
+            </div>
+
+            <div class="login-field">
+              <label for="password">Password</label>
+              <div class="login-input">
+                <svg aria-hidden="true" viewBox="0 0 24 24">
+                  <rect x="5" y="10" width="14" height="10" rx="2"></rect>
+                  <path d="M8.5 10V7.5a3.5 3.5 0 0 1 7 0V10M12 14v2"></path>
+                </svg>
+                <input id="password" name="password" type="password" autocomplete="current-password" placeholder="Enter your password" required>
+              </div>
+            </div>
+
+            <button class="login-submit" type="submit">
+              <span>Sign in</span>
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M5 12h14M14 7l5 5-5 5"></path>
+              </svg>
+            </button>
+
+            <p class="login-message" data-form-message role="status" aria-live="polite"></p>
+          </form>
+
+          <p class="login-hint">
+            First time here? Use the email and password you created from your teacher's invitation.
+          </p>
+        </div>
+
+        <p class="login-footer">Learn at your own pace · celebrate every achievement</p>
+      </section>
+    </main>
+
+    <script type="module" src="./js/pages/login-page.js"></script>
+  </body>
+</html>

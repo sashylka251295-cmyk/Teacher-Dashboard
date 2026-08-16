@@ -1,0 +1,550 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacher Dashboard — Student Progress Tracker</title>
+    <link rel="stylesheet" href="./css/styles.css">
+    <link rel="stylesheet" href="./css/admin.css">
+  </head>
+  <body>
+    <main class="teacher-shell" data-protected-content hidden>
+      <header class="teacher-header">
+        <div>
+          <p class="eyebrow">Teacher workspace</p>
+          <h1>Student Progress Tracker</h1>
+        </div>
+        <form class="global-search" role="search" data-admin-global-search>
+          <label for="admin-global-search">Search students</label>
+          <input id="admin-global-search" type="search" placeholder="Search students by name, group or course…" data-admin-global-search-input>
+          <button type="submit">Search</button>
+        </form>
+        <div class="teacher-account" aria-label="Current role">
+          <span class="teacher-account__avatar" aria-hidden="true">T</span>
+          <span><strong>Teacher</strong><small>Administrator</small></span>
+          <button type="button" data-logout>Log out</button>
+        </div>
+      </header>
+
+      <nav class="teacher-sidebar" aria-label="Teacher Dashboard" data-admin-navigation>
+        <a class="teacher-brand" href="#overview" data-admin-link="overview">
+          <span class="teacher-brand__mark" aria-hidden="true">TD</span>
+          <span>Teacher<br>Dashboard</span>
+        </a>
+        <div class="teacher-nav">
+          <a href="#overview" data-admin-link="overview"><span aria-hidden="true"><img src="./assets/images/icon-dashboard.png.png" alt=""></span>Dashboard</a>
+          <a href="#groups" data-admin-link="groups"><span aria-hidden="true"><img src="./assets/images/icon-groups.png.png" alt=""></span>Groups</a>
+          <a href="#students" data-admin-link="students"><span aria-hidden="true"><img src="./assets/images/icon-students.png.png" alt=""></span>Students</a>
+          <a href="#courses" data-admin-link="courses"><span aria-hidden="true"><img src="./assets/images/icon-courses.png.png" alt=""></span>Courses</a>
+        </div>
+        <p class="teacher-sidebar__note">A calm place to organize learning progress.</p>
+      </nav>
+
+      <section class="admin-page overview-page" id="overview" data-feature="overview" data-admin-section="overview">
+        <div class="page-heading">
+          <div>
+            <p class="eyebrow">Welcome back</p>
+            <h2>Dashboard</h2>
+            <p>Your students, groups and courses at a glance.</p>
+          </div>
+          <button class="button-primary" type="button" data-add-student>+ Add Student</button>
+        </div>
+        <p class="overview-state" data-overview-state role="status" aria-live="polite">Loading dashboard…</p>
+        <div class="overview-stat-grid" data-overview-content hidden aria-label="Dashboard summary">
+          <a class="overview-stat-card overview-stat-card--sage" href="#students" data-dashboard-link="students">
+            <span class="overview-stat-card__icon" aria-hidden="true"><img src="./assets/images/icon-students.png.png" alt=""></span>
+            <span><small>Active Students</small><strong data-overview-active-students>0</strong><em>Open directory</em></span>
+          </a>
+          <a class="overview-stat-card overview-stat-card--lavender" href="#groups" data-dashboard-link="groups">
+            <span class="overview-stat-card__icon" aria-hidden="true"><img src="./assets/images/icon-groups.png.png" alt=""></span>
+            <span><small>Groups</small><strong data-overview-groups>0</strong><em>Teaching groups</em></span>
+          </a>
+          <a class="overview-stat-card overview-stat-card--blue" href="#courses" data-dashboard-link="courses">
+            <span class="overview-stat-card__icon" aria-hidden="true"><img src="./assets/images/icon-courses.png.png" alt=""></span>
+            <span><small>Active Courses</small><strong data-overview-active-courses>0</strong><em>Course library</em></span>
+          </a>
+          <article class="overview-stat-card overview-stat-card--orange">
+            <span class="overview-stat-card__icon" aria-hidden="true"><img src="./assets/images/attention-small.png.png" alt=""></span>
+            <span><small>Need Attention</small><strong data-overview-attention-count>0</strong><em>Below 60% overall</em></span>
+          </article>
+        </div>
+
+        <div class="overview-workspace" data-overview-content hidden>
+          <section class="overview-panel overview-attention" aria-labelledby="attention-heading">
+            <div class="panel-heading">
+              <div><p class="eyebrow">Progress watch</p><h3 id="attention-heading">Students Needing Attention</h3><p>Students whose recorded overall progress is below 60%.</p></div>
+              <a href="#students" data-dashboard-link="students">View all</a>
+            </div>
+            <ul data-overview-attention-list></ul>
+            <p class="overview-empty" data-overview-attention-empty hidden>No students currently need attention.</p>
+          </section>
+
+          <aside class="overview-side-stack">
+            <section class="overview-panel quick-actions" aria-labelledby="quick-actions-heading">
+              <div class="panel-heading"><div><p class="eyebrow">Common tasks</p><h3 id="quick-actions-heading">Quick Actions</h3></div></div>
+              <div>
+                <button type="button" data-add-student><span aria-hidden="true"><img src="./assets/images/icon-students.png.png" alt=""></span><strong>Add Student</strong><small>Create a learner profile</small></button>
+                <button type="button" data-add-group><span aria-hidden="true"><img src="./assets/images/icon-groups.png.png" alt=""></span><strong>Add Group</strong><small>Organize students</small></button>
+                <button type="button" data-add-course><span aria-hidden="true"><img src="./assets/images/icon-courses.png.png" alt=""></span><strong>Add Course</strong><small>Build course units</small></button>
+              </div>
+            </section>
+          </aside>
+        </div>
+
+        <div class="welcome-panel">
+          <div>
+            <p class="eyebrow">Teacher workspace</p>
+            <h3>Keep every learning step visible</h3>
+            <p>Open a student profile to review progress, update skills, set a goal, or add a private observation.</p>
+            <a class="button-link" href="#students" data-dashboard-link="students">Open students</a>
+          </div>
+          <img src="./assets/images/teacher-workspace-illustration.png" alt="" aria-hidden="true">
+        </div>
+      </section>
+
+      <section class="admin-page entity-page" id="groups" data-feature="groups" data-admin-section="groups" hidden>
+        <div class="page-heading">
+          <div><p class="eyebrow">Class organization</p><h2>Groups</h2><p>Manage active teaching groups and their courses.</p></div>
+          <button class="button-primary" type="button" data-add-group>+ Add Group</button>
+        </div>
+        <div class="section-stat-grid" data-section-summary="groups">
+          <article><span>Total groups</span><strong data-summary-value="groups-total">—</strong></article>
+          <article><span>Active groups</span><strong data-summary-value="groups-active">—</strong></article>
+          <article><span>Courses represented</span><strong data-summary-value="groups-courses">—</strong></article>
+        </div>
+        <p data-section-message="groups" role="status" aria-live="polite"></p>
+        <p data-section-state role="status" aria-live="polite"></p>
+        <div class="entity-table-heading entity-table-heading--groups" aria-hidden="true">
+          <span>Group</span><span>Course</span><span>Students</span><span>Academic year</span><span>Status</span>
+        </div>
+        <ul class="entity-list entity-list--groups" data-section-content hidden></ul>
+      </section>
+
+      <section class="admin-page entity-page" id="students" data-feature="students" data-admin-section="students" hidden>
+        <div class="page-heading">
+          <div><p class="eyebrow">Learner directory</p><h2>Students</h2><p>View profiles, learning context and account status.</p></div>
+          <button class="button-primary" type="button" data-add-student>+ Add Student</button>
+        </div>
+        <div class="section-stat-grid" data-section-summary="students">
+          <article><span>Total students</span><strong data-summary-value="students-total">—</strong></article>
+          <article><span>Active</span><strong data-summary-value="students-active">—</strong></article>
+          <article><span>Paused</span><strong data-summary-value="students-paused">—</strong></article>
+          <article><span>Archived</span><strong data-summary-value="students-archived">—</strong></article>
+        </div>
+        <div class="filter-bar">
+          <label class="filter-bar__search" for="student-list-search">
+            <span>Search</span>
+            <input id="student-list-search" type="search" placeholder="Student, group or course" data-student-search>
+          </label>
+          <label for="student-list-filter">Status</label>
+          <select id="student-list-filter" data-student-filter>
+            <option value="active">Active</option>
+            <option value="paused">Paused</option>
+            <option value="archived">Archived</option>
+            <option value="all">All students</option>
+          </select>
+        </div>
+        <p data-section-message="students" role="status" aria-live="polite"></p>
+        <p data-section-state role="status" aria-live="polite"></p>
+        <div class="entity-table-heading entity-table-heading--students" aria-hidden="true">
+          <span>Student</span><span>Group</span><span>Course</span><span>Status</span><span>Actions</span>
+        </div>
+        <ul class="entity-list entity-list--students" data-section-content hidden></ul>
+      </section>
+
+      <section class="admin-page entity-page" id="courses" data-feature="courses" data-admin-section="courses" hidden>
+        <div class="page-heading">
+          <div><p class="eyebrow">Learning structure</p><h2>Courses</h2><p>Manage course information and units.</p></div>
+          <button class="button-primary" type="button" data-add-course>+ Add Course</button>
+        </div>
+        <div class="section-stat-grid" data-section-summary="courses">
+          <article><span>Total courses</span><strong data-summary-value="courses-total">—</strong></article>
+          <article><span>Active courses</span><strong data-summary-value="courses-active">—</strong></article>
+          <article><span>Inactive courses</span><strong data-summary-value="courses-inactive">—</strong></article>
+        </div>
+        <p data-section-message="courses" role="status" aria-live="polite"></p>
+        <p data-section-state role="status" aria-live="polite"></p>
+        <div class="entity-table-heading entity-table-heading--courses" aria-hidden="true">
+          <span>Course</span><span>Level</span><span>Groups</span><span>Students</span><span>Units</span><span>Status</span>
+        </div>
+        <ul class="entity-list entity-list--courses" data-section-content hidden></ul>
+      </section>
+
+      <section
+        class="admin-page profile-page"
+        id="student-profile"
+        data-feature="student-profile"
+        data-admin-section="student-profile"
+        hidden
+      >
+        <a class="breadcrumb-link" href="#students" data-student-profile-back>← Students</a>
+        <p data-profile-state role="status" aria-live="polite"></p>
+
+        <div data-profile-content hidden>
+          <header class="profile-hero">
+            <span class="profile-avatar" data-profile-initial aria-hidden="true">S</span>
+            <div class="profile-identity">
+              <p class="eyebrow">Student profile</p>
+              <h2 data-profile-name></h2>
+              <dl class="profile-meta">
+                <div><dt>Group</dt><dd data-profile-group></dd></div>
+                <div><dt>Course</dt><dd data-profile-course></dd></div>
+                <div><dt>Status</dt><dd data-profile-status></dd></div>
+              </dl>
+            </div>
+            <button class="quick-update-button" type="button" data-quick-update-open>Quick Update</button>
+            <p data-profile-action-message role="status" aria-live="polite"></p>
+          </header>
+
+          <section class="student-access-panel" aria-labelledby="student-access-heading">
+            <div class="student-access-panel__heading">
+              <div><p class="eyebrow">Login access</p><h3 id="student-access-heading">Student Account</h3></div>
+              <strong data-student-access-status data-access-state="loading">Loading…</strong>
+            </div>
+            <form class="student-access-form" data-student-access-form>
+              <label for="student-access-email">Student email</label>
+              <div class="student-access-form__row">
+                <input id="student-access-email" type="email" autocomplete="email" placeholder="student@example.com" data-student-access-email required>
+                <button class="button-primary" type="submit" data-student-access-invite>Invite Student</button>
+                <button type="button" data-student-access-disable hidden>Disable Student Access</button>
+              </div>
+            </form>
+            <p data-student-access-message role="status" aria-live="polite"></p>
+            <div class="student-setup-link" data-student-setup-link-container hidden>
+              <label for="student-setup-link">Student registration link</label>
+              <div><input id="student-setup-link" type="text" readonly data-student-setup-link><button type="button" data-student-setup-link-copy>Copy link</button></div>
+              <small>Send this one-time link to the student. They will create a password and verify their email.</small>
+            </div>
+          </section>
+
+          <div class="profile-summary-grid" aria-label="Student summary">
+            <section class="summary-card summary-card--progress" aria-labelledby="overall-progress-heading">
+              <h3 id="overall-progress-heading">Overall Progress</h3>
+              <dl>
+                <dt>Average across existing units</dt>
+                <dd data-profile-overall-progress></dd>
+              </dl>
+            </section>
+
+            <section class="summary-card summary-card--skill" aria-labelledby="strongest-area-heading">
+              <h3 id="strongest-area-heading">Strongest Area</h3>
+              <dl>
+                <dt>Best current skill</dt>
+                <dd data-profile-strongest-area></dd>
+              </dl>
+            </section>
+
+            <section class="summary-card summary-card--goal" aria-labelledby="current-goal-heading">
+              <h3 id="current-goal-heading">Current Goal</h3>
+              <p data-current-goal-empty hidden>No active goal.</p>
+              <dl data-current-goal hidden>
+                <dt>Title</dt>
+                <dd data-current-goal-title></dd>
+                <dt>Status</dt>
+                <dd data-current-goal-status></dd>
+              </dl>
+            </section>
+          </div>
+
+          <div class="profile-workspace">
+            <section class="content-panel progress-panel" aria-labelledby="progress-matrix-heading">
+              <div class="panel-heading"><div><p class="eyebrow">Skills × units</p><h3 id="progress-matrix-heading">Progress Matrix</h3></div></div>
+              <p data-progress-state role="status"></p>
+              <div data-progress-matrix></div>
+            </section>
+
+            <section class="content-panel observations-panel" aria-labelledby="teacher-observations-heading">
+              <div class="panel-heading">
+                <div><p class="eyebrow">Teacher only</p><h3 id="teacher-observations-heading">Teacher Observations</h3></div>
+                <span class="private-chip">Private</span>
+              </div>
+              <p data-observations-empty hidden>No teacher observations yet.</p>
+              <ul data-observations-list></ul>
+            </section>
+          </div>
+        </div>
+
+        <dialog class="quick-update-dialog" data-quick-update-dialog aria-labelledby="quick-update-heading">
+          <form data-quick-update-form>
+            <h3 id="quick-update-heading">Quick Update</h3>
+
+            <p>
+              Student:
+              <output data-quick-student-name></output>
+            </p>
+
+            <label for="quick-lesson-date">Lesson date</label>
+            <input id="quick-lesson-date" name="lessonDate" type="date" required>
+
+            <label for="quick-unit">Unit</label>
+            <select id="quick-unit" name="unitId" data-quick-unit required></select>
+
+            <fieldset>
+              <legend>Skills</legend>
+              <p>Untouched skills keep their existing numeric values.</p>
+
+              <label for="quick-vocabulary">Vocabulary</label>
+              <select
+                id="quick-vocabulary"
+                name="vocabulary"
+                data-quick-skill="vocabulary"
+              ></select>
+
+              <label for="quick-grammar">Grammar</label>
+              <select id="quick-grammar" name="grammar" data-quick-skill="grammar"></select>
+
+              <label for="quick-reading">Reading</label>
+              <select id="quick-reading" name="reading" data-quick-skill="reading"></select>
+
+              <label for="quick-listening">Listening</label>
+              <select
+                id="quick-listening"
+                name="listening"
+                data-quick-skill="listening"
+              ></select>
+
+              <label for="quick-speaking">Speaking</label>
+              <select id="quick-speaking" name="speaking" data-quick-skill="speaking"></select>
+
+              <label for="quick-homework">Homework</label>
+              <select id="quick-homework" name="homework" data-quick-skill="homework"></select>
+            </fieldset>
+
+            <fieldset>
+              <legend>Short observation</legend>
+
+              <label for="quick-observation-category">Category</label>
+              <select id="quick-observation-category" name="observationCategory">
+                <option value="general">General</option>
+                <option value="vocabulary">Vocabulary</option>
+                <option value="grammar">Grammar</option>
+                <option value="reading">Reading</option>
+                <option value="listening">Listening</option>
+                <option value="speaking">Speaking</option>
+                <option value="homework">Homework</option>
+              </select>
+
+              <label for="quick-observation">Observation</label>
+              <textarea id="quick-observation" name="observation" rows="3"></textarea>
+            </fieldset>
+
+            <fieldset>
+              <legend>Current goal</legend>
+              <p data-quick-current-goal>No active goal.</p>
+
+              <label for="quick-goal-action">Goal action</label>
+              <select id="quick-goal-action" name="goalAction" data-quick-goal-action>
+                <option value="unchanged">Leave unchanged</option>
+                <option value="update" data-goal-update-option>Update current goal</option>
+                <option value="create">Create new goal</option>
+              </select>
+
+              <label for="quick-goal-title">Goal title</label>
+              <input id="quick-goal-title" name="goalTitle" type="text" data-quick-goal-title disabled>
+
+              <label for="quick-goal-status">Goal status</label>
+              <select id="quick-goal-status" name="goalStatus" data-quick-goal-status disabled>
+                <option value="new">New</option>
+                <option value="working">Working</option>
+                <option value="confident">Confident</option>
+                <option value="completed">Completed</option>
+              </select>
+            </fieldset>
+
+            <fieldset disabled>
+              <legend>Achievement — optional</legend>
+              <p>Placeholder for a future achievement workflow.</p>
+            </fieldset>
+
+            <p data-quick-update-message role="status" aria-live="polite"></p>
+            <button type="submit" data-quick-update-save>Save update</button>
+            <button type="button" data-quick-update-close>Cancel</button>
+          </form>
+        </dialog>
+      </section>
+
+      <dialog data-student-dialog aria-labelledby="student-form-heading">
+        <form class="editor-form" data-student-form>
+          <header class="editor-form__heading">
+            <div><p class="eyebrow">Learner profile</p><h2 id="student-form-heading" data-student-form-title>Student</h2><p>Create or update a student profile.</p></div>
+          </header>
+          <div class="editor-form__body">
+            <div class="editor-form__fields">
+              <label for="student-name">Full name</label>
+              <input id="student-name" name="name" type="text" required>
+
+              <div class="editor-form__field-row">
+                <label for="student-group"><span>Group <small>(optional)</small></span><select id="student-group" name="groupId" data-student-group></select></label>
+                <div class="student-course-field">
+                  <span class="field-label-with-action"><label for="student-course">Course</label><button type="button" data-student-course-create-toggle aria-expanded="false">+ Create course</button></span>
+                  <select id="student-course" name="courseId" data-student-course required></select>
+                </div>
+              </div>
+
+              <fieldset class="inline-course-creator" data-student-course-creator hidden>
+                <legend>New course</legend>
+                <div class="editor-form__field-row">
+                  <label for="student-new-course-name"><span>Course name</span><input id="student-new-course-name" type="text" data-student-new-course-name></label>
+                  <label for="student-new-course-level"><span>Level</span><input id="student-new-course-level" type="text" data-student-new-course-level></label>
+                </div>
+                <label class="toggle-field" for="student-new-course-active"><input id="student-new-course-active" type="checkbox" data-student-new-course-active checked> Active</label>
+                <p data-student-course-create-message role="status" aria-live="polite"></p>
+                <div class="inline-course-creator__actions">
+                  <button type="button" data-student-course-create-cancel>Cancel</button>
+                  <button type="button" data-student-course-create>Save and select</button>
+                </div>
+              </fieldset>
+
+              <div class="editor-form__field-row">
+                <label for="student-status"><span>Status</span><select id="student-status" name="status" required><option value="active">Active</option><option value="paused">Paused</option><option value="archived">Archived</option></select></label>
+                <label for="student-color"><span>Student color</span><input id="student-color" name="color" type="color" value="#4f46e5" required></label>
+              </div>
+
+              <label for="student-visual-theme">Student interface</label>
+              <select id="student-visual-theme" name="visualTheme" data-student-visual-theme required>
+                <option value="neutral">Neutral / Teen / Adult</option>
+                <option value="child">Child</option>
+              </select>
+              <p class="field-hint">Changes the student-facing appearance without changing learning data.</p>
+            </div>
+
+            <aside class="editor-preview" aria-label="Student preview">
+              <p class="eyebrow">Preview card</p>
+              <h3>This is how the student appears in your workspace.</h3>
+              <div class="student-preview-card">
+                <span data-student-preview-initial aria-hidden="true">S</span>
+                <div><strong data-student-preview-name>Student name</strong><small data-student-preview-group>Individual</small><small data-student-preview-course>Select course</small></div>
+                <em data-student-preview-status>Active</em>
+              </div>
+              <div class="preview-note"><strong data-student-preview-theme>Neutral / Teen / Adult</strong><span>Student-facing theme</span></div>
+            </aside>
+          </div>
+          <p data-student-form-message role="status" aria-live="polite"></p>
+          <footer class="editor-form__actions"><button type="button" data-student-dialog-close>Cancel</button><button type="submit" data-student-save>Save Student</button></footer>
+        </form>
+      </dialog>
+
+      <dialog data-group-dialog aria-labelledby="group-form-heading">
+        <form class="editor-form" data-group-form>
+          <header class="editor-form__heading">
+            <div><p class="eyebrow">Teaching group</p><h2 id="group-form-heading" data-group-form-title>Group</h2><p>Create or update a teaching group.</p></div>
+          </header>
+          <div class="editor-form__body">
+            <div class="editor-form__fields">
+              <label for="group-name">Group name</label>
+              <input id="group-name" name="name" type="text" required>
+
+              <div class="editor-form__field-row">
+                <label for="group-course"><span>Course</span><select id="group-course" name="courseId" data-group-course required></select></label>
+                <label for="group-academic-year"><span>Academic year</span><input id="group-academic-year" name="academicYear" type="text"></label>
+              </div>
+
+              <label class="toggle-field" for="group-active"><input id="group-active" name="active" type="checkbox"><span>Active group</span></label>
+            </div>
+            <aside class="editor-preview" aria-label="Group preview">
+              <p class="eyebrow">Preview card</p>
+              <h3>This is how the group appears in your workspace.</h3>
+              <div class="group-preview-card">
+                <span aria-hidden="true">G</span>
+                <div><strong data-group-preview-name>Group name</strong><small data-group-preview-course>Select course</small><small data-group-preview-year>Academic year</small></div>
+                <em data-group-preview-active>Active</em>
+              </div>
+            </aside>
+          </div>
+          <p data-group-form-message role="status" aria-live="polite"></p>
+          <footer class="editor-form__actions"><button type="button" data-group-dialog-close>Cancel</button><button type="button" data-group-delete hidden>Delete Group</button><button type="submit" data-group-save>Save Group</button></footer>
+        </form>
+      </dialog>
+
+      <dialog data-group-details-dialog aria-labelledby="group-details-heading">
+        <h2 id="group-details-heading" data-group-details-name>Group details</h2>
+        <p data-group-details-state role="status" aria-live="polite"></p>
+        <div data-group-details-content hidden>
+          <dl>
+            <dt>Course</dt>
+            <dd data-group-details-course></dd>
+            <dt>Academic year</dt>
+            <dd data-group-details-year></dd>
+            <dt>Active</dt>
+            <dd data-group-details-active></dd>
+          </dl>
+          <h3>Students</h3>
+          <p data-group-students-empty hidden>No students yet.</p>
+          <ul data-group-students></ul>
+        </div>
+        <button type="button" data-group-details-edit>Edit Group</button>
+        <button type="button" data-group-details-close>Close</button>
+      </dialog>
+
+      <dialog data-course-dialog aria-labelledby="course-form-heading">
+        <form data-course-form>
+          <h2 id="course-form-heading" data-course-form-title>Course</h2>
+
+          <label for="course-name">Course name</label>
+          <input id="course-name" name="name" type="text" required>
+
+          <label for="course-level">Level</label>
+          <input id="course-level" name="level" type="text">
+
+          <label for="course-active">
+            <input id="course-active" name="active" type="checkbox">
+            Active
+          </label>
+
+          <p data-course-form-message role="status" aria-live="polite"></p>
+          <button type="submit" data-course-save>Save Course</button>
+          <button type="button" data-course-delete hidden>Delete Course</button>
+          <button type="button" data-course-dialog-close>Cancel</button>
+        </form>
+      </dialog>
+
+      <dialog data-course-details-dialog aria-labelledby="course-details-heading">
+        <h2 id="course-details-heading" data-course-details-name>Course details</h2>
+        <p data-course-details-state role="status" aria-live="polite"></p>
+        <p data-course-details-message role="status" aria-live="polite"></p>
+        <div data-course-details-content hidden>
+          <dl>
+            <dt>Level</dt>
+            <dd data-course-details-level></dd>
+            <dt>Active</dt>
+            <dd data-course-details-active></dd>
+          </dl>
+          <button type="button" data-course-details-add-unit>+ Add Unit</button>
+          <h3>Units</h3>
+          <p data-course-units-empty hidden>No units yet.</p>
+          <ul data-course-units></ul>
+        </div>
+        <button type="button" data-course-details-edit>Edit Course</button>
+        <button type="button" data-course-details-close>Close</button>
+      </dialog>
+
+      <dialog data-unit-dialog aria-labelledby="unit-form-heading">
+        <form data-unit-form>
+          <h2 id="unit-form-heading" data-unit-form-title>Unit</h2>
+          <p>Course: <output data-unit-course-name></output></p>
+
+          <label for="unit-number">Unit number</label>
+          <input id="unit-number" name="number" type="number" min="1" step="1" required>
+
+          <label for="unit-title">Unit title</label>
+          <input id="unit-title" name="title" type="text" required>
+
+          <label for="unit-order">Order</label>
+          <input id="unit-order" name="order" type="number" min="1" step="1" required>
+
+          <label for="unit-active">
+            <input id="unit-active" name="active" type="checkbox">
+            Active
+          </label>
+
+          <p data-unit-form-message role="status" aria-live="polite"></p>
+          <button type="submit" data-unit-save>Save Unit</button>
+          <button type="button" data-unit-dialog-close>Cancel</button>
+        </form>
+      </dialog>
+    </main>
+
+    <p data-page-status role="status" aria-live="polite">Проверка доступа…</p>
+    <script type="module" src="./js/pages/admin-page.js"></script>
+  </body>
+</html>
