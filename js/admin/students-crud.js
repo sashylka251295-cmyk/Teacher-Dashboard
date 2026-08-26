@@ -66,7 +66,7 @@ function syncPreview() {
     ? color
     : "#4f46e5";
   elements.previewGroup.textContent = selectedLabel(elements.group, "Individual");
-  elements.previewCourse.textContent = selectedLabel(elements.course, "Select course");
+  elements.previewCourse.textContent = selectedLabel(elements.course, "Independent learning");
   elements.previewStatus.textContent = field(elements.form, "status").selectedOptions[0]?.textContent ?? "Active";
   elements.previewTheme.textContent = elements.visualTheme.selectedOptions[0]?.textContent ?? "Adult";
 }
@@ -94,7 +94,7 @@ async function createCourseForStudent() {
       active: elements.newCourseActive.checked,
     });
     availableCourses = [...availableCourses, course];
-    populateDocumentSelect(elements.course, availableCourses, "Select course");
+    populateDocumentSelect(elements.course, availableCourses, "Independent — no course");
     elements.course.value = course.id;
     setCourseCreatorOpen(false);
     syncPreview();
@@ -144,7 +144,7 @@ async function openForm(studentId = null, initialValues = {}) {
     availableGroups = groups;
     availableCourses = courses;
     populateDocumentSelect(elements.group, groups, "Individual — no group");
-    populateDocumentSelect(elements.course, courses, "Select course");
+    populateDocumentSelect(elements.course, courses, "Independent — no course");
 
     if (studentId && !student) {
       setMessage(elements.message, "Student not found.");
@@ -197,7 +197,7 @@ async function saveStudent(event) {
     setMessage(elements.message, "Student name is required.");
     return;
   }
-  if (!course) {
+  if (courseId && !course) {
     setMessage(elements.message, "Select a course.");
     return;
   }

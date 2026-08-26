@@ -21,11 +21,17 @@ import {
   createJourneySnapshot,
   currentPhysicalUnit,
 } from "../domain/physical-progress.js";
+import { INDEPENDENT_PROGRESS_SCOPE } from "../domain/independent-learning.js";
 import { isGoalStatus, isNonEmptyText } from "../domain/validation.js";
 
 let context = null;
 let elements = null;
 let initialized = false;
+let independentObjectives = [];
+
+function isIndependentMode() {
+  return elements?.mode?.value === INDEPENDENT_PROGRESS_SCOPE;
+}
 
 function unitName(unit) {
   if (typeof unit?.title === "string" && unit.title.trim()) return unit.title;
@@ -41,6 +47,7 @@ function currentLesson() {
 }
 
 function currentLessonObjectives() {
+  if (isIndependentMode()) return independentObjectives;
   const lesson = currentLesson();
   return lesson ? learningObjectivesForLesson(currentUnit(), lesson) : [];
 }
@@ -117,6 +124,24 @@ function createObjectiveRow(objective, progressMap) {
   return row;
 }
 
+function objectiveRowState() {
+  return new Map([...elements.objectives.querySelectorAll("[data-assess-objective]")].map((checkbox) => {
+    const select = checkbox.closest(".quick-objective-row").querySelector("[data-objective-status]");
+    return [checkbox.dataset.assessObjective, { checked: checkbox.checked, status: select.value }];
+  }));
+}
+
+function restoreObjectiveRowState(state) {
+  state.forEach(({ checked, status }, objectiveId) => {
+    const checkbox = elements.objectives.querySelector(`[data-assess-objective="${objectiveId}"]`);
+    if (!checkbox) return;
+    const select = checkbox.closest(".quick-objective-row").querySelector("[data-objective-status]");
+    checkbox.checked = checked;
+    select.disabled = !checked;
+    select.value = status;
+  });
+}
+
 function renderObjectives() {
   const objectives = currentLessonObjectives();
   const progressMap = progressByObjective(context.objectiveProgress);
@@ -151,7 +176,9 @@ function createHomeworkRow(homework) {
 }
 
 function renderHomework() {
-  const assignments = context.homeworkAssignments.filter((item) => item.unitId === elements.unit.value);
+  const assignments = context.homeworkAssignments.filter((item) => isIndependentMode()
+    ? item.scope === INDEPENDENT_PROGRESS_SCOPE || !item.unitId
+    : item.unitId === elements.unit.value);
   elements.existingHomework.replaceChildren();
   if (assignments.length > 0) {
     const heading = document.createElement("h4");
@@ -179,10 +206,30 @@ function renderObservationTargets() {
 }
 
 function renderUnitFields() {
-  populateLessons();
+  if (isIndependentMode()) {
+    elements.lesson.replaceChildren(createOption("", "Not needed for an independent update"));
+    elements.lesson.disabled = true;
+    elements.completeLesson.checked = false;
+    elements.completeLesson.disabled = true;
+  } else {
+    populateLessons();
+    elements.completeLesson.disabled = false;
+  }
   renderObjectives();
+  elements.objectivesEmpty.textContent = isIndependentMode()
+    ? "Add one or more learning objectives for this lesson."
+    : "This lesson has no learning objectives yet.";
   renderHomework();
   renderObservationTargets();
+}
+
+function renderUpdateMode() {
+  const independent = isIndependentMode();
+  elements.courseContext.forEach((element) => { element.hidden = independent; });
+  elements.unit.required = !independent;
+  elements.lesson.required = !independent;
+  elements.unit.disabled = independent || context.units.length === 0;
+  renderUnitFields();
 }
 
 function populateGoalEditor() {
@@ -223,9 +270,13 @@ function openDialog() {
   elements.objectiveCreator.hidden = true;
   elements.objectiveTitle.value = "";
   elements.objectiveMessage.textContent = "";
+  independentObjectives = [];
   setMessage("");
   populateUnits();
-  renderUnitFields();
+  const courseModeAvailable = Boolean(context.student.courseId) && context.units.length > 0;
+  elements.mode.querySelector('option[value="course"]').disabled = !courseModeAvailable;
+  elements.mode.value = courseModeAvailable ? "course" : INDEPENDENT_PROGRESS_SCOPE;
+  renderUpdateMode();
   populateGoalEditor();
   if (typeof elements.dialog.showModal === "function") elements.dialog.showModal();
   else elements.dialog.setAttribute("open", "");
@@ -251,6 +302,7 @@ function collectObjectiveUpdate() {
   });
   const objectiveChanges = workedOnObjectives.filter(({ selectedStatus }) => selectedStatus).map((objective) => ({
     objectiveId: objective.id,
+    title: objective.title,
     category: objective.category,
     previousStatus: progressMap.get(objective.id)?.status ?? "not_assessed",
     status: objective.selectedStatus,
@@ -310,8 +362,41 @@ function collectObservation(objectiveChanges) {
 }
 
 async function addInlineObjective() {
+  if (isIndependentMode()) {
+    const previousRows = objectiveRowState();
+    const title = elements.objectiveTitle.value.trim();
+    const category = elements.objectiveSkill.value;
+    if (!isNonEmptyText(title)) {
+      elements.objectiveMessage.textContent = "Enter an objective title.";
+      return;
+    }
+    if (!LANGUAGE_SKILL_CATEGORIES.includes(category)) {
+      elements.objectiveMessage.textContent = "Select a valid skill area.";
+      return;
+    }
+    const objective = {
+      id: globalThis.crypto?.randomUUID?.() ?? `independent-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      title,
+      category,
+      categories: [category],
+    };
+    independentObjectives.push(objective);
+    elements.objectiveTitle.value = "";
+    elements.objectiveCreator.hidden = true;
+    renderObjectives();
+    restoreObjectiveRowState(previousRows);
+    renderObservationTargets();
+    const checkbox = elements.objectives.querySelector(`[data-assess-objective="${objective.id}"]`);
+    if (checkbox) {
+      checkbox.checked = true;
+      checkbox.closest(".quick-objective-row").querySelector("select").disabled = false;
+    }
+    elements.objectiveMessage.textContent = "";
+    return;
+  }
   const unit = currentUnit();
   const lesson = currentLesson();
+  const previousRows = objectiveRowState();
   elements.objectiveAdd.disabled = true;
   elements.objectiveMessage.textContent = "Saving objective…";
   try {
@@ -327,6 +412,7 @@ async function addInlineObjective() {
     elements.objectiveTitle.value = "";
     elements.objectiveCreator.hidden = true;
     renderObjectives();
+    restoreObjectiveRowState(previousRows);
     renderObservationTargets();
     const checkbox = elements.objectives.querySelector(`[data-assess-objective="${result.objective.id}"]`);
     if (checkbox) {
@@ -352,11 +438,12 @@ async function saveGoal(operation) {
 
 async function handleSubmit(event) {
   event.preventDefault();
+  const independent = isIndependentMode();
   const unit = currentUnit();
   const lesson = currentLesson();
   const lessonDate = dateFromInput(elements.lessonDate.value);
-  if (!unit) return setMessage("Select a unit before saving.");
-  if (!lesson) return setMessage("Select a lesson before saving.");
+  if (!independent && !unit) return setMessage("Select a unit before saving.");
+  if (!independent && !lesson) return setMessage("Select a lesson before saving.");
   if (!lessonDate) return setMessage("Select a valid lesson date.");
   let objectiveChanges;
   let workedOnObjectives;
@@ -371,7 +458,17 @@ async function handleSubmit(event) {
   } catch (error) {
     return setMessage(error.message);
   }
-  const physicalJourney = createJourneySnapshot({
+  if (
+    independent
+    && workedOnObjectives.length === 0
+    && !homework.create
+    && homework.changes.length === 0
+    && !goalOperation
+    && !observation
+  ) {
+    return setMessage("Add and select at least one learning objective before saving.");
+  }
+  const physicalJourney = independent ? null : createJourneySnapshot({
     courseId: context.student.courseId,
     unit,
     lessons: context.lessons,
@@ -385,17 +482,18 @@ async function handleSubmit(event) {
   try {
     await saveLearningUpdate({
       studentId: context.student.id,
-      courseId: context.student.courseId,
-      unitId: unit.id,
+      courseId: independent ? "" : context.student.courseId,
+      unitId: independent ? "" : unit.id,
       groupId: context.group?.id ?? "",
-      lessonId: lesson.id,
+      lessonId: independent ? "" : lesson.id,
+      scope: independent ? INDEPENDENT_PROGRESS_SCOPE : "course",
       objectiveChanges,
       homeworkToCreate: homework.create,
       homeworkChanges: homework.changes,
       lessonDate,
       observation: observation?.text ?? "",
       physicalJourney,
-      physicalChange: {
+      physicalChange: independent ? null : {
         completeLesson: elements.completeLesson.checked,
         previousLessonCompleted: context.student.courseJourney?.unitId === unit.id
           && Array.isArray(context.student.courseJourney.completedLessonIds)
@@ -408,9 +506,10 @@ async function handleSubmit(event) {
       await teacherNotesRepository.createWithDate({
         studentId: context.student.id,
         groupId: context.group?.id ?? "",
-        courseId: context.student.courseId,
-        unitId: unit.id,
-        lessonId: lesson.id,
+        courseId: independent ? "" : context.student.courseId,
+        unitId: independent ? "" : unit.id,
+        lessonId: independent ? "" : lesson.id,
+        scope: independent ? INDEPENDENT_PROGRESS_SCOPE : "course",
         skillCategory: observation.skillCategory,
         learningTargetId: observation.learningTargetId,
         learningTargetTitle: observation.learningTargetTitle,
@@ -423,9 +522,9 @@ async function handleSubmit(event) {
     if (observation && elements.feedbackVisibility.value === "published") {
       await feedbackVersionsRepository.publishQuick({
         studentId: context.student.id,
-        courseId: context.student.courseId,
-        unitId: unit.id,
-        lessonId: lesson.id,
+        courseId: independent ? "" : context.student.courseId,
+        unitId: independent ? "" : unit.id,
+        lessonId: independent ? "" : lesson.id,
         text: observation.text,
       });
     }
@@ -453,6 +552,8 @@ function initialize() {
     message: dialog.querySelector("[data-quick-update-message]"),
     studentName: dialog.querySelector("[data-quick-student-name]"),
     lessonDate: form.elements.lessonDate,
+    mode: dialog.querySelector("[data-quick-update-mode]"),
+    courseContext: [...dialog.querySelectorAll("[data-quick-course-context]")],
     unit: dialog.querySelector("[data-quick-unit]"),
     lesson: dialog.querySelector("[data-quick-lesson]"),
     completeLesson: dialog.querySelector("[data-quick-complete-lesson]"),
@@ -486,6 +587,7 @@ function initialize() {
   openButton.addEventListener("click", openDialog);
   elements.closeButton.addEventListener("click", closeDialog);
   elements.unit.addEventListener("change", renderUnitFields);
+  elements.mode.addEventListener("change", renderUpdateMode);
   elements.lesson.addEventListener("change", () => {
     renderObjectives();
     renderObservationTargets();

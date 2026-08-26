@@ -18,12 +18,15 @@ import {
   OBJECTIVE_STATUS_LABELS,
 } from "../domain/constants.js";
 import {
+  aggregateObjectiveStatus,
   learningObjectivesForUnit,
+  objectiveStatusValue,
   overallObjectiveStatus,
   progressByObjective,
   strongestObjectiveCategory,
   unitObjectiveStatus,
 } from "../domain/learning-objectives.js";
+import { isIndependentProgressEntry } from "../domain/independent-learning.js";
 import { configureQuickUpdate } from "./quick-update.js";
 import { configureFeedbackWorkflow } from "./feedback-workflow.js";
 import { configureProgressUpdateEditor } from "./progress-update-editor.js";
@@ -147,22 +150,70 @@ function createUnitObjectives(unit, objectiveProgress, homeworkAssignments) {
   return card;
 }
 
+function createIndependentObjectives(objectiveProgress, homeworkAssignments) {
+  const card = document.createElement("details");
+  const summary = document.createElement("summary");
+  const title = document.createElement("strong");
+  title.textContent = "Independent learning";
+  summary.append(title, statusBadge(aggregateObjectiveStatus(objectiveProgress), OBJECTIVE_STATUS_LABELS, true));
+  card.className = "unit-objectives-card";
+  card.open = true;
+  card.append(summary);
+  LANGUAGE_SKILL_CATEGORIES.forEach((category) => {
+    const documents = objectiveProgress.filter((item) => item.category === category);
+    if (!documents.length) return;
+    const section = document.createElement("section");
+    const heading = document.createElement("h4");
+    const list = document.createElement("ul");
+    heading.textContent = LANGUAGE_SKILL_LABELS[category];
+    documents.forEach((document) => {
+      const item = document.createElement("li");
+      const objectiveTitle = document.createElement("span");
+      objectiveTitle.textContent = document.objectiveTitle || "Learning objective";
+      item.append(objectiveTitle, statusBadge(document.status ?? "not_assessed"));
+      list.append(item);
+    });
+    section.append(heading, list);
+    card.append(section);
+  });
+  card.append(createHomeworkBlock(homeworkAssignments.filter((item) =>
+    item.scope === "independent" || !item.unitId)));
+  return card;
+}
+
 function renderLearningObjectives(root, units, objectiveProgress, homeworkAssignments) {
   const state = select(root, "[data-progress-state]");
   const container = select(root, "[data-progress-matrix]");
+  const independentProgress = objectiveProgress.filter(isIndependentProgressEntry);
   container.replaceChildren();
-  if (units.length === 0) {
-    state.textContent = "No units yet.";
+  if (units.length === 0 && independentProgress.length === 0) {
+    state.textContent = "No learning updates yet.";
     state.hidden = false;
     return;
   }
   state.hidden = true;
   container.append(...units.map((unit) => createUnitObjectives(unit, objectiveProgress, homeworkAssignments)));
+  if (independentProgress.length) {
+    container.append(createIndependentObjectives(independentProgress, homeworkAssignments));
+  }
 }
 
 function renderSummary(root, units, objectiveProgress) {
-  const overall = overallObjectiveStatus(objectiveProgress, units);
-  const strongest = strongestObjectiveCategory(units, objectiveProgress);
+  const independentProgress = objectiveProgress.filter(isIndependentProgressEntry);
+  const overall = units.length
+    ? overallObjectiveStatus(objectiveProgress, units)
+    : aggregateObjectiveStatus(independentProgress);
+  const strongest = units.length
+    ? strongestObjectiveCategory(units, objectiveProgress)
+    : LANGUAGE_SKILL_CATEGORIES.map((category) => {
+      const documents = independentProgress.filter((item) => item.category === category);
+      const values = documents.map(({ status }) => objectiveStatusValue(status)).filter((value) => value !== null);
+      return values.length ? {
+        category,
+        status: aggregateObjectiveStatus(documents),
+        average: values.reduce((sum, value) => sum + value, 0) / values.length,
+      } : null;
+    }).filter(Boolean).sort((first, second) => second.average - first.average)[0] ?? null;
   setText(root, "[data-profile-overall-progress]", overall === "not_assessed" ? "—" : OBJECTIVE_STATUS_LABELS[overall]);
   setText(root, "[data-profile-strongest-area]", strongest ? `${LANGUAGE_SKILL_LABELS[strongest.category]} — ${OBJECTIVE_STATUS_LABELS[strongest.status]}` : "—");
 }
@@ -215,7 +266,9 @@ function createObservation(note, unitNames, courseName) {
   top.append(skill, date);
 
   breadcrumb.className = "observation-card__breadcrumb";
-  breadcrumb.textContent = `${courseName} › Unit: ${unitNames.get(note.unitId) ?? "Unknown unit"}`;
+  breadcrumb.textContent = isIndependentProgressEntry(note)
+    ? "Independent learning"
+    : `${courseName} › Unit: ${unitNames.get(note.unitId) ?? "Unknown unit"}`;
   title.className = "observation-card__target";
   title.textContent = note.learningTargetTitle || "Observation without a linked learning target";
   item.append(top, breadcrumb, title);
@@ -303,7 +356,10 @@ function renderAssessmentHistory(root, history, units) {
     const date = formatDate(entry.lessonDate ?? entry.createdAt);
     const changes = document.createElement("ul");
     top.className = "assessment-history__top";
-    heading.textContent = [unitNames.get(entry.unitId) ?? "Unknown unit", date].filter(Boolean).join(" — ");
+    heading.textContent = [
+      isIndependentProgressEntry(entry) ? "Independent update" : unitNames.get(entry.unitId) ?? "Unknown unit",
+      date,
+    ].filter(Boolean).join(" — ");
     edit.type = "button";
     edit.dataset.editProgressUpdate = entry.id;
     edit.textContent = "Edit progress";
@@ -311,7 +367,7 @@ function renderAssessmentHistory(root, history, units) {
     (Array.isArray(entry.changes) ? entry.changes : []).forEach((change) => {
       const changeItem = document.createElement("li");
       const objective = objectives.get(change.objectiveId);
-      const label = objective?.title ?? LANGUAGE_SKILL_LABELS[change.category] ?? "Learning objective";
+       const label = objective?.title ?? change.title ?? LANGUAGE_SKILL_LABELS[change.category] ?? "Learning objective";
       changeItem.textContent = `${label}: ${OBJECTIVE_STATUS_LABELS[change.previousStatus] ?? "Not assessed"} → ${OBJECTIVE_STATUS_LABELS[change.status] ?? "Not assessed"}`;
       changes.append(changeItem);
     });
@@ -354,7 +410,7 @@ function renderProfile(root, data, onQuickUpdateSaved) {
   else root.style.removeProperty("--student-color");
   setText(root, "[data-profile-name]", displayValue(student.name));
   setText(root, "[data-profile-group]", student.groupId ? relatedName(group, "Unknown group") : "Individual");
-  setText(root, "[data-profile-course]", relatedName(course, "Unknown course"));
+  setText(root, "[data-profile-course]", student.courseId ? relatedName(course, "Unknown course") : "Independent learning");
   setText(root, "[data-profile-status]", displayValue(student.status ?? student.active));
   select(root, "[data-profile-edit-student]").dataset.editStudent = student.id;
   renderLearningObjectives(root, units, objectiveProgress, homeworkAssignments);

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Teacher Dashboard — Student Progress Tracker</title>
     <link rel="stylesheet" href="./css/styles.css?v=20260825-journey-progress">
-    <link rel="stylesheet" href="./css/admin.css?v=20260826-group-summary">
+    <link rel="stylesheet" href="./css/admin.css?v=20260826-independent-update">
   </head>
   <body>
     <main class="teacher-shell" data-protected-content hidden>
@@ -354,16 +354,30 @@
               <output data-quick-student-name></output>
             </p>
 
-            <label for="quick-lesson-date">Lesson date</label>
-            <input id="quick-lesson-date" name="lessonDate" type="date" required>
+            <label class="quick-update-context-field" for="quick-lesson-date">
+              <span>Lesson date</span>
+              <input id="quick-lesson-date" name="lessonDate" type="date" required>
+            </label>
 
-            <label for="quick-unit">Unit</label>
-            <select id="quick-unit" name="unitId" data-quick-unit required></select>
+            <label class="quick-update-context-field" for="quick-update-mode">
+              <span>Update type</span>
+              <select id="quick-update-mode" data-quick-update-mode>
+                <option value="course">Course lesson</option>
+                <option value="independent">Independent update — no course</option>
+              </select>
+            </label>
 
-            <label for="quick-lesson">Lesson</label>
-            <select id="quick-lesson" name="lessonId" data-quick-lesson required></select>
+            <label class="quick-update-context-field" for="quick-unit" data-quick-course-context>
+              <span>Unit</span>
+              <select id="quick-unit" name="unitId" data-quick-unit></select>
+            </label>
 
-            <label class="toggle-field" for="quick-complete-lesson">
+            <label class="quick-update-context-field" for="quick-lesson" data-quick-course-context>
+              <span>Lesson</span>
+              <select id="quick-lesson" name="lessonId" data-quick-lesson></select>
+            </label>
+
+            <label class="toggle-field" for="quick-complete-lesson" data-quick-course-context>
               <input id="quick-complete-lesson" name="completeLesson" type="checkbox" data-quick-complete-lesson checked>
               Mark this lesson completed
             </label>
@@ -494,7 +508,7 @@
             <label for="progress-update-date">Lesson date</label>
             <input id="progress-update-date" name="progressUpdateDate" type="date" required>
 
-            <label class="toggle-field" for="progress-update-complete">
+            <label class="toggle-field" for="progress-update-complete" data-progress-update-complete-row>
               <input id="progress-update-complete" type="checkbox" data-progress-update-complete>
               Mark this lesson completed
             </label>
@@ -547,8 +561,8 @@
               <div class="editor-form__field-row">
                 <label for="student-group"><span>Group <small>(optional)</small></span><select id="student-group" name="groupId" data-student-group></select></label>
                 <div class="student-course-field">
-                  <span class="field-label-with-action"><label for="student-course">Course</label><button type="button" data-student-course-create-toggle aria-expanded="false">+ Create course</button></span>
-                  <select id="student-course" name="courseId" data-student-course required></select>
+                  <span class="field-label-with-action"><label for="student-course">Course (optional)</label><button type="button" data-student-course-create-toggle aria-expanded="false">+ Create course</button></span>
+                  <select id="student-course" name="courseId" data-student-course></select>
                   <small class="student-course-inherited" data-student-course-hint hidden>Inherited from the selected group.</small>
                 </div>
               </div>
@@ -1037,6 +1051,6 @@
     </main>
 
     <p data-page-status role="status" aria-live="polite">Проверка доступа…</p>
-    <script type="module" src="./js/pages/admin-page.js?v=20260825-journey-progress"></script>
+    <script type="module" src="./js/pages/admin-page.js?v=20260826-independent-update"></script>
   </body>
 </html>

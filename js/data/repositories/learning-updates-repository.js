@@ -7,10 +7,14 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
 import { getFirestoreClient } from "../../core/firebase-client.js";
+import {
+  INDEPENDENT_PROGRESS_SCOPE,
+  progressScopeKey,
+} from "../../domain/independent-learning.js";
 import { COLLECTIONS } from "../collection-names.js";
 
-function progressDocumentId(studentId, unitId, objectiveId) {
-  return [studentId, unitId, objectiveId].map(encodeURIComponent).join("__");
+function progressDocumentId(studentId, unitId, objectiveId, scope = "") {
+  return [studentId, progressScopeKey(unitId, scope), objectiveId].map(encodeURIComponent).join("__");
 }
 
 export async function saveLearningUpdate({
@@ -27,6 +31,7 @@ export async function saveLearningUpdate({
   physicalJourney = null,
   physicalChange = null,
   workedOnObjectives = [],
+  scope = "course",
 }) {
   const firestore = getFirestoreClient();
   const batch = writeBatch(firestore);
@@ -36,7 +41,7 @@ export async function saveLearningUpdate({
     const progressRef = doc(
       firestore,
       COLLECTIONS.OBJECTIVE_PROGRESS,
-      progressDocumentId(studentId, unitId, change.objectiveId),
+      progressDocumentId(studentId, unitId, change.objectiveId, scope),
     );
     batch.set(
       progressRef,
@@ -45,8 +50,10 @@ export async function saveLearningUpdate({
         courseId,
         unitId,
         objectiveId: change.objectiveId,
+        objectiveTitle: change.title ?? "",
         category: change.category,
         status: change.status,
+        scope,
         updatedAt,
       },
       { merge: true },
@@ -63,10 +70,12 @@ export async function saveLearningUpdate({
       unitId,
       groupId,
       lessonId,
+      scope,
       lessonDate: Timestamp.fromDate(lessonDate),
-      changes: objectiveChanges.map(({ objectiveId, category, previousStatus, status }) => ({
+      changes: objectiveChanges.map(({ objectiveId, title, category, previousStatus, status }) => ({
         objectiveId,
         category,
+        title: title ?? "",
         previousStatus: previousStatus ?? "not_assessed",
         status,
       })),
@@ -99,6 +108,19 @@ export async function saveLearningUpdate({
         updatedAt,
       },
     }, { merge: true });
+  } else if (scope === INDEPENDENT_PROGRESS_SCOPE && workedOnObjectives.length > 0) {
+    const studentRef = doc(firestore, COLLECTIONS.STUDENTS, studentId);
+    batch.set(studentRef, {
+      independentLearning: {
+        currentLearningTargets: workedOnObjectives.map(({ id, objectiveId, title, category }) => ({
+          id: objectiveId ?? id,
+          title,
+          category,
+          categories: [category],
+        })),
+        updatedAt,
+      },
+    }, { merge: true });
   }
 
   if (homeworkToCreate) {
@@ -107,6 +129,7 @@ export async function saveLearningUpdate({
       studentId,
       courseId,
       unitId,
+      scope,
       title: homeworkToCreate.title,
       status: homeworkToCreate.status,
       lessonDate: Timestamp.fromDate(lessonDate),

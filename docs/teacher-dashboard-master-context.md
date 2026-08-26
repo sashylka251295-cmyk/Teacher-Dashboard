@@ -820,3 +820,18 @@ Examples:
 - AI search architecture is selected.
 
 The goal is that **any new chat or AI coding session can recover the project accurately from this single file without relying on memory of previous conversations.**
+
+---
+
+## 37. Independent learning without a course
+
+An individual student may have no `courseId`. In that case the interface uses the label **Independent learning** rather than `Unknown course`.
+
+Student Quick Update supports two scopes:
+
+- `course`: the existing Course → Unit → Lesson workflow, including optional physical lesson completion;
+- `independent`: date plus teacher-created learning objectives, with optional statuses, homework, observation, feedback and goal changes.
+
+Independent updates do not create placeholder curriculum documents and do not affect Course Journey percentages. They are stored in progress history with `scope: "independent"`, can be edited or deleted, and publish only a safe current-target snapshot to the student document. Raw observations remain teacher-only.
+
+See `docs/independent-learning-updates-spec.md`.

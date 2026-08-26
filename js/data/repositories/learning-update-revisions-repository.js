@@ -6,6 +6,11 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
 import { getFirestoreClient } from "../../core/firebase-client.js";
+import {
+  independentLearningTargets,
+  isIndependentProgressEntry,
+  progressScopeKey,
+} from "../../domain/independent-learning.js";
 import { learningObjectivesForUnit } from "../../domain/learning-objectives.js";
 import { createJourneySnapshot } from "../../domain/physical-progress.js";
 import {
@@ -15,8 +20,8 @@ import {
 } from "../../domain/progress-revisions.js";
 import { COLLECTIONS } from "../collection-names.js";
 
-function progressDocumentId(studentId, unitId, objectiveId) {
-  return [studentId, unitId, objectiveId].map(encodeURIComponent).join("__");
+function progressDocumentId(studentId, unitId, objectiveId, scope = "") {
+  return [studentId, progressScopeKey(unitId, scope), objectiveId].map(encodeURIComponent).join("__");
 }
 
 function replacementEntry(entry, history, { objectiveChanges, workedOnObjectives, lessonDate, completeLesson }) {
@@ -24,6 +29,10 @@ function replacementEntry(entry, history, { objectiveChanges, workedOnObjectives
   const originalChanges = new Map(
     (Array.isArray(entry.changes) ? entry.changes : []).map((change) => [change.objectiveId, change]),
   );
+  const objectiveTitles = new Map([
+    ...(Array.isArray(entry.workedOnObjectives) ? entry.workedOnObjectives : []),
+    ...workedOnObjectives,
+  ].map(({ objectiveId, id, title }) => [objectiveId ?? id, title ?? ""]));
   return {
     ...entry,
     lessonDate: Timestamp.fromDate(lessonDate),
@@ -33,6 +42,7 @@ function replacementEntry(entry, history, { objectiveChanges, workedOnObjectives
       : false,
     changes: objectiveChanges.map((change) => ({
       objectiveId: change.objectiveId,
+      title: change.title ?? originalChanges.get(change.objectiveId)?.title ?? objectiveTitles.get(change.objectiveId) ?? "",
       category: change.category,
       previousStatus: previousStatuses.get(change.objectiveId)
         ?? originalChanges.get(change.objectiveId)?.previousStatus
@@ -70,7 +80,8 @@ export async function reviseLearningUpdate({
   if (!entry?.id || !student?.id || entry.studentId !== student.id) {
     throw new Error("A valid student progress update is required.");
   }
-  if (!unit || unit.id !== entry.unitId) throw new Error("The update unit is unavailable.");
+  const independent = isIndependentProgressEntry(entry);
+  if (!independent && (!unit || unit.id !== entry.unitId)) throw new Error("The update unit is unavailable.");
   if (!validDate(lessonDate)) throw new Error("Select a valid lesson date.");
 
   const firestore = getFirestoreClient();
@@ -92,7 +103,7 @@ export async function reviseLearningUpdate({
     const progressRef = doc(
       firestore,
       COLLECTIONS.OBJECTIVE_PROGRESS,
-      progressDocumentId(student.id, unit.id, objectiveId),
+      progressDocumentId(student.id, entry.unitId, objectiveId, entry.scope),
     );
     const latest = latestObjectiveChange(revisedHistory, student.id, unit.id, objectiveId);
     const fallback = originalChanges.get(objectiveId);
@@ -104,16 +115,18 @@ export async function reviseLearningUpdate({
     batch.set(progressRef, {
       studentId: student.id,
       courseId: latest?.entry.courseId ?? entry.courseId,
-      unitId: unit.id,
+      unitId: entry.unitId ?? "",
       objectiveId,
+      objectiveTitle: latest?.change.title ?? fallback?.title ?? "",
       category: latest?.change.category ?? fallback?.category ?? "",
       status,
+      scope: entry.scope ?? (independent ? "independent" : "course"),
       updatedAt,
     }, { merge: true });
   });
 
   const lesson = lessons.find(({ id }) => id === entry.lessonId);
-  if (lesson && student.courseJourney?.unitId === unit.id) {
+  if (!independent && lesson && student.courseJourney?.unitId === unit.id) {
     const latestCompletion = latestLessonCompletion(
       revisedHistory,
       student.id,
@@ -156,6 +169,24 @@ export async function reviseLearningUpdate({
             id: objectiveId, title, category, categories: [category],
           }),
         ),
+        updatedAt,
+      },
+    }, { merge: true });
+  }
+
+  if (independent) {
+    const latestIndependentUpdate = [...revisedHistory]
+      .filter((item) => item.studentId === student.id && isIndependentProgressEntry(item))
+      .sort((first, second) => {
+        const firstDate = first.lessonDate?.toMillis?.() ?? first.lessonDate?.getTime?.() ?? 0;
+        const secondDate = second.lessonDate?.toMillis?.() ?? second.lessonDate?.getTime?.() ?? 0;
+        return secondDate - firstDate;
+      })[0] ?? null;
+    batch.set(doc(firestore, COLLECTIONS.STUDENTS, student.id), {
+      independentLearning: {
+        currentLearningTargets: latestIndependentUpdate
+          ? independentLearningTargets(latestIndependentUpdate)
+          : [],
         updatedAt,
       },
     }, { merge: true });

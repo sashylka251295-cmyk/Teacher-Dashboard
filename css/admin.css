@@ -6188,3 +6188,33 @@ th[data-skill="homework"]::before { background-image: url("../assets/images/skil
     min-height: 3.5rem;
   }
 }
+
+/* Independent updates use the same compact lesson-update workspace. */
+.quick-update-dialog form {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.quick-update-context-field {
+  display: grid;
+  align-content: start;
+  gap: 0.28rem;
+  min-width: 0;
+}
+
+.quick-update-context-field > span {
+  color: var(--color-ink-soft);
+  font-size: 0.75rem;
+  font-weight: 750;
+}
+
+@media (max-width: 64rem) {
+  .quick-update-dialog form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 44rem) {
+  .quick-update-dialog form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

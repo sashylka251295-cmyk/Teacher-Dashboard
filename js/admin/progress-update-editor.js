@@ -8,6 +8,7 @@ import {
   learningObjectivesForLesson,
   learningObjectivesForUnit,
 } from "../domain/learning-objectives.js";
+import { isIndependentProgressEntry } from "../domain/independent-learning.js";
 
 let context = null;
 let currentEntry = null;
@@ -59,7 +60,7 @@ function objectivesForEntry(entry, unit, lesson) {
     if (!byId.has(change.objectiveId)) {
       byId.set(change.objectiveId, {
         id: change.objectiveId,
-        title: LANGUAGE_SKILL_LABELS[change.category] ?? "Archived learning target",
+        title: change.title || LANGUAGE_SKILL_LABELS[change.category] || "Archived learning target",
         category: change.category,
       });
     }
@@ -118,7 +119,8 @@ function openDialog(entryId) {
   if (!entry) return;
   const unit = context.units.find(({ id }) => id === entry.unitId);
   const lesson = context.lessons.find(({ id }) => id === entry.lessonId);
-  if (!unit) return;
+  const independent = isIndependentProgressEntry(entry);
+  if (!independent && !unit) return;
   currentEntry = entry;
   const changes = new Map(
     (Array.isArray(entry.changes) ? entry.changes : []).map((change) => [change.objectiveId, change]),
@@ -127,14 +129,19 @@ function openDialog(entryId) {
     (Array.isArray(entry.workedOnObjectives) ? entry.workedOnObjectives : [])
       .map((objective) => objective.objectiveId ?? objective.id),
   );
-  elements.context.textContent = `${unitName(unit)} › ${lessonName(lesson)}`;
+  elements.context.textContent = independent
+    ? "Independent learning — no course or lesson required"
+    : `${unitName(unit)} › ${lessonName(lesson)}`;
   elements.date.value = dateInputValue(entry.lessonDate ?? entry.createdAt);
-  elements.completeLesson.checked = typeof entry.completeLesson === "boolean"
-    ? entry.completeLesson
-    : context.student.courseJourney?.unitId === unit.id
-      && Array.isArray(context.student.courseJourney.completedLessonIds)
-      && context.student.courseJourney.completedLessonIds.includes(entry.lessonId);
-  elements.completeLesson.disabled = !lesson || context.student.courseJourney?.unitId !== unit.id;
+  elements.completeRow.hidden = independent;
+  elements.completeLesson.checked = independent
+    ? false
+    : typeof entry.completeLesson === "boolean"
+      ? entry.completeLesson
+      : context.student.courseJourney?.unitId === unit.id
+        && Array.isArray(context.student.courseJourney.completedLessonIds)
+        && context.student.courseJourney.completedLessonIds.includes(entry.lessonId);
+  elements.completeLesson.disabled = independent || !lesson || context.student.courseJourney?.unitId !== unit?.id;
   elements.objectives.replaceChildren(
     ...objectivesForEntry(entry, unit, lesson).map((objective) =>
       createObjectiveRow(objective, changes.get(objective.id), workedOnIds)),
@@ -244,6 +251,7 @@ function initialize() {
     context: dialog.querySelector("[data-progress-update-context]"),
     date: form.elements.progressUpdateDate,
     completeLesson: dialog.querySelector("[data-progress-update-complete]"),
+    completeRow: dialog.querySelector("[data-progress-update-complete-row]"),
     objectives: dialog.querySelector("[data-progress-update-objectives]"),
     message: dialog.querySelector("[data-progress-update-message]"),
     save: dialog.querySelector("[data-progress-update-save]"),

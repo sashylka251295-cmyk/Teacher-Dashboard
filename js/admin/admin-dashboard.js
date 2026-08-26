@@ -246,7 +246,7 @@ async function loadStudentsWithRelatedNames() {
       groupName: student.groupId
         ? resolveName(groupNames, student.groupId, "Unknown group")
         : "Individual",
-      courseName: resolveName(courseNames, courseId, "Unknown course"),
+      courseName: courseId ? resolveName(courseNames, courseId, "Unknown course") : "Independent learning",
     };
   });
 }

@@ -14,13 +14,16 @@ import {
   OBJECTIVE_STATUS_LABELS,
 } from "../domain/constants.js";
 import {
+  aggregateObjectiveStatus,
   categorySummaries,
   learningObjectivesForUnit,
+  objectiveStatusValue,
   overallObjectiveStatus,
   progressByObjective,
   strongestObjectiveCategory,
   unitObjectiveStatus,
 } from "../domain/learning-objectives.js";
+import { isIndependentProgressEntry } from "../domain/independent-learning.js";
 import { applyStudentTheme } from "./student-theme.js";
 import { currentPhysicalUnit } from "../domain/physical-progress.js";
 import { renderCourseJourneyMap } from "../ui/course-journey-map.js";
@@ -164,7 +167,21 @@ function renderCourseArt(root, course) {
 }
 
 function calculateSkillSummaries(units, progressDocuments) {
-  return categorySummaries(units, progressDocuments).map((summary) => ({
+  const summaries = units.length ? categorySummaries(units, progressDocuments) : LANGUAGE_SKILL_CATEGORIES.map((category) => {
+    const documents = progressDocuments.filter((item) =>
+      isIndependentProgressEntry(item) && item.category === category);
+    const assessed = documents.filter(({ status }) => objectiveStatusValue(status) !== null);
+    return {
+      category,
+      objectiveCount: documents.length,
+      assessedCount: assessed.length,
+      status: aggregateObjectiveStatus(documents),
+      average: assessed.length
+        ? assessed.reduce((sum, { status }) => sum + objectiveStatusValue(status), 0) / assessed.length
+        : null,
+    };
+  }).filter(({ objectiveCount }) => objectiveCount > 0);
+  return summaries.map((summary) => ({
     ...summary,
     skill: summary.category,
     label: LANGUAGE_SKILL_LABELS[summary.category],
@@ -231,13 +248,15 @@ function createDashboardLearningTarget(objective, status) {
   return row;
 }
 
-function renderDashboardLearning(root, unit, progressDocuments, journey) {
+function renderDashboardLearning(root, unit, progressDocuments, journey, independentLearning) {
   const container = select(root, "[data-dashboard-learning]");
   const empty = select(root, "[data-dashboard-learning-empty]");
   const currentStop = journey?.unitId === unit?.id && Array.isArray(journey?.lessonStops)
     ? journey.lessonStops.find(({ id }) => id === journey.currentLessonId)
     : null;
-  const objectives = Array.isArray(journey?.currentLearningTargets)
+  const objectives = !unit && Array.isArray(independentLearning?.currentLearningTargets)
+    ? independentLearning.currentLearningTargets.slice(0, 3)
+    : Array.isArray(journey?.currentLearningTargets)
     ? journey.currentLearningTargets.slice(0, 3)
     : Array.isArray(currentStop?.learningTargets) && currentStop.learningTargets.length
       ? currentStop.learningTargets.slice(0, 3)
@@ -514,17 +533,67 @@ function createUnitDetails(unit, progressDocuments, homeworkAssignments) {
   return card;
 }
 
+function createIndependentDetails(progressDocuments, homeworkAssignments) {
+  const card = document.createElement("details");
+  const summary = document.createElement("summary");
+  const title = document.createElement("strong");
+  title.textContent = "Independent learning";
+  summary.append(title, createStatusBadge(aggregateObjectiveStatus(progressDocuments), OBJECTIVE_STATUS_LABELS, true));
+  card.className = "student-objective-unit";
+  card.open = true;
+  card.append(summary);
+  LANGUAGE_SKILL_CATEGORIES.forEach((category) => {
+    const documents = progressDocuments.filter((item) => item.category === category);
+    if (!documents.length) return;
+    const section = document.createElement("section");
+    const heading = document.createElement("h4");
+    const list = document.createElement("ul");
+    heading.textContent = LANGUAGE_SKILL_LABELS[category];
+    documents.forEach((document) => {
+      const item = document.createElement("li");
+      const objectiveTitle = document.createElement("span");
+      objectiveTitle.textContent = document.objectiveTitle || "Learning objective";
+      item.append(objectiveTitle, createStatusBadge(document.status ?? "not_assessed"));
+      list.append(item);
+    });
+    section.append(heading, list);
+    card.append(section);
+  });
+  const independentHomework = homeworkAssignments.filter((item) =>
+    item.scope === "independent" || !item.unitId);
+  if (independentHomework.length) {
+    const section = document.createElement("section");
+    const heading = document.createElement("h4");
+    const list = document.createElement("ul");
+    heading.textContent = "Learning habits — Homework";
+    independentHomework.forEach((assignment) => {
+      const item = document.createElement("li");
+      const title = document.createElement("span");
+      title.textContent = assignment.title || "Homework";
+      item.append(title, createStatusBadge(assignment.status, HOMEWORK_STATUS_LABELS));
+      list.append(item);
+    });
+    section.append(heading, list);
+    card.append(section);
+  }
+  return card;
+}
+
 function renderProgressMatrix(root, units, progressDocuments, homeworkAssignments) {
   const container = select(root, "[data-student-progress-matrix]");
   const empty = select(root, "[data-student-progress-empty]");
   container.replaceChildren();
 
-  if (units.length === 0) {
+  const independentProgress = progressDocuments.filter(isIndependentProgressEntry);
+  if (units.length === 0 && independentProgress.length === 0) {
     container.hidden = true;
     empty.hidden = false;
     return;
   }
   container.append(...units.map((unit) => createUnitDetails(unit, progressDocuments, homeworkAssignments)));
+  if (independentProgress.length) {
+    container.append(createIndependentDetails(independentProgress, homeworkAssignments));
+  }
   container.hidden = false;
   empty.hidden = true;
 }
@@ -532,12 +601,19 @@ function renderProgressMatrix(root, units, progressDocuments, homeworkAssignment
 function renderStudent(root, data) {
   const { student, course, units, objectiveProgress, homeworkAssignments, goals, achievements, feedbackVersions } = data;
   const name = displayValue(student.name, "Student");
-  const courseName = displayValue(course?.name, "Course not available");
-  const overall = overallObjectiveStatus(objectiveProgress, units);
-  const strongest = strongestObjectiveCategory(units, objectiveProgress);
+  const courseName = displayValue(course?.name, "Independent learning");
+  const independentProgress = objectiveProgress.filter(isIndependentProgressEntry);
+  const skillSummaries = calculateSkillSummaries(units, objectiveProgress);
+  const overall = units.length
+    ? overallObjectiveStatus(objectiveProgress, units)
+    : aggregateObjectiveStatus(independentProgress);
+  const strongest = units.length
+    ? strongestObjectiveCategory(units, objectiveProgress)
+    : [...skillSummaries].filter(({ average }) => average !== null)
+      .sort((first, second) => second.average - first.average)[0] ?? null;
   const currentGoal = activeGoal(goals);
   const currentUnit = dashboardCurrentUnit(units, student.courseJourney);
-  const averages = calculateSkillSummaries(units, objectiveProgress);
+  const averages = skillSummaries;
 
   const theme = applyStudentTheme(root, student.visualTheme);
   if (typeof student.color === "string" && globalThis.CSS?.supports?.("color", student.color)) {
@@ -554,7 +630,9 @@ function renderStudent(root, data) {
     "[data-dashboard-current-unit]",
     currentUnit
       ? `${currentUnit.number ? `Unit ${currentUnit.number} · ` : ""}${unitName(currentUnit)}`
-      : "No course units yet",
+      : student.independentLearning?.currentLearningTargets?.length
+        ? "Independent learning"
+        : "No learning update yet",
   );
   setText(root, "[data-progress-overall]", summaryStatusLabel(overall));
   setText(root, "[data-progress-course]", courseName);
@@ -570,7 +648,7 @@ function renderStudent(root, data) {
     currentGoal ? goalStatusLabel(currentGoal.status) : "Your next goal will appear here",
   );
   renderSkills(root, "[data-progress-skills]", "[data-progress-skills-empty]", averages);
-  renderDashboardLearning(root, currentUnit, objectiveProgress, student.courseJourney);
+  renderDashboardLearning(root, currentUnit, objectiveProgress, student.courseJourney, student.independentLearning);
   const physical = renderDashboardJourney(root, currentUnit, student.courseJourney, theme);
   renderNextLesson(root, physical);
   if (currentUnit && physical?.total) {
