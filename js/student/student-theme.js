@@ -14,6 +14,16 @@ const THEME_COPY = Object.freeze({
     brand: "Learning Studio",
     message: "Your learning journey, clearly organized.",
   },
+  teen: {
+    label: "Teen theme",
+    brand: "Learning Studio",
+    message: "Your learning journey, clearly organized.",
+  },
+  adult: {
+    label: "Adult theme",
+    brand: "Learning Studio",
+    message: "Your learning journey, clearly organized.",
+  },
 });
 
 export function resolveStudentTheme(value) {
@@ -26,8 +36,11 @@ export function applyStudentTheme(root, value) {
   const theme = resolveStudentTheme(value);
   const copy = THEME_COPY[theme];
 
-  root.dataset.theme = theme;
-  document.body.dataset.studentTheme = theme;
+  const visualFamily = theme === "child" ? "child" : "neutral";
+  root.dataset.theme = visualFamily;
+  root.dataset.themeVariant = theme === "neutral" ? "adult" : theme;
+  document.body.dataset.studentTheme = visualFamily;
+  document.body.dataset.studentThemeVariant = root.dataset.themeVariant;
   root.querySelectorAll("[data-theme-label]").forEach((element) => {
     element.textContent = copy.label;
   });

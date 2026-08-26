@@ -1,0 +1,60 @@
+{
+  "students": [
+    {
+      "label": "Girl avatar",
+      "path": "./assets/images/gallery/student-avatars/avatar-girl.png"
+    },
+    {
+      "label": "Boy avatar",
+      "path": "./assets/images/gallery/student-avatars/avatar-boy.png"
+    }
+  ],
+  "courses": [
+    {
+      "label": "Wider World 1 course cover",
+      "path": "./assets/images/gallery/course-covers/wider-world-1-course-cover.png"
+    },
+    {
+      "label": "Own It! A2 course cover",
+      "path": "./assets/images/gallery/course-covers/own-it-a2-cover.png"
+    },
+    {
+      "label": "Cozy study",
+      "path": "./assets/images/gallery/course-covers/cozy-study.png"
+    },
+    {
+      "label": "Teacher workspace",
+      "path": "./assets/images/gallery/course-covers/teacher-workspace.png"
+    }
+  ],
+  "units": [
+    {
+      "label": "Wider World 1 — Unit 4: Live and Learn",
+      "path": "./assets/images/gallery/unit-covers/wider-world-1-unit-4-live-and-learn.png"
+    },
+    {
+      "label": "Own It! A2 — Unit 6: Hidden Danger",
+      "path": "./assets/images/gallery/unit-covers/own-it-a2-unit-6-hidden-danger.png"
+    },
+    {
+      "label": "Own It! A2 — Unit 7: Get Connected",
+      "path": "./assets/images/gallery/unit-covers/own-it-a2-unit-7-get-connected.png"
+    },
+    {
+      "label": "Own It! A2 — Unit 8: High-flyers",
+      "path": "./assets/images/gallery/unit-covers/own-it-a2-unit-8-high-flyers.png"
+    },
+    {
+      "label": "Own It! A2 — Unit 9: Show Your Moves",
+      "path": "./assets/images/gallery/unit-covers/own-it-a2-unit-9-show-your-moves.png"
+    },
+    {
+      "label": "Learning garden",
+      "path": "./assets/images/gallery/unit-covers/learning-garden.png"
+    },
+    {
+      "label": "Cozy study",
+      "path": "./assets/images/gallery/unit-covers/cozy-study.png"
+    }
+  ]
+}

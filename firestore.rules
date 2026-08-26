@@ -28,6 +28,33 @@ service cloud.firestore {
       return isStudent() && currentStudentId() == studentId;
     }
 
+    function hasValidStudentAvatar(data) {
+      let path = data.get("avatarImagePath", "");
+      let url = data.get("avatarImageUrl", "");
+      return (path == "" && url == "") || (
+        path is string && url == path
+        && path.matches("^\\./assets/images/gallery/student-avatars/[A-Za-z0-9._-]+\\.([Jj][Pp][Ee]?[Gg]|[Pp][Nn][Gg]|[Ww][Ee][Bb][Pp])$")
+      );
+    }
+
+    function hasValidCourseCover(data) {
+      let path = data.get("coverImagePath", "");
+      let url = data.get("coverImageUrl", "");
+      return (path == "" && url == "") || (
+        path is string && url == path
+        && path.matches("^\\./assets/images/gallery/course-covers/[A-Za-z0-9._-]+\\.([Jj][Pp][Ee]?[Gg]|[Pp][Nn][Gg]|[Ww][Ee][Bb][Pp])$")
+      );
+    }
+
+    function hasValidUnitCover(data) {
+      let path = data.get("coverImagePath", "");
+      let url = data.get("coverImageUrl", "");
+      return (path == "" && url == "") || (
+        path is string && url == path
+        && path.matches("^\\./assets/images/gallery/unit-covers/[A-Za-z0-9._-]+\\.([Jj][Pp][Ee]?[Gg]|[Pp][Nn][Gg]|[Ww][Ee][Bb][Pp])$")
+      );
+    }
+
     function currentStudentCourseId() {
       return get(
         /databases/$(database)/documents/students/$(currentStudentId())
@@ -114,24 +141,52 @@ service cloud.firestore {
 
     match /students/{studentId} {
       allow read: if isAdmin() || isOwnStudent(studentId);
-      allow create, update, delete: if isAdmin();
+      allow create, update: if isAdmin() && hasValidStudentAvatar(request.resource.data);
+      allow delete: if isAdmin();
     }
 
     match /courses/{courseId} {
       allow read: if isAdmin() || (isStudent() && courseId == currentStudentCourseId());
-      allow create, update, delete: if isAdmin();
+      allow create, update: if isAdmin() && hasValidCourseCover(request.resource.data);
+      allow delete: if isAdmin();
     }
 
     match /units/{unitId} {
       allow read: if isAdmin() || (
         isStudent() && resource.data.courseId == currentStudentCourseId()
       );
-      allow create, update, delete: if isAdmin();
+      allow create, update: if isAdmin() && hasValidUnitCover(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    // Lesson planning and internal course-program notes may contain private
+    // teacher reflections and are never exposed to student accounts.
+    match /lessons/{lessonId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /courseProgramPrivate/{noteId} {
+      allow read, write: if isAdmin();
     }
 
     match /progress/{progressId} {
       allow read: if isAdmin() || isOwnStudent(resource.data.studentId);
       allow create, update, delete: if isAdmin();
+    }
+
+    match /objectiveProgress/{progressId} {
+      allow read: if isAdmin() || isOwnStudent(resource.data.studentId);
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /homeworkAssignments/{assignmentId} {
+      allow read: if isAdmin() || isOwnStudent(resource.data.studentId);
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Assessment history may contain the teacher's private lesson observation.
+    match /progressHistory/{historyId} {
+      allow read, write: if isAdmin();
     }
 
     match /goals/{goalId} {
@@ -143,6 +198,18 @@ service cloud.firestore {
 
     match /teacherNotes/{noteId} {
       allow read, write: if isAdmin();
+    }
+
+    match /feedbackDrafts/{feedbackId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /feedbackVersions/{versionId} {
+      allow read: if isAdmin() || (
+        isOwnStudent(resource.data.studentId) && resource.data.status == "published"
+      );
+      allow create: if isAdmin();
+      allow update, delete: if false;
     }
 
     match /achievements/{achievementId} {

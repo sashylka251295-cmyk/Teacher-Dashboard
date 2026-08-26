@@ -22,6 +22,10 @@ export const teacherNotesRepository = Object.freeze({
       throw new Error("A valid observation date is required.");
     }
 
-    return repository.create({ ...data, createdAt: Timestamp.fromDate(date) });
+    return repository.create({
+      ...data,
+      lessonDate: Timestamp.fromDate(date),
+      createdAt: serverTimestamp(),
+    });
   },
 });

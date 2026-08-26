@@ -1,6 +1,6 @@
 import {
   GOAL_STATUSES,
-  PROGRESS_SKILLS,
+  LEGACY_PROGRESS_SKILLS,
   STUDENT_STATUSES,
   STUDENT_VISUAL_THEMES,
 } from "./constants.js";
@@ -19,7 +19,7 @@ export function isProgressScore(value) {
 }
 
 export function isProgressPayloadValid(payload) {
-  return PROGRESS_SKILLS.every((skill) => isProgressScore(payload[skill]));
+  return LEGACY_PROGRESS_SKILLS.every((skill) => isProgressScore(payload[skill]));
 }
 
 export function isStudentStatus(value) {

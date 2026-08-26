@@ -6,6 +6,10 @@ import {
   STUDENT_STATUSES,
 } from "../domain/constants.js";
 import {
+  ENTITY_IMAGE_TYPES,
+  entityImageFields,
+} from "../domain/entity-images.js";
+import {
   isNonEmptyText,
   isStudentStatus,
   isStudentVisualTheme,
@@ -20,12 +24,14 @@ import {
   showDialog,
 } from "./crud-helpers.js";
 import { CourseCreationError, createCourseRecord } from "./course-records.js";
+import { createEntityImageField } from "./entity-image-field.js";
 
 let onEntityChanged = null;
 let elements = null;
 let editingStudentId = null;
 let availableGroups = [];
 let availableCourses = [];
+let studentImageField = null;
 
 function studentStatus(student) {
   if (isStudentStatus(student.status)) return student.status;
@@ -39,6 +45,10 @@ function syncCourseToGroup() {
   if (group && availableCourses.some((course) => course.id === group.courseId)) {
     elements.course.value = group.courseId;
   }
+  elements.course.disabled = Boolean(group);
+  elements.courseCreatorToggle.disabled = Boolean(group);
+  elements.courseHint.hidden = !group;
+  if (group) setCourseCreatorOpen(false);
   syncPreview();
 }
 
@@ -58,7 +68,7 @@ function syncPreview() {
   elements.previewGroup.textContent = selectedLabel(elements.group, "Individual");
   elements.previewCourse.textContent = selectedLabel(elements.course, "Select course");
   elements.previewStatus.textContent = field(elements.form, "status").selectedOptions[0]?.textContent ?? "Active";
-  elements.previewTheme.textContent = elements.visualTheme.selectedOptions[0]?.textContent ?? "Neutral / Teen / Adult";
+  elements.previewTheme.textContent = elements.visualTheme.selectedOptions[0]?.textContent ?? "Adult";
 }
 
 function setCourseCreatorOpen(isOpen) {
@@ -108,9 +118,13 @@ async function createCourseForStudent() {
   }
 }
 
-async function openForm(studentId = null) {
+async function openForm(studentId = null, initialValues = {}) {
   editingStudentId = studentId;
   elements.form.reset();
+  elements.course.disabled = false;
+  elements.courseCreatorToggle.disabled = false;
+  elements.courseHint.hidden = true;
+  studentImageField.reset();
   field(elements.form, "color").value = "#4f46e5";
   field(elements.form, "status").value = "active";
   elements.visualTheme.value = DEFAULT_STUDENT_VISUAL_THEME;
@@ -140,16 +154,25 @@ async function openForm(studentId = null) {
     if (student) {
       field(elements.form, "name").value = student.name ?? "";
       elements.group.value = student.groupId ?? "";
-      elements.course.value = student.courseId ?? "";
+      const selectedGroup = groups.find((group) => group.id === student.groupId);
+      elements.course.value = selectedGroup?.courseId ?? student.courseId ?? "";
       field(elements.form, "color").value = isValidHexColor(student.color)
         ? student.color
         : "#4f46e5";
       field(elements.form, "status").value = studentStatus(student);
       elements.visualTheme.value = isStudentVisualTheme(student.visualTheme)
-        ? student.visualTheme
+        ? (student.visualTheme === "neutral" ? "adult" : student.visualTheme)
         : DEFAULT_STUDENT_VISUAL_THEME;
+      studentImageField.reset(student);
+    } else if (initialValues.groupId) {
+      const selectedGroup = groups.find((group) => group.id === initialValues.groupId);
+      if (selectedGroup) {
+        elements.group.value = selectedGroup.id;
+        elements.course.value = selectedGroup.courseId ?? "";
+      }
     }
 
+    syncCourseToGroup();
     syncPreview();
     elements.save.disabled = false;
     setMessage(elements.message, "");
@@ -204,12 +227,19 @@ async function saveStudent(event) {
     active: status === "active",
     visualTheme,
   };
+  const studentId = editingStudentId ?? studentsRepository.createId();
   elements.save.disabled = true;
   setMessage(elements.message, "Saving…");
 
+  let preparedImage = null;
+  let studentSaved = false;
   try {
+    preparedImage = await studentImageField.prepare(studentId);
+    Object.assign(payload, entityImageFields(ENTITY_IMAGE_TYPES.STUDENT, preparedImage));
     if (editingStudentId) await studentsRepository.update(editingStudentId, payload);
-    else await studentsRepository.create(payload);
+    else await studentsRepository.createWithId(studentId, payload);
+    studentSaved = true;
+    await studentImageField.commit(preparedImage);
 
     const message = editingStudentId
       ? "Student updated."
@@ -218,6 +248,7 @@ async function saveStudent(event) {
     await onEntityChanged("students");
     setSectionMessage("students", message);
   } catch (error) {
+    if (!studentSaved) await studentImageField.rollback(preparedImage);
     console.error("Unable to save the student.", error);
     setMessage(elements.message, "Unable to save changes. Please try again.");
   } finally {
@@ -278,6 +309,7 @@ export function initializeStudentsCrud(options) {
     message: dashboard?.querySelector("[data-student-form-message]"),
     group: dashboard?.querySelector("[data-student-group]"),
     course: dashboard?.querySelector("[data-student-course]"),
+    courseHint: dashboard?.querySelector("[data-student-course-hint]"),
     visualTheme: dashboard?.querySelector("[data-student-visual-theme]"),
     previewInitial: dashboard?.querySelector("[data-student-preview-initial]"),
     previewName: dashboard?.querySelector("[data-student-preview-name]"),
@@ -301,6 +333,11 @@ export function initializeStudentsCrud(options) {
     console.error("Students CRUD markup is incomplete.");
     return;
   }
+
+  studentImageField = createEntityImageField(
+    dashboard.querySelector("[data-student-image-field]"),
+    ENTITY_IMAGE_TYPES.STUDENT,
+  );
 
   dashboard.addEventListener("click", handleClick);
   elements.group.addEventListener("change", syncCourseToGroup);

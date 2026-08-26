@@ -1,4 +1,4 @@
-import { PROGRESS_SKILLS } from "./constants.js";
+import { LEGACY_PROGRESS_SKILLS } from "./constants.js";
 
 function existingNumericValues(values) {
   return values
@@ -9,7 +9,7 @@ function existingNumericValues(values) {
 
 export function calculateUnitProgress(scores) {
   const existingScores = existingNumericValues(
-    PROGRESS_SKILLS.map((skill) => scores[skill]),
+    LEGACY_PROGRESS_SKILLS.map((skill) => scores[skill]),
   );
 
   if (existingScores.length === 0) return null;
@@ -32,7 +32,7 @@ export function calculateOverallProgress(progressDocuments) {
 export function findStrongestArea(progressDocuments) {
   if (progressDocuments.length === 0) return null;
 
-  const skillAverages = PROGRESS_SKILLS.map((skill) => {
+  const skillAverages = LEGACY_PROGRESS_SKILLS.map((skill) => {
     const scores = existingNumericValues(progressDocuments.map((item) => item[skill]));
 
     if (scores.length === 0) return null;

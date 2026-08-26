@@ -885,6 +885,1259 @@ body[data-student-theme] > [data-page-status] {
   }
 }
 
+/* Student dashboard v2 — page-level composition from student-dashboard-reference-v2.png */
+.student-icon-sprite {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+body[data-student-theme] {
+  background: #f8f4e9;
+  overflow-x: clip;
+}
+
+body.student-menu-open {
+  overflow: hidden;
+}
+
+.student-shell {
+  grid-template-columns: 16.75rem minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  background: #fbf8ef;
+}
+
+.student-header {
+  position: relative;
+  min-height: 7.6rem;
+  padding: 1.35rem clamp(1.35rem, 2.4vw, 2.5rem) 0.95rem;
+  overflow: hidden;
+  border-bottom: 0;
+  background: #fbf8ef;
+}
+
+.student-header__welcome {
+  position: relative;
+  z-index: 2;
+}
+
+.student-header__section {
+  display: none;
+}
+
+.student-header__welcome h1 {
+  margin: 0 0 0.25rem;
+  color: #203a29;
+  font-family: var(--font-heading);
+  font-size: clamp(2rem, 3vw, 2.8rem);
+  line-height: 1.05;
+}
+
+.student-header__welcome p {
+  margin: 0;
+  color: #68736b;
+  font-size: 1rem;
+}
+
+.student-header__botanical {
+  position: absolute;
+  z-index: 0;
+  top: -5.25rem;
+  right: 0;
+  width: 15.5rem;
+  height: 15.5rem;
+  pointer-events: none;
+  object-fit: contain;
+  opacity: 0.86;
+}
+
+.student-account {
+  position: relative;
+  z-index: 2;
+  min-width: 13.5rem;
+  padding: 0.55rem 0.85rem;
+  border-color: #dfd2b7;
+  border-radius: 0.95rem;
+  background: rgb(255 253 247 / 92%);
+  box-shadow: 0 0.45rem 1.5rem rgb(69 60 39 / 6%);
+}
+
+.student-account small {
+  font-size: 0.8rem;
+}
+
+.student-menu-toggle,
+.student-sidebar__close {
+  display: none;
+}
+
+.student-menu-toggle svg,
+.student-sidebar__close svg,
+.student-sidebar svg,
+.dashboard-card__heading svg {
+  width: 1.35rem;
+  height: 1.35rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.student-sidebar {
+  gap: 0.85rem;
+  padding: 1.4rem 1rem 1rem;
+  border-right: 1px solid #dfd5bd;
+  background: #f5f0e3;
+  scrollbar-width: thin;
+}
+
+.student-shell[data-theme="child"] .student-sidebar,
+.student-shell[data-theme="neutral"] .student-sidebar {
+  background: #f5f0e3;
+}
+
+.student-sidebar::after {
+  content: none;
+}
+
+.student-sidebar__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.student-brand {
+  min-width: 0;
+  gap: 0.7rem;
+  padding: 0.25rem 0.4rem;
+}
+
+.student-brand > span:last-child {
+  display: grid;
+  line-height: 1.1;
+}
+
+.student-brand strong {
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.student-brand small {
+  margin-top: 0.2rem;
+  color: #697169;
+  font-family: var(--font-ui);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.student-brand__mark,
+.student-shell[data-theme="child"] .student-brand__mark {
+  width: 2.8rem;
+  height: 2.8rem;
+  border: 0;
+  border-radius: 0;
+  color: #567a3d;
+  background: transparent;
+}
+
+.student-brand__mark svg {
+  width: 2.35rem;
+  height: 2.35rem;
+  stroke-width: 1.35;
+}
+
+.student-nav {
+  gap: 0.15rem;
+}
+
+.student-nav a,
+.student-sidebar__footer a,
+.student-sidebar__footer button {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  min-height: 2.6rem;
+  padding: 0.45rem 0.75rem;
+  border: 0;
+  border-radius: 0.75rem;
+  color: #263b2d;
+  background: transparent;
+  box-shadow: none;
+  font-family: var(--font-heading);
+  font-size: 0.98rem;
+  font-weight: 500;
+  text-align: left;
+  text-decoration: none;
+  transform: none;
+}
+
+.student-nav a > svg,
+.student-sidebar__footer svg {
+  flex: 0 0 auto;
+  width: 1.35rem;
+  height: 1.35rem;
+}
+
+.student-sidebar .student-nav a:hover,
+.student-sidebar .student-nav a[aria-current="page"],
+.student-shell[data-theme="child"] .student-nav a:hover,
+.student-shell[data-theme="child"] .student-nav a[aria-current="page"] {
+  color: #29432f;
+  background: #dfe7ca;
+  box-shadow: none;
+}
+
+.student-nav a[data-student-unavailable] {
+  cursor: default;
+}
+
+.student-sidebar__scene {
+  display: block;
+  width: calc(100% + 2rem);
+  max-height: 18rem;
+  margin: auto -1rem -0.75rem;
+  object-fit: contain;
+  object-position: center bottom;
+  pointer-events: none;
+}
+
+.student-sidebar__footer {
+  display: grid;
+  gap: 0.1rem;
+  margin-top: auto;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgb(180 162 126 / 28%);
+}
+
+.student-sidebar__footer button {
+  width: 100%;
+  min-height: 2.6rem;
+  cursor: pointer;
+}
+
+.student-sidebar__footer a:hover,
+.student-sidebar__footer button:hover {
+  color: #29432f;
+  background: #ebe6d7;
+  transform: none;
+}
+
+.student-sidebar-overlay {
+  display: none;
+}
+
+.student-content,
+.student-state {
+  width: 100%;
+}
+
+.student-page {
+  width: 100%;
+  max-width: none;
+  padding: 0.35rem clamp(1.35rem, 2.4vw, 2.5rem) 2rem;
+}
+
+.student-home-grid {
+  display: grid;
+  grid-template-columns: minmax(20rem, 1.28fr) minmax(15.5rem, 0.84fr) minmax(20rem, 1.15fr);
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.dashboard-card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #e2d5b8;
+  border-radius: 1rem;
+  background: #fffdf8;
+  box-shadow: 0 0.45rem 1.4rem rgb(82 65 34 / 5%);
+}
+
+.dashboard-card__heading {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-height: 2.85rem;
+  padding: 0.8rem 1rem 0.45rem;
+  color: #355e39;
+}
+
+.dashboard-card__heading > div {
+  min-width: 0;
+}
+
+.dashboard-card__heading h2,
+.dashboard-card__heading p {
+  margin: 0;
+}
+
+.dashboard-card__heading h2 {
+  color: #21382a;
+  font-family: var(--font-heading);
+  font-size: 1.08rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.dashboard-card__heading p {
+  margin-top: 0.08rem;
+  color: #687269;
+  font-size: 0.76rem;
+}
+
+.dashboard-card__heading a {
+  margin-left: auto;
+  color: #47734b;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.dashboard-current-course,
+.dashboard-next-lesson,
+.dashboard-side-stack {
+  min-height: 22.75rem;
+}
+
+.dashboard-course-cover,
+.student-shell[data-theme="neutral"] .dashboard-course-cover {
+  display: block;
+  width: auto;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  margin: 0.15rem 0.85rem 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0.85rem;
+  background: #edf0df;
+  box-shadow: none;
+}
+
+.dashboard-course-cover img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dashboard-current-course__body {
+  position: relative;
+  padding: 0.8rem 1.25rem 1rem;
+}
+
+.dashboard-current-course__body::after {
+  content: "";
+  position: absolute;
+  right: 0.5rem;
+  bottom: 0;
+  width: 5.5rem;
+  height: 5.5rem;
+  pointer-events: none;
+  opacity: 0.38;
+  background: url("../assets/images/decor-floral-corner-bottom-right.png.png") center / contain no-repeat;
+}
+
+.dashboard-current-course__body h3 {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  color: #193425;
+  font-family: var(--font-heading);
+  font-size: clamp(1.35rem, 2vw, 1.75rem);
+  line-height: 1.12;
+}
+
+.dashboard-current-course__body p {
+  position: relative;
+  z-index: 1;
+  margin: 0.25rem 0 0.75rem;
+  color: #5f6d63;
+}
+
+.student-primary-link {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 2.55rem;
+  padding: 0.55rem 1rem;
+  border-radius: 0.7rem;
+  color: #fff;
+  background: #46794b;
+  box-shadow: 0 0.35rem 0.9rem rgb(53 94 57 / 13%);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.student-primary-link:hover {
+  color: #fff;
+  background: #355f3b;
+}
+
+.dashboard-empty {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  color: #69736b;
+}
+
+.dashboard-empty strong {
+  display: block;
+  color: #2d4133;
+  font-family: var(--font-heading);
+  font-size: 1rem;
+}
+
+.dashboard-empty p {
+  margin: 0.15rem 0 0;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.dashboard-empty--lesson {
+  min-height: 17rem;
+  padding: 1.5rem 1.75rem;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+}
+
+.dashboard-next-lesson {
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-next-lesson .dashboard-empty--lesson {
+  flex: 1;
+}
+
+.dashboard-empty__icon {
+  display: grid;
+  width: 4rem;
+  height: 4rem;
+  place-items: center;
+  border-radius: 50%;
+  color: #67805b;
+  background: #eef1df;
+}
+
+.dashboard-empty__icon svg {
+  width: 2rem;
+  height: 2rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
+
+.dashboard-side-stack {
+  display: grid;
+  grid-template-rows: minmax(9.25rem, auto) minmax(10.75rem, 1fr);
+  gap: 1rem;
+}
+
+.dashboard-goal-card__content {
+  display: grid;
+  grid-template-columns: 5.8rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.25rem 1rem 1rem;
+}
+
+.dashboard-goal-card__content img {
+  width: 5.8rem;
+  height: 5.8rem;
+  object-fit: contain;
+}
+
+.dashboard-goal-card__content div {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.dashboard-goal-card__content strong {
+  color: #253a2d;
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+  line-height: 1.18;
+}
+
+.dashboard-goal-card__content span {
+  justify-self: start;
+  padding: 0.24rem 0.65rem;
+  border-radius: 999px;
+  color: #8b641d;
+  background: #fff1cf;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.dashboard-feedback-preview > [data-student-feedback-list] {
+  padding: 0.15rem 1rem 0.75rem;
+}
+
+.dashboard-feedback-item {
+  display: grid;
+  grid-template-columns: 3.4rem minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: start;
+}
+
+.dashboard-teacher-avatar {
+  display: grid;
+  width: 3.4rem;
+  height: 3.4rem;
+  place-items: center;
+  border: 0.2rem solid #f2ead9;
+  border-radius: 50%;
+  color: #fff;
+  background: #66805e;
+  font-family: var(--font-heading);
+  font-size: 1.3rem;
+}
+
+.dashboard-feedback-item p {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: #4e5e53;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.dashboard-feedback-item small {
+  display: block;
+  margin-top: 0.25rem;
+  color: #7a827b;
+  font-size: 0.7rem;
+}
+
+.dashboard-feedback-item details {
+  margin-top: 0.2rem;
+}
+
+.dashboard-feedback-item summary {
+  color: #3d7445;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 750;
+  list-style: none;
+}
+
+.dashboard-feedback-item details > div {
+  display: grid;
+  gap: 0.45rem;
+  max-height: 10rem;
+  margin-top: 0.55rem;
+  padding: 0.65rem;
+  overflow: auto;
+  border-radius: 0.6rem;
+  background: #f8f4e9;
+}
+
+.dashboard-feedback-item details section h4 {
+  margin: 0;
+  color: #2f4936;
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+}
+
+.dashboard-feedback-item details section p {
+  display: block;
+  margin-top: 0.1rem;
+  font-size: 0.75rem;
+  -webkit-line-clamp: unset;
+}
+
+.dashboard-empty--feedback {
+  min-height: 7.5rem;
+  padding: 0 1rem 0.8rem;
+}
+
+.dashboard-empty--feedback img {
+  width: 5.25rem;
+  height: 5.25rem;
+  object-fit: contain;
+}
+
+.dashboard-current-learning,
+.dashboard-course-journey {
+  min-height: 12.75rem;
+}
+
+.dashboard-learning-list {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.35rem 1rem 1rem;
+}
+
+.dashboard-learning-target {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.65rem;
+  min-height: 3.1rem;
+  padding: 0.4rem 0.55rem;
+  border: 1px solid #e9dfca;
+  border-radius: 0.75rem;
+  background: #fffefa;
+}
+
+.dashboard-learning-target > span:first-child {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 50%;
+  background: #edf2df;
+}
+
+.dashboard-learning-target > span:first-child img {
+  width: 1.7rem;
+  height: 1.7rem;
+  object-fit: contain;
+}
+
+.dashboard-learning-target strong {
+  min-width: 0;
+  color: #2b4032;
+  font-family: var(--font-heading);
+  font-size: 0.9rem;
+  line-height: 1.2;
+}
+
+.learning-status-badge {
+  white-space: nowrap;
+}
+
+.dashboard-learning-target .learning-status-badge {
+  padding: 0.22rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.66rem;
+  font-weight: 700;
+}
+
+.dashboard-learning-target .learning-status-badge[data-status="confident"] {
+  color: #2f6338;
+  background: #dfeeda;
+}
+
+.dashboard-learning-target .learning-status-badge[data-status="developing"] {
+  color: #49683e;
+  background: #ebf0dd;
+}
+
+.dashboard-learning-target .learning-status-badge[data-status="needs_practice"] {
+  color: #976413;
+  background: #fff0c8;
+}
+
+.dashboard-learning-target .learning-status-badge[data-status="not_assessed"] {
+  color: #6d746e;
+  background: #f0eee8;
+}
+
+.dashboard-course-journey {
+  grid-column: 2 / 4;
+}
+
+.dashboard-course-journey > .course-journey-map {
+  padding: 0.2rem 1rem 1rem;
+}
+
+.dashboard-course-journey {
+  min-height: 0;
+}
+
+.dashboard-journey-scroll {
+  padding: 0.25rem 0 0.8rem;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.dashboard-journey-list {
+  display: flex;
+  align-items: stretch;
+  gap: 1.3rem;
+  width: max-content;
+  min-width: 100%;
+  padding: 0 1rem 0.15rem;
+}
+
+.dashboard-journey-unit {
+  position: relative;
+  display: grid;
+  flex: 1 0 9.25rem;
+  grid-template-rows: auto 4.1rem minmax(2rem, auto) auto;
+  max-width: 10.75rem;
+  gap: 0.25rem;
+  align-content: start;
+  min-height: 9.35rem;
+  padding: 0.55rem;
+  border: 1px solid #dcd2b9;
+  border-radius: 0.75rem;
+  background: #fffefa;
+  text-align: center;
+}
+
+.dashboard-journey-unit:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  top: 52%;
+  left: 100%;
+  width: 1.35rem;
+  border-top: 2px dotted #8aa26f;
+}
+
+.dashboard-journey-unit > span {
+  color: #647067;
+  font-size: 0.66rem;
+  font-weight: 800;
+}
+
+.dashboard-journey-unit img {
+  width: 100%;
+  height: 4.1rem;
+  object-fit: cover;
+  border-radius: 0.45rem;
+}
+
+.dashboard-course-cover img[src*="own-it-a2"],
+.dashboard-journey-unit img[src*="own-it-a2"] {
+  object-position: center 14%;
+}
+
+.dashboard-journey-unit strong {
+  overflow-wrap: anywhere;
+  color: #2c4032;
+  font-family: var(--font-heading);
+  font-size: 0.75rem;
+  line-height: 1.15;
+}
+
+.dashboard-journey-unit small {
+  align-self: end;
+  padding: 0.18rem 0.35rem;
+  border-radius: 999px;
+  color: #647067;
+  background: #efeee8;
+  font-size: 0.62rem;
+}
+
+.dashboard-journey-unit[data-state="completed"] small {
+  color: #34643a;
+  background: #e5eed9;
+}
+
+.dashboard-journey-unit[data-state="in_progress"] {
+  border-color: #e6bb61;
+}
+
+.dashboard-journey-unit[data-state="in_progress"] small {
+  color: #996310;
+  background: #fff0c8;
+}
+
+.dashboard-homework-card,
+.dashboard-achievement-card {
+  min-height: 10.5rem;
+}
+
+.dashboard-achievement-card {
+  grid-column: 2 / 4;
+}
+
+.dashboard-homework-item {
+  display: grid;
+  grid-template-columns: 6.5rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.25rem 1rem 1rem;
+}
+
+.dashboard-homework-item > img {
+  width: 6.5rem;
+  height: 5.5rem;
+  object-fit: contain;
+}
+
+.dashboard-homework-item strong {
+  color: #293d30;
+  font-family: var(--font-heading);
+  font-size: 1rem;
+}
+
+.dashboard-homework-item p {
+  margin: 0.2rem 0 0;
+  color: #707971;
+  font-size: 0.75rem;
+}
+
+.dashboard-homework-item .learning-status-badge {
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  color: #3e6843;
+  background: #e6efdf;
+  font-size: 0.68rem;
+}
+
+.dashboard-empty--homework,
+.dashboard-empty--achievement {
+  min-height: 6.8rem;
+  padding: 0.1rem 1rem 1rem;
+}
+
+.dashboard-empty--homework img,
+.dashboard-empty--achievement img {
+  width: 7rem;
+  height: 6rem;
+  object-fit: contain;
+}
+
+.dashboard-achievement-card .achievement-preview {
+  margin: 0;
+  padding: 0.15rem 1rem 1rem;
+  list-style: none;
+}
+
+.dashboard-achievement-card .achievement-preview li {
+  display: grid;
+  grid-template-columns: 7rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.9rem;
+  min-height: 6.8rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.dashboard-achievement-card .achievement-marker {
+  width: 7rem;
+  height: 6rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.dashboard-achievement-card .achievement-marker img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.dashboard-achievement-card .achievement-preview li > span:last-child {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.dashboard-achievement-card .achievement-preview strong {
+  color: #293d30;
+  font-family: var(--font-heading);
+  font-size: 1.05rem;
+}
+
+.dashboard-achievement-card .achievement-preview p {
+  margin: 0;
+  color: #657067;
+  font-size: 0.78rem;
+}
+
+.dashboard-achievement-card .achievement-preview small {
+  color: #7c837d;
+  font-size: 0.7rem;
+}
+
+.dashboard-empty-copy {
+  margin: 1rem;
+  color: #6d766f;
+  font-size: 0.85rem;
+}
+
+@media (min-width: 112rem) {
+  .student-shell {
+    grid-template-columns: 17.5rem minmax(0, 1fr);
+  }
+
+  .student-page,
+  .student-header {
+    padding-right: 3rem;
+    padding-left: 3rem;
+  }
+}
+
+@media (max-width: 78rem) {
+  .student-home-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-side-stack,
+  .dashboard-course-journey,
+  .dashboard-achievement-card {
+    grid-column: 1 / -1;
+  }
+
+  .dashboard-side-stack {
+    min-height: 0;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: auto;
+  }
+
+  .dashboard-current-learning,
+  .dashboard-course-journey {
+    min-height: 13.25rem;
+  }
+
+  .dashboard-course-journey {
+    grid-column: 2;
+  }
+
+  .dashboard-achievement-card {
+    grid-column: 2;
+  }
+}
+
+@media (max-width: 56rem) {
+  .student-shell {
+    grid-template-areas:
+      "header"
+      "content";
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .student-header {
+    min-height: 6.7rem;
+    padding-left: 4.5rem;
+  }
+
+  .student-menu-toggle {
+    position: absolute;
+    z-index: 4;
+    top: 1.5rem;
+    left: 1rem;
+    display: grid;
+    width: 2.75rem;
+    height: 2.75rem;
+    padding: 0;
+    place-items: center;
+    border-color: #ddcfb1;
+    background: #fffdf7;
+  }
+
+  .student-menu-toggle svg {
+    width: 1.35rem;
+    height: 1.35rem;
+  }
+
+  .student-sidebar {
+    position: fixed;
+    z-index: 30;
+    top: 0;
+    left: 0;
+    display: flex;
+    width: min(20rem, 88vw);
+    height: 100dvh;
+    transform: translateX(-105%);
+    transition: transform 180ms ease;
+  }
+
+  .student-sidebar.is-open {
+    transform: translateX(0);
+  }
+
+  .student-sidebar__close {
+    display: grid;
+    width: 2.45rem;
+    height: 2.45rem;
+    padding: 0;
+    place-items: center;
+    border: 0;
+    background: transparent;
+  }
+
+  .student-sidebar-overlay:not([hidden]) {
+    position: fixed;
+    z-index: 25;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: rgb(24 36 27 / 35%);
+    backdrop-filter: blur(2px);
+  }
+
+  .student-sidebar__scene {
+    max-height: 13rem;
+  }
+
+  .student-page {
+    padding-right: 1rem;
+    padding-left: 1rem;
+  }
+}
+
+@media (max-width: 46rem) {
+  .student-header {
+    align-items: center;
+    padding-right: 1rem;
+  }
+
+  .student-header__welcome h1 {
+    font-size: clamp(1.55rem, 7vw, 2rem);
+  }
+
+  .student-header__welcome p {
+    max-width: 16rem;
+    font-size: 0.83rem;
+  }
+
+  .student-account {
+    min-width: 0;
+    padding: 0.35rem;
+  }
+
+  .student-account > span:nth-child(2) {
+    display: none;
+  }
+
+  .student-header__botanical {
+    right: 0;
+    width: 11rem;
+    height: 11rem;
+    opacity: 0.35;
+  }
+
+  .student-home-grid,
+  .dashboard-side-stack {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dashboard-current-course,
+  .dashboard-next-lesson,
+  .dashboard-side-stack,
+  .dashboard-current-learning,
+  .dashboard-course-journey,
+  .dashboard-homework-card,
+  .dashboard-achievement-card {
+    grid-column: 1;
+    min-height: 0;
+  }
+
+  .dashboard-side-stack {
+    display: grid;
+  }
+
+  .dashboard-current-course,
+  .dashboard-next-lesson {
+    min-height: auto;
+  }
+
+  .dashboard-empty--lesson {
+    min-height: 12rem;
+  }
+
+  .dashboard-homework-item {
+    grid-template-columns: 5.5rem minmax(0, 1fr);
+  }
+
+  .dashboard-homework-item > img {
+    width: 5.5rem;
+  }
+
+  .dashboard-homework-item .learning-status-badge {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .dashboard-achievement-card .achievement-preview li {
+    grid-template-columns: 5.5rem minmax(0, 1fr);
+  }
+
+  .dashboard-achievement-card .achievement-marker {
+    width: 5.5rem;
+    height: 5.5rem;
+  }
+
+  .dashboard-learning-target {
+    grid-template-columns: 2rem minmax(0, 1fr);
+  }
+
+  .dashboard-learning-target .learning-status-badge {
+    grid-column: 2;
+    justify-self: start;
+  }
+}
+
+/* Profile actions live beside the student avatar. */
+.student-header {
+  overflow: visible;
+}
+
+.student-account {
+  padding: 0;
+}
+
+.student-account__toggle {
+  display: grid;
+  width: 100%;
+  min-height: 0;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.5rem 0.7rem;
+  border: 0;
+  border-radius: 0.9rem;
+  background: transparent;
+  box-shadow: none;
+  text-align: left;
+}
+
+.student-account__toggle:hover:not(:disabled),
+.student-account.is-open .student-account__toggle {
+  color: #263b2d;
+  background: #f3efe2;
+  transform: none;
+}
+
+.student-account__identity {
+  display: grid;
+  min-width: 6rem;
+}
+
+.student-account__identity strong,
+.student-account__identity small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.student-account__chevron,
+.student-account-menu svg {
+  width: 1.15rem;
+  height: 1.15rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.student-account__chevron {
+  transition: transform 160ms ease;
+}
+
+.student-account.is-open .student-account__chevron {
+  transform: rotate(180deg);
+}
+
+.student-account-menu {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 0.45rem);
+  right: 0;
+  display: grid;
+  width: 12.5rem;
+  padding: 0.4rem;
+  border: 1px solid #dfd2b7;
+  border-radius: 0.85rem;
+  background: #fffdf8;
+  box-shadow: 0 0.8rem 2rem rgb(54 48 33 / 14%);
+}
+
+.student-account-menu[hidden] {
+  display: none;
+}
+
+.student-account-menu a,
+.student-account-menu button {
+  display: flex;
+  width: 100%;
+  min-height: 2.65rem;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.55rem 0.7rem;
+  border: 0;
+  border-radius: 0.6rem;
+  color: #29402f;
+  background: transparent;
+  font-family: var(--font-heading);
+  font-size: 0.98rem;
+  text-align: left;
+  text-decoration: none;
+}
+
+.student-account-menu a:hover,
+.student-account-menu button:hover:not(:disabled) {
+  color: #29402f;
+  background: #eef0df;
+  transform: none;
+}
+
+@media (max-width: 46rem) {
+  .student-account__identity {
+    display: none;
+  }
+
+  .student-account__toggle {
+    grid-template-columns: auto auto;
+    gap: 0.35rem;
+    padding: 0.3rem 0.4rem;
+  }
+
+  .student-account-menu {
+    top: calc(100% + 0.35rem);
+  }
+}
+
+/* Published teacher feedback */
+.student-feedback-panel {
+  margin-top: var(--space-5);
+}
+
+[data-student-feedback-list] {
+  display: grid;
+  gap: 1rem;
+}
+
+.student-feedback-card {
+  display: grid;
+  gap: 0.85rem;
+  padding: 1.15rem;
+  border: 1px solid var(--student-border);
+  border-radius: 1.1rem;
+  background: rgb(255 255 255 / 74%);
+}
+
+.student-feedback-card > small {
+  color: var(--student-muted);
+}
+
+.student-feedback-card section {
+  padding: 0.85rem 1rem;
+  border-radius: 0.9rem;
+  background: color-mix(in srgb, var(--student-accent) 7%, #fffefa);
+}
+
+.student-feedback-card h4,
+.student-feedback-card p {
+  margin: 0;
+}
+
+.student-feedback-card h4 {
+  margin-bottom: 0.35rem;
+  color: var(--student-ink);
+}
+
 /* Page-level reference refinement for the child and neutral student themes. */
 .student-sidebar::after {
   right: -1.4rem;
@@ -1143,6 +2396,16 @@ body[data-student-theme] > [data-page-status] {
 [data-skill="reading"]::before { background-image: url("../assets/images/skill-reading.png.png"); }
 [data-skill="listening"]::before { background-image: url("../assets/images/skill-listening.png.png"); }
 [data-skill="speaking"]::before { background-image: url("../assets/images/skill-speaking.png.png"); }
+[data-skill="writing"]::before {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: #7b6ba8;
+  content: "W";
+  font-size: .72rem;
+  font-weight: 800;
+}
 [data-skill="homework"]::before { background-image: url("../assets/images/skill-homework.png.png"); }
 
 .student-summary-card--goal {
@@ -1215,6 +2478,74 @@ body[data-student-theme] > [data-page-status] {
   background-image: url("../assets/images/empty-progress.png.png");
 }
 
+/* Objective-based progress */
+.skill-row > small {
+  display: block;
+  margin-top: 6px;
+  color: var(--student-muted);
+}
+
+.student-objective-unit {
+  margin-bottom: 14px;
+  padding: 18px;
+  border: 1px solid var(--student-border);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, .74);
+}
+
+.student-objective-unit summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.student-objective-unit section {
+  margin-top: 18px;
+}
+
+.student-objective-unit ul {
+  display: grid;
+  gap: 9px;
+  padding: 0;
+  list-style: none;
+}
+
+.student-objective-unit li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+}
+
+.learning-status-badge {
+  display: inline-flex;
+  width: max-content;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #ece9e1;
+  color: #536057;
+  font-size: .8rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.learning-status-badge[data-status="needs_practice"],
+.learning-status-badge[data-status="needs_completion"] { background: #f8dfda; color: #9a4138; }
+.learning-status-badge[data-status="developing"],
+.learning-status-badge[data-status="assigned"] { background: #f6e9c9; color: #80601c; }
+.learning-status-badge[data-status="confident"],
+.learning-status-badge[data-status="completed"] { background: #dcebd9; color: #365f3e; }
+
+@media (max-width: 620px) {
+  .student-objective-unit li,
+  .student-objective-unit summary {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
 [data-achievement-preview-empty]::before,
 [data-achievement-empty]::before {
   background-image: url("../assets/images/achievement-small.png.png");
@@ -1237,5 +2568,362 @@ body[data-student-theme] > [data-page-status] {
 
   .student-summary-card--goal::after {
     opacity: 0.12;
+  }
+}
+
+/* Keep legacy Progress/Achievement refinements from overriding the v2 dashboard shell. */
+.student-sidebar::after,
+.student-shell[data-theme="child"] .student-sidebar::after {
+  content: none;
+  background: none;
+}
+
+.student-nav a > span,
+.student-nav a:hover > span,
+.student-nav a[aria-current="page"] > span {
+  display: inline;
+  width: auto;
+  height: auto;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.dashboard-course-cover.course-art.has-image,
+.student-shell[data-theme="neutral"] .dashboard-course-cover.course-art.has-image {
+  position: static;
+  display: block;
+  width: auto;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  margin: 0.15rem 0.85rem 0;
+  border: 0;
+  border-radius: 0.85rem;
+}
+
+.dashboard-achievement-card .achievement-marker,
+.student-shell[data-theme="neutral"] .dashboard-achievement-card .achievement-marker {
+  width: 7rem;
+  height: 6rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+@media (max-width: 46rem) {
+  .dashboard-achievement-card .achievement-marker,
+  .student-shell[data-theme="neutral"] .dashboard-achievement-card .achievement-marker {
+    width: 5.5rem;
+    height: 5.5rem;
+  }
+}
+
+/* Shared desktop density: compact at 100% without scaling the application. */
+@media (min-width: 56.0625rem) {
+  .student-shell {
+    grid-template-columns: 14.75rem minmax(0, 1fr);
+  }
+
+  .student-header {
+    min-height: 6.1rem;
+    gap: 1rem;
+    padding: 1rem var(--app-page-gutter) 0.65rem;
+  }
+
+  .student-header__welcome h1 {
+    font-size: clamp(1.7rem, 2.4vw, 2.25rem);
+  }
+
+  .student-header__welcome p {
+    font-size: 0.92rem;
+  }
+
+  .student-header__botanical {
+    top: -4.5rem;
+    width: 13rem;
+    height: 13rem;
+  }
+
+  .student-account {
+    min-width: 12rem;
+  }
+
+  .student-account__toggle {
+    gap: 0.55rem;
+    padding: 0.4rem 0.6rem;
+  }
+
+  .student-avatar--small {
+    width: 2.35rem;
+    height: 2.35rem;
+  }
+
+  .student-sidebar {
+    gap: 0.65rem;
+    padding: 1rem 0.75rem 0.75rem;
+  }
+
+  .student-brand {
+    gap: 0.55rem;
+    padding: 0.2rem 0.3rem;
+  }
+
+  .student-brand strong {
+    font-size: 1.05rem;
+  }
+
+  .student-brand__mark,
+  .student-shell[data-theme="child"] .student-brand__mark {
+    width: 2.4rem;
+    height: 2.4rem;
+  }
+
+  .student-brand__mark svg {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .student-nav {
+    gap: 0.08rem;
+  }
+
+  .student-nav a,
+  .student-sidebar__footer a,
+  .student-sidebar__footer button {
+    gap: 0.65rem;
+    min-height: 2.35rem;
+    padding: 0.35rem 0.6rem;
+    font-size: 0.9rem;
+  }
+
+  .student-nav a > svg,
+  .student-sidebar__footer svg {
+    width: 1.2rem;
+    height: 1.2rem;
+  }
+
+  .student-sidebar__scene {
+    max-height: 14.5rem;
+  }
+
+  .student-sidebar__footer {
+    padding-top: 0.35rem;
+  }
+
+  .student-page {
+    padding: 0.25rem var(--app-page-gutter) 1.5rem;
+  }
+
+  .student-home-grid {
+    gap: var(--app-section-gap);
+  }
+
+  .dashboard-card__heading {
+    gap: 0.55rem;
+    min-height: 2.5rem;
+    padding: 0.65rem 0.85rem 0.35rem;
+  }
+
+  .dashboard-card__heading h2 {
+    font-size: 1rem;
+  }
+
+  .dashboard-current-course,
+  .dashboard-next-lesson,
+  .dashboard-side-stack {
+    min-height: 20.25rem;
+  }
+
+  .dashboard-course-cover,
+  .student-shell[data-theme="neutral"] .dashboard-course-cover,
+  .dashboard-course-cover.course-art.has-image,
+  .student-shell[data-theme="neutral"] .dashboard-course-cover.course-art.has-image {
+    margin-right: 0.7rem;
+    margin-left: 0.7rem;
+  }
+
+  .dashboard-current-course__body {
+    padding: 0.7rem 1rem 0.85rem;
+  }
+
+  .dashboard-current-course__body h3 {
+    font-size: clamp(1.25rem, 1.7vw, 1.55rem);
+  }
+
+  .student-primary-link {
+    min-height: 2.35rem;
+    padding: 0.48rem 0.85rem;
+  }
+
+  .dashboard-empty--lesson {
+    min-height: 12rem;
+    padding: 1rem 1.25rem;
+  }
+
+  .dashboard-empty__icon {
+    width: 3.4rem;
+    height: 3.4rem;
+  }
+
+  .dashboard-side-stack {
+    grid-template-rows: minmax(8.25rem, auto) minmax(9.25rem, 1fr);
+    gap: var(--app-section-gap);
+  }
+
+  .dashboard-goal-card__content {
+    grid-template-columns: 5rem minmax(0, 1fr);
+    gap: 0.6rem;
+    padding: 0.15rem 0.85rem 0.8rem;
+  }
+
+  .dashboard-goal-card__content img {
+    width: 5rem;
+    height: 5rem;
+  }
+
+  .dashboard-feedback-preview > [data-student-feedback-list] {
+    padding: 0.1rem 0.85rem 0.65rem;
+  }
+
+  .dashboard-empty--feedback {
+    min-height: 6rem;
+    padding: 0 0.85rem 0.65rem;
+  }
+
+  .dashboard-current-learning,
+  .dashboard-course-journey {
+    min-height: 10.75rem;
+  }
+
+  .dashboard-learning-list {
+    gap: 0.35rem;
+    padding: 0.25rem 0.85rem 0.8rem;
+  }
+
+  .dashboard-learning-target {
+    gap: 0.55rem;
+    min-height: 2.75rem;
+    padding: 0.3rem 0.45rem;
+  }
+
+  .dashboard-journey-scroll {
+    padding-bottom: 0.65rem;
+  }
+
+  .dashboard-journey-list {
+    gap: 1rem;
+    padding: 0 0.85rem 0.1rem;
+  }
+
+  .dashboard-journey-unit {
+    min-height: 8.8rem;
+  }
+
+  .dashboard-homework-card,
+  .dashboard-achievement-card {
+    min-height: 8.75rem;
+  }
+
+  .dashboard-homework-item {
+    grid-template-columns: 5.5rem minmax(0, 1fr) auto;
+    gap: 0.7rem;
+    padding: 0.15rem 0.85rem 0.8rem;
+  }
+
+  .dashboard-homework-item > img {
+    width: 5.5rem;
+    height: 4.75rem;
+  }
+
+  .dashboard-empty--homework,
+  .dashboard-empty--achievement,
+  .dashboard-achievement-card .achievement-preview li {
+    min-height: 5.8rem;
+  }
+
+  .dashboard-achievement-card .achievement-preview {
+    padding: 0.1rem 0.85rem 0.8rem;
+  }
+
+  .student-page-heading {
+    gap: 1rem;
+    margin-bottom: 1.2rem;
+  }
+
+  .student-page-heading h2 {
+    margin-bottom: 0.35rem;
+    font-size: clamp(1.65rem, 2.5vw, 2.25rem);
+  }
+
+  .student-summary-grid,
+  .student-dashboard-grid,
+  .student-progress-grid,
+  .progress-overview,
+  .achievement-grid {
+    gap: var(--app-section-gap);
+  }
+
+  .student-summary-card,
+  .student-panel,
+  .progress-overview article {
+    padding: var(--app-card-padding);
+  }
+
+  .student-summary-card {
+    min-height: 8rem;
+  }
+
+  .student-summary-card p {
+    margin-bottom: 0.8rem;
+  }
+
+  .student-panel__heading {
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .progress-overview article {
+    min-height: 6.5rem;
+  }
+
+  .unit-grid article {
+    min-height: 8.5rem;
+    padding: 0.8rem;
+  }
+
+  .achievement-grid li,
+  .student-shell[data-theme="child"] .achievement-grid li {
+    min-height: 13rem;
+    padding: var(--app-card-padding);
+  }
+
+  .student-feedback-panel {
+    margin-top: 0.9rem;
+  }
+
+  .student-feedback-card {
+    gap: 0.7rem;
+    padding: 0.9rem;
+  }
+
+  .student-feedback-card section {
+    padding: 0.7rem 0.8rem;
+  }
+
+  .student-objective-unit {
+    margin-bottom: 0.65rem;
+    padding: 0.85rem;
+  }
+
+  .student-objective-unit section {
+    margin-top: 0.85rem;
+  }
+}
+
+@media (min-width: 78.0625rem) {
+  .student-home-grid {
+    grid-template-columns: minmax(18rem, 1.28fr) minmax(14rem, 0.84fr) minmax(18rem, 1.15fr);
   }
 }

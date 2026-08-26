@@ -4,115 +4,167 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Learning — Student Progress Tracker</title>
-    <link rel="stylesheet" href="./css/styles.css">
-    <link rel="stylesheet" href="./css/student.css">
+    <link rel="stylesheet" href="./css/styles.css?v=20260825-journey-progress">
+    <link rel="stylesheet" href="./css/student.css?v=20260825-journey-progress">
   </head>
   <body data-student-theme="neutral">
+    <svg class="student-icon-sprite" aria-hidden="true">
+      <symbol id="student-icon-home" viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5M5.5 10v10h13V10M9.5 20v-6h5v6"/></symbol>
+      <symbol id="student-icon-calendar" viewBox="0 0 24 24"><path d="M5 4.5h14a2 2 0 0 1 2 2V20H3V6.5a2 2 0 0 1 2-2ZM7 2v5M17 2v5M3 9h18M8 13h2M14 13h2M8 17h2"/></symbol>
+      <symbol id="student-icon-book" viewBox="0 0 24 24"><path d="M3.5 5.5c3.7-.8 6.5.1 8.5 2.4v11c-2-2.3-4.8-3.2-8.5-2.4v-11Zm17 0c-3.7-.8-6.5.1-8.5 2.4v11c2-2.3 4.8-3.2 8.5-2.4v-11Z"/></symbol>
+      <symbol id="student-icon-progress" viewBox="0 0 24 24"><path d="M5 20v-6M12 20V8M19 20V3M3 20h18"/></symbol>
+      <symbol id="student-icon-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="m14 10 6-6M16 4h4v4"/></symbol>
+      <symbol id="student-icon-message" viewBox="0 0 24 24"><path d="M4 5h16v12H9l-5 4V5Z"/><path d="M8 9h8M8 13h5"/></symbol>
+      <symbol id="student-icon-clipboard" viewBox="0 0 24 24"><path d="M7 5H4v16h16V5h-3M8 3h8v4H8V3ZM8 11h8M8 15h8"/></symbol>
+      <symbol id="student-icon-star" viewBox="0 0 24 24"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-2.9-5.6 2.9 1.1-6.2L3 9.6l6.2-.9L12 3Z"/></symbol>
+      <symbol id="student-icon-folder" viewBox="0 0 24 24"><path d="M3 6h7l2 2h9v12H3V6Z"/></symbol>
+      <symbol id="student-icon-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.5 21c.7-4.2 3.2-6.5 7.5-6.5s6.8 2.3 7.5 6.5"/></symbol>
+      <symbol id="student-icon-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2.1 2.1M16.9 16.9 19 19M19 5l-2.1 2.1M7.1 16.9 5 19"/></symbol>
+      <symbol id="student-icon-logout" viewBox="0 0 24 24"><path d="M10 4H4v16h6M14 8l4 4-4 4M8 12h10"/></symbol>
+      <symbol id="student-icon-chevron" viewBox="0 0 24 24"><path d="m7 9 5 5 5-5"/></symbol>
+      <symbol id="student-icon-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+      <symbol id="student-icon-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+    </svg>
+
     <main class="student-shell" data-protected-content data-theme="neutral" hidden>
       <header class="student-header">
-        <div>
-          <p class="student-eyebrow">My learning space</p>
-          <h1 data-student-page-title>Dashboard</h1>
+        <button class="student-menu-toggle" type="button" data-student-menu-toggle aria-controls="student-sidebar" aria-expanded="false" aria-label="Open navigation">
+          <svg aria-hidden="true"><use href="#student-icon-menu"/></svg>
+        </button>
+        <div class="student-header__welcome">
+          <p class="student-header__section" data-student-page-title>Dashboard</p>
+          <h1>Hello, <span data-student-name>Student</span>!</h1>
+          <p>Let’s keep learning and growing every day.</p>
         </div>
-        <div class="student-account">
-          <span class="student-avatar student-avatar--small" data-avatar-frame>
-            <img data-student-avatar alt="" hidden>
-            <span data-student-initial aria-hidden="true">S</span>
-          </span>
-          <span><strong data-student-account-name>Student</strong><small data-theme-label>Neutral theme</small></span>
-          <button type="button" data-logout>Log out</button>
+        <div class="student-account" data-student-account>
+          <button class="student-account__toggle" type="button" data-student-account-toggle aria-expanded="false" aria-controls="student-account-menu" aria-haspopup="menu">
+            <span class="student-avatar student-avatar--small" data-avatar-frame>
+              <img data-student-avatar alt="" hidden>
+              <span data-student-initial aria-hidden="true">S</span>
+            </span>
+            <span class="student-account__identity"><strong data-student-account-name>Student</strong><small>Student</small></span>
+            <svg class="student-account__chevron" aria-hidden="true"><use href="#student-icon-chevron"/></svg>
+          </button>
+          <div class="student-account-menu" id="student-account-menu" data-student-account-menu role="menu" hidden>
+            <a href="#settings" role="menuitem" data-student-unavailable aria-disabled="true"><svg aria-hidden="true"><use href="#student-icon-settings"/></svg><span>Settings</span></a>
+            <button type="button" role="menuitem" data-logout><svg aria-hidden="true"><use href="#student-icon-logout"/></svg><span>Log out</span></button>
+          </div>
         </div>
+        <img class="student-header__botanical" src="./assets/references/teacher-dashboard/child-botanical-corner-top-right.png" alt="">
       </header>
 
-      <aside class="student-sidebar">
-        <a class="student-brand" href="#dashboard" data-student-link="dashboard">
-          <span class="student-brand__mark" aria-hidden="true">L</span>
-          <span data-brand-name>Learning Studio</span>
-        </a>
-        <nav class="student-nav" aria-label="Student Progress">
-          <a href="#dashboard" data-student-link="dashboard"><span aria-hidden="true"><img src="./assets/images/icon-dashboard.png.png" alt=""></span>Dashboard</a>
-          <a href="#progress" data-student-link="progress"><span aria-hidden="true"><img src="./assets/images/empty-progress.png.png" alt=""></span>My Progress</a>
-          <a href="#achievements" data-student-link="achievements"><span aria-hidden="true"><img src="./assets/images/achievement-small.png.png" alt=""></span>Achievements</a>
-        </nav>
-        <div class="student-sidebar__message">
-          <p class="student-eyebrow">Keep growing</p>
-          <p data-theme-message>Your learning journey, clearly organized.</p>
+      <aside class="student-sidebar" id="student-sidebar" data-student-sidebar>
+        <div class="student-sidebar__top">
+          <a class="student-brand" href="#dashboard" data-student-link="dashboard" aria-label="Open dashboard">
+            <span class="student-brand__mark" aria-hidden="true"><svg><use href="#student-icon-book"/></svg></span>
+            <span><strong data-brand-name>Learning Garden</strong><small>English learning</small></span>
+          </a>
+          <button class="student-sidebar__close" type="button" data-student-sidebar-close aria-label="Close navigation"><svg aria-hidden="true"><use href="#student-icon-close"/></svg></button>
         </div>
+
+        <nav class="student-nav" aria-label="Student navigation">
+          <a href="#progress" data-student-link="progress"><svg aria-hidden="true"><use href="#student-icon-progress"/></svg><span>My Progress</span></a>
+          <a href="#my-goals" data-student-unavailable aria-disabled="true"><svg aria-hidden="true"><use href="#student-icon-target"/></svg><span>My Goals</span></a>
+          <a href="#feedback" data-student-unavailable aria-disabled="true"><svg aria-hidden="true"><use href="#student-icon-message"/></svg><span>Feedback</span></a>
+          <a href="#homework" data-student-unavailable aria-disabled="true"><svg aria-hidden="true"><use href="#student-icon-clipboard"/></svg><span>Homework</span></a>
+          <a href="#achievements" data-student-link="achievements"><svg aria-hidden="true"><use href="#student-icon-star"/></svg><span>Achievements</span></a>
+        </nav>
+
+        <img class="student-sidebar__scene" src="./assets/references/teacher-dashboard/child-sidebar-scene.png" alt="">
+
       </aside>
+      <button class="student-sidebar-overlay" type="button" data-student-sidebar-overlay aria-label="Close navigation" hidden></button>
 
       <p class="student-state" data-student-state role="status" aria-live="polite">Loading your learning space…</p>
 
       <div class="student-content" data-student-content hidden>
-        <section class="student-page student-dashboard" id="dashboard" data-student-section="dashboard">
-          <header class="student-welcome">
-            <span class="student-avatar student-avatar--large" data-avatar-frame>
-              <img data-student-avatar alt="" hidden>
-              <span data-student-initial aria-hidden="true">S</span>
-            </span>
-            <div>
-              <p class="student-eyebrow">Welcome back</p>
-              <h2>Hello, <span data-student-name>Student</span>!</h2>
-              <p>Continue building your English skills, one unit at a time.</p>
-              <p class="student-course-line"><span>Current course</span><strong data-student-course>—</strong></p>
+        <section class="student-page student-dashboard student-dashboard--v2" id="dashboard" data-student-section="dashboard">
+          <div class="student-home-grid">
+            <article class="dashboard-card dashboard-current-course">
+              <div class="dashboard-card__heading"><svg aria-hidden="true"><use href="#student-icon-book"/></svg><h2>Current Course</h2></div>
+              <figure class="dashboard-course-cover course-art" data-course-art>
+                <img data-course-image src="./assets/references/teacher-dashboard/child-course-cover-fallback.png" alt="">
+                <span data-course-initial hidden>C</span>
+              </figure>
+              <div class="dashboard-current-course__body">
+                <h3 data-student-course>Course not available</h3>
+                <p><span data-dashboard-current-unit>Choose a course to begin</span></p>
+                <a class="student-primary-link" href="#progress" data-student-link="progress">Continue learning <span aria-hidden="true">→</span></a>
+              </div>
+            </article>
+
+            <article class="dashboard-card dashboard-next-lesson">
+              <div class="dashboard-card__heading"><svg aria-hidden="true"><use href="#student-icon-calendar"/></svg><h2>Next Lesson</h2></div>
+              <div class="dashboard-empty dashboard-empty--lesson">
+                <span class="dashboard-empty__icon"><svg aria-hidden="true"><use href="#student-icon-calendar"/></svg></span>
+                <div><strong data-dashboard-next-lesson>No lesson scheduled</strong><p data-dashboard-next-lesson-meta>Your next lesson will appear here when it is available.</p></div>
+              </div>
+            </article>
+
+            <div class="dashboard-side-stack">
+              <article class="dashboard-card dashboard-goal-card">
+                <div class="dashboard-card__heading"><svg aria-hidden="true"><use href="#student-icon-target"/></svg><h2>Current Goal</h2></div>
+                <div class="dashboard-goal-card__content">
+                  <img src="./assets/references/teacher-dashboard/child-goal-plant.png" alt="">
+                  <div><strong data-student-goal-title>No active goal</strong><span data-student-goal-status>Choose a goal with your teacher</span></div>
+                </div>
+              </article>
+
+              <article class="dashboard-card dashboard-feedback-preview">
+                <div class="dashboard-card__heading"><svg aria-hidden="true"><use href="#student-icon-message"/></svg><h2>Feedback from your teacher</h2></div>
+                <div data-student-feedback-list></div>
+                <div class="dashboard-empty dashboard-empty--feedback" data-student-feedback-empty hidden>
+                  <img src="./assets/references/teacher-dashboard/child-feedback-empty.png" alt="">
+                  <div><strong>No feedback yet</strong><p>Published feedback from your teacher will appear here.</p></div>
+                </div>
+              </article>
             </div>
-            <div class="course-art" data-course-art aria-hidden="true">
-              <img data-course-image alt="" hidden>
-              <span data-course-initial>C</span>
-            </div>
-          </header>
 
-          <div class="student-summary-grid">
-            <article class="student-summary-card student-summary-card--overall">
-              <p>Overall Progress</p>
-              <strong data-student-overall>—</strong>
-              <small>Across units with progress</small>
+            <article class="dashboard-card dashboard-current-learning">
+              <div class="dashboard-card__heading"><svg aria-hidden="true"><use href="#student-icon-progress"/></svg><div><h2>Current Learning</h2><p>Focus on your key learning targets.</p></div></div>
+              <div class="dashboard-learning-list" data-dashboard-learning></div>
+              <p class="dashboard-empty-copy" data-dashboard-learning-empty hidden>No learning targets are available for the current unit.</p>
             </article>
-            <article class="student-summary-card student-summary-card--strongest">
-              <p>Strongest Area</p>
-              <strong data-student-strongest>—</strong>
-              <small>Your current strength</small>
-            </article>
-            <article class="student-summary-card student-summary-card--goal">
-              <p>Current Goal</p>
-              <strong data-student-goal-title>—</strong>
-              <small data-student-goal-status>No active goal</small>
-            </article>
-            <article class="student-summary-card student-summary-card--units">
-              <p>Units in Course</p>
-              <strong data-student-unit-count>0</strong>
-              <small data-student-progress-count>No progress yet</small>
-            </article>
-          </div>
 
-          <div class="student-dashboard-grid">
-            <section class="student-panel" aria-labelledby="dashboard-skills-heading">
-              <div class="student-panel__heading"><div><p class="student-eyebrow">Your strengths</p><h3 id="dashboard-skills-heading">Progress by Skill</h3></div><a href="#progress" data-student-link="progress">View details</a></div>
-              <div class="skill-list" data-dashboard-skills></div>
-              <p class="student-empty" data-dashboard-skills-empty hidden>No progress data yet.</p>
-            </section>
+            <article class="dashboard-card dashboard-course-journey">
+              <div class="dashboard-card__heading"><svg aria-hidden="true"><use href="#student-icon-book"/></svg><div><h2>Course Journey</h2><p>Lessons completed in your current unit.</p></div></div>
+              <div data-dashboard-journey></div>
+            </article>
 
-            <section class="student-panel" aria-labelledby="dashboard-achievements-heading">
-              <div class="student-panel__heading"><div><p class="student-eyebrow">Milestones</p><h3 id="dashboard-achievements-heading">Recent Achievements</h3></div><a href="#achievements" data-student-link="achievements">View all</a></div>
+            <article class="dashboard-card dashboard-homework-card">
+              <div class="dashboard-card__heading"><svg aria-hidden="true"><use href="#student-icon-clipboard"/></svg><h2>Homework</h2></div>
+              <div data-dashboard-homework></div>
+              <div class="dashboard-empty dashboard-empty--homework" data-dashboard-homework-empty hidden>
+                <img src="./assets/references/teacher-dashboard/child-homework-empty.png" alt="">
+                <div><strong>No active homework</strong><p>Your next assignment will appear here.</p></div>
+              </div>
+            </article>
+
+            <article class="dashboard-card dashboard-achievement-card">
+              <div class="dashboard-card__heading"><svg aria-hidden="true"><use href="#student-icon-star"/></svg><h2>Recent Achievement</h2><a href="#achievements" data-student-link="achievements">View all</a></div>
               <ul class="achievement-preview" data-achievement-preview></ul>
-              <p class="student-empty" data-achievement-preview-empty hidden>No achievements yet. Your next milestone is ahead.</p>
-            </section>
+              <div class="dashboard-empty dashboard-empty--achievement" data-achievement-preview-empty hidden>
+                <img src="./assets/references/teacher-dashboard/child-achievements-empty.png" alt="">
+                <div><strong>Your first achievement is ahead</strong><p>Keep learning and celebrating every step.</p></div>
+              </div>
+            </article>
           </div>
         </section>
 
         <section class="student-page student-progress-page" id="progress" data-student-section="progress" hidden>
           <div class="student-page-heading">
-            <div><p class="student-eyebrow">Learning journey</p><h2>My Progress</h2><p>See how your skills are developing across the course.</p></div>
+            <div><p class="student-eyebrow">Learning journey</p><h2>My Progress</h2><p>See how your learning objectives are developing across the course.</p></div>
           </div>
 
           <div class="progress-overview">
-            <article><span>Overall</span><strong data-progress-overall>—</strong></article>
+            <article><span>Overall Status</span><strong data-progress-overall>—</strong></article>
             <article><span>Current Course</span><strong data-progress-course>—</strong></article>
             <article><span>Strongest Area</span><strong data-progress-strongest>—</strong></article>
           </div>
 
           <div class="student-progress-grid">
             <section class="student-panel" aria-labelledby="skills-progress-heading">
-              <div class="student-panel__heading"><div><p class="student-eyebrow">Skill averages</p><h3 id="skills-progress-heading">Skills Progress</h3></div></div>
+              <div class="student-panel__heading"><div><p class="student-eyebrow">Category overview</p><h3 id="skills-progress-heading">Language Skills</h3></div></div>
               <div class="skill-list" data-progress-skills></div>
               <p class="student-empty" data-progress-skills-empty hidden>No skill progress yet.</p>
             </section>
@@ -125,9 +177,9 @@
           </div>
 
           <section class="student-panel student-matrix-panel" aria-labelledby="student-matrix-heading">
-            <div class="student-panel__heading"><div><p class="student-eyebrow">Skills × units</p><h3 id="student-matrix-heading">Progress Matrix</h3></div></div>
+            <div class="student-panel__heading"><div><p class="student-eyebrow">Unit learning plan</p><h3 id="student-matrix-heading">Learning Objectives</h3></div></div>
             <div class="student-matrix" data-student-progress-matrix></div>
-            <p class="student-empty" data-student-progress-empty hidden>No progress has been recorded yet.</p>
+            <p class="student-empty" data-student-progress-empty hidden>No course units are available yet.</p>
           </section>
         </section>
 
@@ -146,6 +198,6 @@
     </main>
 
     <p data-page-status role="status" aria-live="polite">Checking access…</p>
-    <script type="module" src="./js/pages/student-page.js"></script>
+    <script type="module" src="./js/pages/student-page.js?v=20260825-journey-progress"></script>
   </body>
 </html>

@@ -446,11 +446,9 @@ Use course image / thumbnail when available.
 
 # 19. Course Images
 
-Admin must be able to upload or select a custom course image.
+Admin selects course and unit covers from the public local gallery in `assets/images/gallery`. New decorative files are added to the repository and registered in `manifest.json`; runtime upload is intentionally disabled so Firebase Storage and the Blaze plan are not required.
 
-Do not hardcode course artwork.
-
-The course data model / UI should support an image URL or storage path.
+The course data model / UI stores the selected relative image URL/path.
 
 Use that image in:
 
@@ -462,11 +460,9 @@ Use that image in:
 
 # 20. Student Photos
 
-Admin must be able to upload or select a custom student photo/avatar.
+Admin can choose one of the shared illustrated Girl/Boy avatars or keep the student's initials. Do not infer an avatar from a name, and do not store personal student photos in the public repository.
 
-Do not rely only on generated avatars.
-
-Use the uploaded image in:
+Use the selected avatar in:
 
 - Students List;
 - Student Profile;
@@ -544,21 +540,21 @@ Student-facing UI must support different visual themes.
 
 Do not make Paddington the permanent visual identity of every student account.
 
-Use at minimum:
+Supported values:
 
 ```text
 child
+teen
+adult
+```
+
+Legacy records may still contain:
+
+```text
 neutral
 ```
 
-Possible future values:
-
-```text
-teen
-minimal
-playful
-cozy
-```
+Neutral resolves to the adult visual family. Child, teen and adult use shared dashboard components and data bindings; theme tokens and decorative assets change their presentation. Do not duplicate dashboard implementations per theme.
 
 A field such as:
 
@@ -586,6 +582,14 @@ Child theme may use:
 Existing child student-facing references are valid references for this theme.
 
 Do not apply this theme automatically to all students.
+
+The child dashboard uses this page-level reference:
+
+```text
+assets/references/teacher-dashboard/student-dashboard-reference-v2.png
+```
+
+Its home layout is a compact full-width workspace: Current Course, Next Lesson, Current Goal and published Feedback in the first row; Current Learning and Course Journey in the second row; Homework and Recent Achievement in the third row. Missing data uses an honest card-level empty state. The large legacy welcome hero and four equal summary cards are not part of this dashboard layout.
 
 ---
 
@@ -866,7 +870,7 @@ course-units-reference-v1.png
 add-edit-student-modal-reference-v1.png
 add-edit-group-modal-reference-v1.png
 
-student-dashboard-reference-v1.png
+student-dashboard-reference-v2.png
 student-progress-reference-v1.png
 student-achievements-reference-v1.png
 
@@ -875,7 +879,11 @@ student-progress-adult-reference-v1.png
 student-achievements-adult-reference-v1.png
 ```
 
-Child and adult/neutral references must not be mixed into one universal student UI.
+Child and adult/neutral decorative assets must not be mixed on the same rendered dashboard. Component structure and business logic remain universal and theme-aware.
+
+## Course Journey mini map
+
+The dashboard Course Journey area uses one shared responsive component. `course.journey.child.png` is the direct visual direction for the child trail variant; `course.journey.adult..png` is the direct direction for both teen and adult roadmap variants. The map displays physical lesson completion only: completed, current and upcoming lesson stops plus completed/total and percentage. It never visualizes learning-target mastery.
 
 ---
 

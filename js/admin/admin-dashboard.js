@@ -1,9 +1,12 @@
 import { coursesRepository } from "../data/repositories/courses-repository.js";
+import { feedbackDraftsRepository } from "../data/repositories/feedback-drafts-repository.js";
 import { groupsRepository } from "../data/repositories/groups-repository.js";
-import { progressRepository } from "../data/repositories/progress-repository.js";
+import { objectiveProgressRepository } from "../data/repositories/objective-progress-repository.js";
 import { studentsRepository } from "../data/repositories/students-repository.js";
 import { unitsRepository } from "../data/repositories/units-repository.js";
-import { calculateOverallProgress } from "../domain/progress.js";
+import { OBJECTIVE_STATUS_LABELS } from "../domain/constants.js";
+import { ENTITY_IMAGE_CONFIG, ENTITY_IMAGE_TYPES } from "../domain/entity-images.js";
+import { overallObjectiveStatus } from "../domain/learning-objectives.js";
 import { initializeAdminCrud } from "./admin-crud.js";
 import { clearStudentAccess } from "./student-access.js";
 import { loadAdminStudentProfile } from "./student-profile.js";
@@ -74,7 +77,7 @@ function setOverviewText(selector, value) {
   if (element) element.textContent = String(value);
 }
 
-function createAttentionItem(student, overallProgress) {
+function createAttentionItem(student, overallStatus) {
   const item = document.createElement("li");
   const marker = createEntityMarker(student.name, "student");
   const identity = document.createElement("span");
@@ -86,11 +89,23 @@ function createAttentionItem(student, overallProgress) {
   name.dataset.studentProfileLink = student.id;
   name.textContent = displayValue(student.name);
   group.textContent = `Group: ${displayValue(student.groupName)}`;
-  progress.textContent = `${overallProgress}%`;
-  progress.setAttribute("aria-label", `Overall progress ${overallProgress}%`);
+  progress.textContent = OBJECTIVE_STATUS_LABELS[overallStatus];
+  progress.setAttribute("aria-label", `Overall status ${OBJECTIVE_STATUS_LABELS[overallStatus]}`);
   identity.append(name, group);
   item.append(marker, identity, progress);
   setStudentColor(item, student.color);
+  return item;
+}
+
+function createFeedbackDraftItem(draft, student) {
+  const item = document.createElement("li");
+  const link = document.createElement("a");
+  const detail = document.createElement("small");
+  link.href = `#student/${encodeURIComponent(draft.studentId)}`;
+  link.dataset.studentProfileLink = draft.studentId;
+  link.textContent = displayValue(student?.name ?? "Unknown student");
+  detail.textContent = `${draft.sourceObservationIds?.length ?? 0} observations · Review draft`;
+  item.append(link, detail);
   return item;
 }
 
@@ -108,11 +123,12 @@ async function loadOverview() {
   });
 
   try {
-    const [students, groups, courses, progressDocuments] = await Promise.all([
+    const [students, groups, courses, progressDocuments, feedbackDrafts] = await Promise.all([
       loadStudentsWithRelatedNames(),
       loadGroups(),
       loadCourses(),
-      progressRepository.list(),
+      objectiveProgressRepository.list(),
+      feedbackDraftsRepository.listWaiting(),
     ]);
     const progressByStudent = new Map();
     progressDocuments.forEach((progress) => {
@@ -124,10 +140,12 @@ async function loadOverview() {
       .filter((student) => studentStatus(student) === "active")
       .map((student) => ({
         student,
-        overall: calculateOverallProgress(progressByStudent.get(student.id) ?? []),
+        overall: overallObjectiveStatus(progressByStudent.get(student.id) ?? []),
       }))
-      .filter((item) => item.overall !== null && item.overall < 60)
-      .sort((first, second) => first.overall - second.overall);
+      .filter((item) => item.overall === "needs_practice");
+    const studentsById = new Map(students.map((student) => [student.id, student]));
+    const feedbackList = document.querySelector("[data-overview-feedback-list]");
+    const feedbackEmpty = document.querySelector("[data-overview-feedback-empty]");
 
     setOverviewText(
       "[data-overview-active-students]",
@@ -139,11 +157,19 @@ async function loadOverview() {
       courses.filter((course) => course.active !== false).length,
     );
     setOverviewText("[data-overview-attention-count]", attention.length);
+    setOverviewText("[data-overview-feedback-count]", feedbackDrafts.length);
     list.replaceChildren(
       ...attention.slice(0, 4).map((item) => createAttentionItem(item.student, item.overall)),
     );
     list.hidden = attention.length === 0;
     empty.hidden = attention.length > 0;
+    feedbackList?.replaceChildren(
+      ...feedbackDrafts.slice(0, 5).map((draft) =>
+        createFeedbackDraftItem(draft, studentsById.get(draft.studentId)),
+      ),
+    );
+    if (feedbackList) feedbackList.hidden = feedbackDrafts.length === 0;
+    if (feedbackEmpty) feedbackEmpty.hidden = feedbackDrafts.length > 0;
     state.hidden = true;
     content.forEach((element) => {
       element.hidden = false;
@@ -161,6 +187,11 @@ function createNameLookup(documents) {
 function resolveName(lookup, documentId, fallback) {
   const name = lookup.get(documentId);
   return typeof name === "string" && name.trim() ? name : fallback;
+}
+
+function effectiveStudentCourseId(student, groupsById) {
+  const groupCourseId = student.groupId ? groupsById.get(student.groupId)?.courseId : "";
+  return groupCourseId || student.courseId || "";
 }
 
 async function loadGroupsWithCourseNames() {
@@ -186,10 +217,13 @@ async function loadCoursesWithCounts() {
     loadUnits(),
   ]);
 
+  const groupsById = new Map(groups.map((group) => [group.id, group]));
   return courses.map((course) => ({
     ...course,
     groupCount: groups.filter((group) => group.courseId === course.id).length,
-    studentCount: students.filter((student) => student.courseId === course.id).length,
+    studentCount: students.filter(
+      (student) => effectiveStudentCourseId(student, groupsById) === course.id,
+    ).length,
     unitCount: units.filter((unit) => unit.courseId === course.id).length,
   }));
 }
@@ -202,14 +236,19 @@ async function loadStudentsWithRelatedNames() {
   ]);
   const groupNames = createNameLookup(groups);
   const courseNames = createNameLookup(courses);
+  const groupsById = new Map(groups.map((group) => [group.id, group]));
 
-  return students.map((student) => ({
-    ...student,
-    groupName: student.groupId
-      ? resolveName(groupNames, student.groupId, "Unknown group")
-      : "Individual",
-    courseName: resolveName(courseNames, student.courseId, "Unknown course"),
-  }));
+  return students.map((student) => {
+    const courseId = effectiveStudentCourseId(student, groupsById);
+    return {
+      ...student,
+      courseId,
+      groupName: student.groupId
+        ? resolveName(groupNames, student.groupId, "Unknown group")
+        : "Individual",
+      courseName: resolveName(courseNames, courseId, "Unknown course"),
+    };
+  });
 }
 
 function displayValue(value) {
@@ -274,6 +313,21 @@ function createEntityMarker(title, modifier) {
   return marker;
 }
 
+function addMarkerImage(marker, source, fallback, alt) {
+  const image = document.createElement("img");
+  image.src = source || fallback;
+  image.alt = alt;
+  image.addEventListener("error", () => {
+    if (source && fallback) {
+      image.src = fallback;
+      return;
+    }
+    image.remove();
+  }, { once: true });
+  marker.prepend(image);
+  marker.classList.add("entity-marker--image");
+}
+
 function setStudentColor(element, color) {
   if (typeof color === "string" && globalThis.CSS?.supports?.("color", color)) {
     element.style.setProperty("--student-color", color);
@@ -308,16 +362,12 @@ function renderStudent(student) {
   link.href = `#student/${encodeURIComponent(student.id)}`;
   link.dataset.studentProfileLink = student.id;
   link.textContent = displayValue(student.name);
-  heading.replaceChildren(createEntityMarker(student.name, "student"), link);
+  const marker = createEntityMarker(student.name, "student");
+  if (student.avatarImageUrl) addMarkerImage(marker, student.avatarImageUrl, "", `${displayValue(student.name)} avatar`);
+  heading.replaceChildren(marker, link);
   setStudentColor(item, student.color);
 
   const actions = document.createElement("div");
-  const editButton = document.createElement("button");
-  editButton.type = "button";
-  editButton.dataset.editStudent = student.id;
-  editButton.textContent = "Edit";
-  actions.append(editButton);
-
   if (studentStatus(student) !== "archived") {
     const archiveButton = document.createElement("button");
     archiveButton.type = "button";
@@ -350,7 +400,14 @@ function renderCourse(course) {
   openButton.className = "entity-name-button";
   openButton.dataset.openCourse = course.id;
   openButton.textContent = displayValue(course.name);
-  heading?.replaceChildren(createEntityMarker(course.name, "course"), openButton);
+  const marker = createEntityMarker(course.name, "course");
+  addMarkerImage(
+    marker,
+    course.coverImageUrl,
+    ENTITY_IMAGE_CONFIG[ENTITY_IMAGE_TYPES.COURSE].fallbackUrl,
+    `${displayValue(course.name)} cover`,
+  );
+  heading?.replaceChildren(marker, openButton);
   return item;
 }
 

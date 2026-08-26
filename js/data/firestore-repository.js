@@ -22,6 +22,10 @@ export function createRepository(collectionName) {
   }
 
   return Object.freeze({
+    createId() {
+      return doc(collectionRef()).id;
+    },
+
     async getById(id) {
       return withId(await getDoc(doc(collectionRef(), id)));
     },

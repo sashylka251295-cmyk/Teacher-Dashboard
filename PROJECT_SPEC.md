@@ -445,7 +445,21 @@ order
 
 ---
 
-# 17. Progress
+# 17. Physical and learning progress (current model)
+
+The application has two separate progress layers. Physical course progress is the only layer allowed to show a percentage: `completed lessons / total lessons in the current unit × 100`. Each group and student stores its current physical snapshot in `courseJourney`, including `unitId`, `completedLessonIds`, `currentLessonId` and safe `lessonStops`. Master lesson setup status is not learner progress.
+
+Learning progress uses specific learning targets defined in each unit. `units/{unitId}.objectives` is an ordered array of stable `{ id, category, categories[], title, order }` objects. Categories are Vocabulary, Grammar, Reading, Listening, Speaking and Writing. Writing is included only in units where Writing objectives are configured. One target may belong to several skill areas but is assessed once by stable ID.
+
+Current status records are stored in `objectiveProgress`, lesson update records in `progressHistory`, and homework in `homeworkAssignments`. Teacher-selectable objective statuses are `needs_practice`, `developing` and `confident`; an absent record is displayed as Not assessed/`—`. Aggregates use assessed objectives only and display status labels rather than percentages. An admin may edit or delete a lesson update from the Student Profile; the application then recalculates affected objective snapshots and physical lesson completion from the remaining history. Private observations and published feedback remain independent records and are never silently deleted with progress.
+
+Homework is a separate Learning habits area with `assigned`, `completed` and `needs_completion` statuses. It is not a language skill and does not contribute to language progress calculations.
+
+The previous `progress` percentage documents described below are legacy read-only compatibility data. New UI writes must not add to them or mix them into current calculations.
+
+The shared Course Journey map displays physical completed/current/upcoming lesson stops for students and groups. Group Quick Update pre-fills the selected lesson's one-to-three real learning targets, applies common statuses and permits per-student overrides before publishing. See `docs/physical-and-learning-progress-spec.md`.
+
+## 17.1 Legacy percentage schema (read-only compatibility)
 
 Структура:
 
@@ -494,7 +508,7 @@ Skills в первой версии фиксированные:
 
 ---
 
-# 18. Unit Progress
+# 18. Legacy Unit Progress (read-only compatibility)
 
 `unitProgress` должен рассчитываться автоматически на основе skill scores.
 
@@ -929,7 +943,15 @@ Current Focus
 
 ---
 
-# 34. Progress Matrix
+# 33.1 Current learning-objective UI (supersedes sections 34–38)
+
+The Admin Student Profile and student-facing My Progress page show expandable unit cards. Inside each unit, objectives are grouped by the categories configured for that unit and each objective displays one of the four approved status badges. Categories with no objectives are omitted, so Writing appears only where it is taught.
+
+Quick Update lists the selected unit's concrete objectives. The teacher explicitly ticks only objectives assessed in that lesson and selects a status; unticked objectives remain unchanged. The same update can create or update separate Homework/Learning habits records and can save an optional private teacher observation.
+
+Overall Status and Strongest Area are derived from assessed objective statuses only. The current UI must not render percentage bars or combine legacy percentage documents with objective statuses.
+
+# 34. Legacy Progress Matrix (superseded by section 33.1)
 
 Главный элемент страницы.
 
@@ -952,7 +974,7 @@ Units расположены горизонтально.
 
 ---
 
-# 35. Unit details
+# 35. Legacy Unit details (superseded by section 33.1)
 
 При клике на Unit открыть подробную карточку или modal.
 
@@ -977,7 +999,7 @@ Edit Progress
 
 ---
 
-# 36. Edit Progress
+# 36. Legacy Edit Progress (superseded by section 33.1)
 
 Admin выбирает / редактирует:
 
@@ -1004,7 +1026,7 @@ Homework
 
 ---
 
-# 37. Overall Progress
+# 37. Legacy Overall Progress (superseded by section 33.1)
 
 Overall Progress ученика рассчитывать автоматически на основе существующих progress documents.
 
@@ -1012,7 +1034,7 @@ Overall Progress ученика рассчитывать автоматичес�
 
 ---
 
-# 38. Strongest Area
+# 38. Legacy Strongest Area (superseded by section 33.1)
 
 Strongest Area определить автоматически на основе средних значений skills по всем units.
 
@@ -1120,7 +1142,11 @@ Student не видит:
 
 ---
 
-# 43. Student Progress Matrix
+# 43. Student Learning Objectives (current model)
+
+The student sees expandable unit cards containing the same teacher-defined objective descriptions and student-safe status badges. The page shows category and unit status summaries, never manually entered percentages. Homework is shown at the bottom of each unit as a separate Learning habits block, including completed count among assigned homework only.
+
+The matrix guidance below is retained only as a legacy visual reference and must not override the current objective-based model.
 
 Можно использовать ту же структуру:
 
