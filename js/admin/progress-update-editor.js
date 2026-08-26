@@ -199,7 +199,9 @@ async function submitRevision(event) {
     await context.onSaved("The progress update was edited and current progress was recalculated.");
   } catch (error) {
     console.error("Unable to revise the progress update.", error);
-    elements.message.textContent = "Unable to save the changes. Please try again.";
+    elements.message.textContent = error instanceof Error && error.message
+      ? `Unable to save the changes: ${error.message}`
+      : "Unable to save the changes. Please try again.";
   } finally {
     elements.save.disabled = false;
     elements.remove.disabled = false;
@@ -232,7 +234,9 @@ async function removeUpdate() {
     await context.onSaved("The progress update was deleted and current progress was recalculated.");
   } catch (error) {
     console.error("Unable to delete the progress update.", error);
-    elements.message.textContent = "Unable to delete the update. Please try again.";
+    elements.message.textContent = error instanceof Error && error.message
+      ? `Unable to delete the update: ${error.message}`
+      : "Unable to delete the update. Please try again.";
   } finally {
     elements.save.disabled = false;
     elements.remove.disabled = false;

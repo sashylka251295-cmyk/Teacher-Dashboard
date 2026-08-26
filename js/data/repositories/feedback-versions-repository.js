@@ -16,12 +16,13 @@ export const feedbackVersionsRepository = Object.freeze({
       where("status", "==", "published"),
     );
   },
-  publishQuick({ studentId, courseId, unitId, lessonId, text }) {
+  publishQuick({ studentId, courseId, unitId, lessonId, learningTargetIds = [], text }) {
     return repository.create({
       studentId,
       courseId,
       unitId,
       lessonId,
+      learningTargetIds: Array.isArray(learningTargetIds) ? learningTargetIds : [],
       sourceObservationIds: [],
       content: {
         message: String(text ?? "").trim(),

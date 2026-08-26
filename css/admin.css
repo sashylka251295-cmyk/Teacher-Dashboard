@@ -6207,6 +6207,62 @@ th[data-skill="homework"]::before { background-image: url("../assets/images/skil
   font-weight: 750;
 }
 
+.quick-related-targets {
+  margin: 0.25rem 0 0;
+  padding: 0.65rem;
+  border: 1px solid #dfe5d7;
+  border-radius: 0.75rem;
+  background: #f8faf4;
+}
+
+.quick-related-targets > p {
+  margin: 0 0 0.55rem;
+  color: var(--color-muted);
+  font-size: 0.78rem;
+}
+
+.quick-related-targets > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.quick-related-targets section {
+  display: grid;
+  align-content: start;
+  gap: 0.25rem;
+  min-width: 0;
+  padding: 0.5rem;
+  border: 1px solid rgb(220 211 196 / 70%);
+  border-radius: 0.6rem;
+  background: #fffefa;
+}
+
+.quick-related-targets h4 {
+  margin: 0 0 0.15rem;
+  color: var(--color-green);
+  font-size: 0.75rem;
+}
+
+.quick-related-targets section label {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.45rem;
+  align-items: start;
+  min-width: 0;
+  padding: 0.35rem 0.4rem;
+  border-radius: 0.45rem;
+  cursor: pointer;
+}
+
+.quick-related-targets section label:hover {
+  background: var(--color-green-soft);
+}
+
+.quick-related-targets input {
+  margin-top: 0.15rem;
+}
+
 @media (max-width: 64rem) {
   .quick-update-dialog form {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -6215,6 +6271,10 @@ th[data-skill="homework"]::before { background-image: url("../assets/images/skil
 
 @media (max-width: 44rem) {
   .quick-update-dialog form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .quick-related-targets > div {
     grid-template-columns: minmax(0, 1fr);
   }
 }

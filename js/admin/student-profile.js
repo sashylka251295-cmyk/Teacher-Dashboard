@@ -253,13 +253,24 @@ function createObservation(note, unitNames, courseName) {
   const more = document.createElement("details");
   const moreSummary = document.createElement("summary");
   const remove = document.createElement("button");
-  const isLinked = Boolean(note.learningTargetId && note.skillCategory);
+  const targetIds = Array.isArray(note.learningTargetIds) && note.learningTargetIds.length
+    ? note.learningTargetIds
+    : note.learningTargetId ? [note.learningTargetId] : [];
+  const targetTitles = Array.isArray(note.learningTargetTitles) && note.learningTargetTitles.length
+    ? note.learningTargetTitles
+    : note.learningTargetTitle ? [note.learningTargetTitle] : [];
+  const skillCategories = Array.isArray(note.skillCategories) && note.skillCategories.length
+    ? note.skillCategories
+    : note.skillCategory ? [note.skillCategory] : [];
+  const isLinked = targetIds.length > 0 && skillCategories.length > 0;
   const observationDate = formatDate(note.lessonDate ?? note.createdAt);
 
   item.className = "observation-card";
   top.className = "observation-card__top";
   skill.className = "observation-skill-chip";
-  skill.textContent = LANGUAGE_SKILL_LABELS[note.skillCategory] ?? "General";
+  skill.textContent = skillCategories.length
+    ? skillCategories.map((category) => LANGUAGE_SKILL_LABELS[category] ?? category).join(" · ")
+    : "General";
   date.textContent = observationDate ?? "Date unavailable";
   const rawDate = timestampToDate(note.lessonDate ?? note.createdAt);
   if (rawDate) date.dateTime = rawDate.toISOString();
@@ -270,7 +281,9 @@ function createObservation(note, unitNames, courseName) {
     ? "Independent learning"
     : `${courseName} › Unit: ${unitNames.get(note.unitId) ?? "Unknown unit"}`;
   title.className = "observation-card__target";
-  title.textContent = note.learningTargetTitle || "Observation without a linked learning target";
+  title.textContent = targetTitles.length
+    ? targetTitles.join(" · ")
+    : "Observation without a linked learning target";
   item.append(top, breadcrumb, title);
 
   if (note.lessonContext) {

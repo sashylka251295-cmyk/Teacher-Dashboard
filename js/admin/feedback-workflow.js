@@ -291,7 +291,9 @@ async function archiveDraft() {
 
 function openObservationEditor(note) {
   activeObservation = note;
-  elements.observationTarget.textContent = note.learningTargetTitle || "Observation without a linked learning target";
+  elements.observationTarget.textContent = Array.isArray(note.learningTargetTitles) && note.learningTargetTitles.length
+    ? note.learningTargetTitles.join(" · ")
+    : note.learningTargetTitle || "Observation without a linked learning target";
   elements.observationForm.elements.lessonContext.value = note.lessonContext ?? "";
   elements.observationForm.elements.text.value = note.text ?? "";
   elements.observationForm.elements.includeInFeedback.checked = note.includeInFeedback === true;

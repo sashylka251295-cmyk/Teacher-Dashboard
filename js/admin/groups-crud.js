@@ -14,6 +14,7 @@ import {
   ACTIVE_GOAL_STATUSES,
   HOMEWORK_STATUSES,
   HOMEWORK_STATUS_LABELS,
+  LANGUAGE_SKILL_CATEGORIES,
   LANGUAGE_SKILL_LABELS,
   OBJECTIVE_STATUSES,
   OBJECTIVE_STATUS_LABELS,
@@ -30,6 +31,7 @@ import {
   currentPhysicalUnit,
 } from "../domain/physical-progress.js";
 import { renderCourseJourneyMap } from "../ui/course-journey-map.js";
+import { buildObservationTargetFields } from "../domain/observation-links.js";
 import { isGoalStatus, isNonEmptyText, isStudentStatus } from "../domain/validation.js";
 import {
   closeDialog,
@@ -496,7 +498,10 @@ function createGroupUpdateStudentRow(student) {
   const observationSection = document.createElement("section");
   const observationHeading = document.createElement("h4");
   const feedbackVisibility = document.createElement("select");
-  const observationTarget = document.createElement("select");
+  const relatedTargets = document.createElement("fieldset");
+  const relatedTargetsLegend = document.createElement("legend");
+  const relatedTargetsHint = document.createElement("p");
+  const observationTargets = document.createElement("div");
   const observationContext = document.createElement("input");
   const observationText = document.createElement("textarea");
   const includeFeedback = document.createElement("input");
@@ -608,11 +613,29 @@ function createGroupUpdateStudentRow(student) {
     createOption("published", "Published student feedback"),
   );
   feedbackVisibility.dataset.groupFeedbackVisibility = "";
-  observationTarget.append(
-    createOption("", "Select a learning target"),
-    ...objectives.map((objective) => createOption(objective.id, objective.title)),
-  );
-  observationTarget.dataset.groupObservationTarget = "";
+  relatedTargets.className = "quick-related-targets";
+  relatedTargetsLegend.textContent = "Related learning targets";
+  relatedTargetsHint.textContent = "Select one or more targets connected to this note or feedback.";
+  observationTargets.dataset.groupObservationTargets = "";
+  LANGUAGE_SKILL_CATEGORIES.forEach((category) => {
+    const categoryObjectives = objectives.filter((objective) => objective.category === category);
+    if (!categoryObjectives.length) return;
+    const group = document.createElement("section");
+    const heading = document.createElement("h4");
+    heading.textContent = LANGUAGE_SKILL_LABELS[category];
+    group.append(heading, ...categoryObjectives.map((objective) => {
+      const label = document.createElement("label");
+      const checkbox = document.createElement("input");
+      const title = document.createElement("span");
+      checkbox.type = "checkbox";
+      checkbox.dataset.groupObservationTarget = objective.id;
+      title.textContent = objective.title;
+      label.append(checkbox, title);
+      return label;
+    }));
+    observationTargets.append(group);
+  });
+  relatedTargets.append(relatedTargetsLegend, relatedTargetsHint, observationTargets);
   observationContext.type = "text";
   observationContext.placeholder = "Lesson or context (optional)";
   observationContext.dataset.groupObservationContext = "";
@@ -624,7 +647,7 @@ function createGroupUpdateStudentRow(student) {
   observationSection.append(
     observationHeading,
     createLabeledControl("Visibility", feedbackVisibility),
-    createLabeledControl("Related learning target", observationTarget),
+    relatedTargets,
     createLabeledControl("Lesson or context", observationContext),
     createLabeledControl("Observation", observationText),
     includeFeedbackLabel,
@@ -883,24 +906,23 @@ async function saveGroupQuickUpdate(event) {
           .filter((change) => homeworkById.get(change.id)?.status !== change.status);
 
         const observationText = card.querySelector("[data-group-observation-text]").value.trim();
-        const observationTargetId = card.querySelector("[data-group-observation-target]").value;
-        const observationTarget = objectives.get(observationTargetId);
-        if (observationText && !observationTarget) {
-          throw new Error(`Select the observation learning target for ${student.name}.`);
+        const observationTargetIds = [...card.querySelectorAll("[data-group-observation-target]:checked")]
+          .map((checkbox) => checkbox.dataset.groupObservationTarget);
+        const observationTargets = observationTargetIds.map((targetId) => objectives.get(targetId)).filter(Boolean);
+        if (observationText && !observationTargets.length) {
+          throw new Error(`Select at least one observation learning target for ${student.name}.`);
         }
-        const changedTarget = objectiveChanges.find(
-          (change) => change.objectiveId === observationTargetId,
-        );
-        const existingTarget = progressByObjective(
+        const existingTargets = progressByObjective(
           currentGroupDetails.progressDocuments.filter((entry) =>
             entry.studentId === student.id && entry.unitId === unit.id),
-        ).get(observationTargetId);
+        );
+        const targetFields = buildObservationTargetFields(observationTargets, (target) => {
+          const changedTarget = objectiveChanges.find((change) => change.objectiveId === target.id);
+          return changedTarget?.status ?? existingTargets.get(target.id)?.status ?? "not_assessed";
+        });
         const observation = observationText ? {
           text: observationText,
-          learningTargetId: observationTarget.id,
-          learningTargetTitle: observationTarget.title,
-          skillCategory: observationTarget.category,
-          targetStatus: changedTarget?.status ?? existingTarget?.status ?? "not_assessed",
+          ...targetFields,
           lessonContext: card.querySelector("[data-group-observation-context]").value.trim(),
           includeInFeedback: card.querySelector("[data-group-observation-feedback]").checked,
         } : null;
@@ -999,6 +1021,10 @@ async function saveGroupQuickUpdate(event) {
           learningTargetId: plan.observation.learningTargetId,
           learningTargetTitle: plan.observation.learningTargetTitle,
           targetStatus: plan.observation.targetStatus,
+          learningTargetIds: plan.observation.learningTargetIds,
+          learningTargetTitles: plan.observation.learningTargetTitles,
+          skillCategories: plan.observation.skillCategories,
+          targetStatuses: plan.observation.targetStatuses,
           lessonContext: plan.observation.lessonContext,
           includeInFeedback: plan.observation.includeInFeedback,
           text: plan.observation.text,
@@ -1010,6 +1036,7 @@ async function saveGroupQuickUpdate(event) {
           courseId: currentGroupDetails.group.courseId,
           unitId: unit.id,
           lessonId: lesson.id,
+          learningTargetIds: plan.observation.learningTargetIds,
           text: plan.observation.text,
         });
       }

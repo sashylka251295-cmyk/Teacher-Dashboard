@@ -105,7 +105,12 @@ export async function reviseLearningUpdate({
       COLLECTIONS.OBJECTIVE_PROGRESS,
       progressDocumentId(student.id, entry.unitId, objectiveId, entry.scope),
     );
-    const latest = latestObjectiveChange(revisedHistory, student.id, unit.id, objectiveId);
+    const latest = latestObjectiveChange(
+      revisedHistory,
+      student.id,
+      entry.unitId ?? "",
+      objectiveId,
+    );
     const fallback = originalChanges.get(objectiveId);
     const status = latest?.change.status ?? fallback?.previousStatus ?? "not_assessed";
     if (status === "not_assessed") {

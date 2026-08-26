@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Teacher Dashboard — Student Progress Tracker</title>
     <link rel="stylesheet" href="./css/styles.css?v=20260825-journey-progress">
-    <link rel="stylesheet" href="./css/admin.css?v=20260826-independent-update">
+    <link rel="stylesheet" href="./css/admin.css?v=20260826-multi-target-update">
   </head>
   <body>
     <main class="teacher-shell" data-protected-content hidden>
@@ -427,10 +427,12 @@
               <legend>Optional individual feedback</legend>
               <label for="quick-feedback-visibility">Visibility</label>
               <select id="quick-feedback-visibility" data-quick-feedback-visibility><option value="private">Private teacher note</option><option value="published">Published student feedback</option></select>
-              <label for="quick-observation-target">Related learning target</label>
-              <select id="quick-observation-target" name="observationTarget" data-quick-observation-target>
-                <option value="">Select a learning target</option>
-              </select>
+              <fieldset class="quick-related-targets" aria-labelledby="quick-observation-target-label">
+                <legend id="quick-observation-target-label">Related learning targets</legend>
+                <p>Select one or more targets connected to this note or feedback.</p>
+                <div data-quick-observation-targets></div>
+                <p data-quick-observation-targets-empty hidden>Add a learning objective first.</p>
+              </fieldset>
               <label for="quick-observation-context">Lesson or context <small>(optional)</small></label>
               <input id="quick-observation-context" name="observationContext" type="text" placeholder="For example: speaking practice">
               <label for="quick-observation">Observation</label>
@@ -1051,6 +1053,6 @@
     </main>
 
     <p data-page-status role="status" aria-live="polite">Проверка доступа…</p>
-    <script type="module" src="./js/pages/admin-page.js?v=20260826-independent-update"></script>
+    <script type="module" src="./js/pages/admin-page.js?v=20260826-multi-target-update"></script>
   </body>
 </html>
