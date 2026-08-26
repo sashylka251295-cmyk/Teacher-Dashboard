@@ -24,9 +24,12 @@ import {
   overallObjectiveStatus,
   progressByObjective,
   strongestObjectiveCategory,
-  unitObjectiveStatus,
 } from "../domain/learning-objectives.js";
 import { isIndependentProgressEntry } from "../domain/independent-learning.js";
+import {
+  cumulativeUnitTargets,
+  unitPhysicalProgressFromHistory,
+} from "../domain/progress-display.js";
 import { configureQuickUpdate } from "./quick-update.js";
 import { configureFeedbackWorkflow } from "./feedback-workflow.js";
 import { configureProgressUpdateEditor } from "./progress-update-editor.js";
@@ -89,9 +92,30 @@ function setProfileState(root, message) {
 function createObjectiveItem(objective, progressMap) {
   const item = document.createElement("li");
   const title = document.createElement("span");
+  const progress = progressMap.get(objective.id);
   title.textContent = objective.title;
-  item.append(title, statusBadge(progressMap.get(objective.id)?.status ?? "not_assessed"));
+  if (progress?.status) {
+    item.append(title, statusBadge(progress.status));
+  } else {
+    const workedOn = document.createElement("span");
+    workedOn.className = "learning-status-badge learning-status-badge--worked-on";
+    workedOn.textContent = "Worked on";
+    item.append(title, workedOn);
+  }
   return item;
+}
+
+function physicalProgressBadge(progress) {
+  const badge = document.createElement("span");
+  const lessons = document.createElement("span");
+  const percent = document.createElement("strong");
+  badge.className = "unit-physical-progress";
+  lessons.textContent = progress.total
+    ? `${progress.completed} of ${progress.total} lessons`
+    : "No lessons yet";
+  percent.textContent = `${progress.percent}%`;
+  badge.append(lessons, percent);
+  return badge;
 }
 
 function createHomeworkBlock(assignments) {
@@ -118,20 +142,34 @@ function createHomeworkBlock(assignments) {
   return block;
 }
 
-function createUnitObjectives(unit, objectiveProgress, homeworkAssignments) {
+function createUnitObjectives({
+  unit,
+  objectiveProgress,
+  homeworkAssignments,
+  progressHistory,
+  lessons,
+  student,
+}) {
   const card = document.createElement("details");
   const summary = document.createElement("summary");
   const title = document.createElement("strong");
-  const objectives = learningObjectivesForUnit(unit);
+  const objectives = cumulativeUnitTargets(unit, progressHistory);
   const progressMap = progressByObjective(objectiveProgress);
+  const physical = unitPhysicalProgressFromHistory({
+    unit,
+    lessons,
+    history: progressHistory,
+    studentId: student.id,
+    fallbackJourney: student.courseJourney?.unitId === unit.id ? student.courseJourney : null,
+  });
   title.textContent = unitName(unit);
-  summary.append(title, statusBadge(unitObjectiveStatus(unit, objectiveProgress), OBJECTIVE_STATUS_LABELS, true));
+  summary.append(title, physicalProgressBadge(physical));
   card.className = "unit-objectives-card";
   card.append(summary);
 
   if (objectives.length === 0) {
     const empty = document.createElement("p");
-    empty.textContent = "No learning objectives have been added to this unit.";
+    empty.textContent = "No learning targets have been recorded for this student yet.";
     card.append(empty);
   } else {
     LANGUAGE_SKILL_CATEGORIES.forEach((category) => {
@@ -181,7 +219,15 @@ function createIndependentObjectives(objectiveProgress, homeworkAssignments) {
   return card;
 }
 
-function renderLearningObjectives(root, units, objectiveProgress, homeworkAssignments) {
+function renderLearningObjectives(
+  root,
+  units,
+  objectiveProgress,
+  homeworkAssignments,
+  progressHistory,
+  lessons,
+  student,
+) {
   const state = select(root, "[data-progress-state]");
   const container = select(root, "[data-progress-matrix]");
   const independentProgress = objectiveProgress.filter(isIndependentProgressEntry);
@@ -192,7 +238,14 @@ function renderLearningObjectives(root, units, objectiveProgress, homeworkAssign
     return;
   }
   state.hidden = true;
-  container.append(...units.map((unit) => createUnitObjectives(unit, objectiveProgress, homeworkAssignments)));
+  container.append(...units.map((unit) => createUnitObjectives({
+    unit,
+    objectiveProgress,
+    homeworkAssignments,
+    progressHistory,
+    lessons,
+    student,
+  })));
   if (independentProgress.length) {
     container.append(createIndependentObjectives(independentProgress, homeworkAssignments));
   }
@@ -348,13 +401,17 @@ function renderObservations(root, notes, units, course) {
   ));
 }
 
-function renderAssessmentHistory(root, history, units) {
+function renderAssessmentHistory(root, history, units, lessons) {
   const empty = select(root, "[data-assessment-history-empty]");
   const list = select(root, "[data-assessment-history-list]");
   const unitNames = new Map(units.map((unit) => [unit.id, unitName(unit)]));
   const objectives = new Map(
     units.flatMap((unit) => learningObjectivesForUnit(unit)).map((objective) => [objective.id, objective]),
   );
+  const lessonNames = new Map(lessons.map((lesson) => [
+    lesson.id,
+    lesson.title || `Lesson ${lesson.number ?? lesson.order ?? ""}`.trim(),
+  ]));
   const sorted = [...history].sort((first, second) =>
     (timestampToDate(second.lessonDate)?.getTime() ?? timestampToDate(second.createdAt)?.getTime() ?? 0) -
     (timestampToDate(first.lessonDate)?.getTime() ?? timestampToDate(first.createdAt)?.getTime() ?? 0),
@@ -368,20 +425,33 @@ function renderAssessmentHistory(root, history, units) {
     const edit = document.createElement("button");
     const date = formatDate(entry.lessonDate ?? entry.createdAt);
     const changes = document.createElement("ul");
+    const topActions = document.createElement("div");
     top.className = "assessment-history__top";
     heading.textContent = [
       isIndependentProgressEntry(entry) ? "Independent update" : unitNames.get(entry.unitId) ?? "Unknown unit",
+      isIndependentProgressEntry(entry) ? "" : lessonNames.get(entry.lessonId),
       date,
     ].filter(Boolean).join(" — ");
     edit.type = "button";
     edit.dataset.editProgressUpdate = entry.id;
     edit.textContent = "Edit progress";
-    top.append(heading, edit);
+    topActions.className = "assessment-history__actions";
+    if (!isIndependentProgressEntry(entry) && typeof entry.completeLesson === "boolean") {
+      const completion = document.createElement("span");
+      completion.className = "assessment-history__completion";
+      completion.dataset.completed = entry.completeLesson === true ? "true" : "false";
+      completion.textContent = entry.completeLesson === true ? "Lesson completed" : "Lesson not completed";
+      topActions.append(completion);
+    }
+    topActions.append(edit);
+    top.append(heading, topActions);
     (Array.isArray(entry.changes) ? entry.changes : []).forEach((change) => {
       const changeItem = document.createElement("li");
       const objective = objectives.get(change.objectiveId);
-       const label = objective?.title ?? change.title ?? LANGUAGE_SKILL_LABELS[change.category] ?? "Learning objective";
-      changeItem.textContent = `${label}: ${OBJECTIVE_STATUS_LABELS[change.previousStatus] ?? "Not assessed"} → ${OBJECTIVE_STATUS_LABELS[change.status] ?? "Not assessed"}`;
+      const label = objective?.title ?? change.title ?? LANGUAGE_SKILL_LABELS[change.category] ?? "Learning objective";
+      const target = document.createElement("span");
+      target.textContent = label;
+      changeItem.append(target, statusBadge(change.status));
       changes.append(changeItem);
     });
     const changedIds = new Set((entry.changes ?? []).map(({ objectiveId }) => objectiveId));
@@ -389,7 +459,12 @@ function renderAssessmentHistory(root, history, units) {
       .filter(({ objectiveId, id }) => !changedIds.has(objectiveId ?? id))
       .forEach((workedOn) => {
         const workedOnItem = document.createElement("li");
-        workedOnItem.textContent = `${workedOn.title || "Learning objective"}: worked on (no status)`;
+        const target = document.createElement("span");
+        const workedOnBadge = document.createElement("span");
+        target.textContent = workedOn.title || "Learning objective";
+        workedOnBadge.className = "learning-status-badge learning-status-badge--worked-on";
+        workedOnBadge.textContent = "Worked on";
+        workedOnItem.append(target, workedOnBadge);
         changes.append(workedOnItem);
       });
     if (!changes.childElementCount) {
@@ -405,7 +480,7 @@ function renderAssessmentHistory(root, history, units) {
 }
 
 function renderProfile(root, data, onQuickUpdateSaved) {
-  const { student, group, course, units, objectiveProgress, homeworkAssignments, progressHistory, legacyProgress, goals, teacherNotes } = data;
+  const { student, group, course, units, lessons, objectiveProgress, homeworkAssignments, progressHistory, legacyProgress, goals, teacherNotes } = data;
   const initial = displayValue(student.name).trim().charAt(0).toUpperCase() || "S";
   setText(root, "[data-profile-initial]", initial);
   const avatarImage = select(root, "[data-profile-avatar-image]");
@@ -426,11 +501,11 @@ function renderProfile(root, data, onQuickUpdateSaved) {
   setText(root, "[data-profile-course]", student.courseId ? relatedName(course, "Unknown course") : "Independent learning");
   setText(root, "[data-profile-status]", displayValue(student.status ?? student.active));
   select(root, "[data-profile-edit-student]").dataset.editStudent = student.id;
-  renderLearningObjectives(root, units, objectiveProgress, homeworkAssignments);
+  renderLearningObjectives(root, units, objectiveProgress, homeworkAssignments, progressHistory, lessons, student);
   renderSummary(root, units, objectiveProgress);
   renderCurrentGoal(root, goals);
   renderObservations(root, teacherNotes, units, course);
-  renderAssessmentHistory(root, progressHistory, units);
+  renderAssessmentHistory(root, progressHistory, units, lessons);
   select(root, "[data-legacy-progress-note]").hidden = legacyProgress.length === 0;
   configureQuickUpdate({ ...data, onSaved: onQuickUpdateSaved });
   configureProgressUpdateEditor({ ...data, onSaved: onQuickUpdateSaved });

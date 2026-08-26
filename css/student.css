@@ -2501,6 +2501,18 @@ body.student-menu-open {
   cursor: pointer;
 }
 
+.student-unit-physical-progress {
+  display: inline-flex;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid color-mix(in srgb, var(--student-accent) 24%, var(--student-border));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--student-accent-soft) 70%, white);
+  color: var(--student-ink);
+  font-size: 0.8rem;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
 .student-objective-unit section {
   margin-top: 18px;
 }

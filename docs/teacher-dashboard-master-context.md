@@ -687,9 +687,11 @@ Treat the following as **approved project decisions** unless explicitly changed 
 - Writing is a full language category and is present only in units with Writing objectives.
 - Homework is a separate Learning habits block and never contributes to language-skill calculations.
 - Objective statuses are Needs practice, Developing, Confident and Not assessed; the current UI does not use manual percentages.
+- Unit headers show completed lessons / total lessons and physical completion percentage, never an aggregate learning label such as Confident.
+- Expanded unit progress accumulates the real learning targets recorded across saved lesson updates and groups them by language skill.
 - Quick Update stores worked-on objectives separately from optional assessed status changes and never assigns a status automatically.
 - Teachers can add and persist a Unit/Lesson objective directly inside Progress Update.
-- Progress-history entries remain editable and deletable; current physical and learning progress is recalculated from remaining history.
+- Progress-history entries remain editable and deletable, including date, unit/lesson, target selection, optional statuses and physical completion; current physical and learning progress is recalculated from remaining history.
 - Teacher notes/goals/strengths/weaknesses belong on the student side of the system.
 - Teacher observations are required.
 - Raw observations and feedback drafts are teacher-only; students see only their own explicitly published feedback versions.

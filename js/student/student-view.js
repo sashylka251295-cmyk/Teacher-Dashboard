@@ -21,11 +21,10 @@ import {
   overallObjectiveStatus,
   progressByObjective,
   strongestObjectiveCategory,
-  unitObjectiveStatus,
 } from "../domain/learning-objectives.js";
 import { isIndependentProgressEntry } from "../domain/independent-learning.js";
 import { applyStudentTheme } from "./student-theme.js";
-import { currentPhysicalUnit } from "../domain/physical-progress.js";
+import { currentPhysicalUnit, physicalProgress } from "../domain/physical-progress.js";
 import { renderCourseJourneyMap } from "../ui/course-journey-map.js";
 
 const DEFAULT_SECTION = "dashboard";
@@ -437,19 +436,24 @@ function renderFeedback(root, feedbackVersions) {
   empty.hidden = sorted.length > 0;
 }
 
-function createUnitCard(unit, progressDocuments, homeworkAssignments) {
+function createUnitCard(unit, homeworkAssignments, journey) {
   const card = document.createElement("article");
   const number = document.createElement("span");
   const title = document.createElement("h4");
   const value = document.createElement("strong");
   const homework = homeworkAssignments.filter((item) => item.unitId === unit.id);
   const completedHomework = homework.filter((item) => item.status === "completed").length;
-  const status = unitObjectiveStatus(unit, progressDocuments);
-  card.dataset.unitState = status === "confident" ? "complete" : status === "not_assessed" ? "upcoming" : "current";
+  const physical = physicalProgress(unit, journey, []);
+  const isCurrent = journey?.unitId === unit.id;
+  card.dataset.unitState = isCurrent
+    ? physical.percent === 100 ? "complete" : "current"
+    : "upcoming";
 
   number.textContent = unit.number ? `Unit ${unit.number}` : "Unit";
   title.textContent = unitName(unit);
-  value.textContent = summaryStatusLabel(status);
+  value.textContent = isCurrent
+    ? `${physical.completed} of ${physical.total} lessons · ${physical.percent}% complete`
+    : "Not started";
   card.append(number, title, value);
   if (homework.length > 0) {
     const habits = document.createElement("small");
@@ -459,10 +463,10 @@ function createUnitCard(unit, progressDocuments, homeworkAssignments) {
   return card;
 }
 
-function renderUnits(root, units, progressDocuments, homeworkAssignments) {
+function renderUnits(root, units, homeworkAssignments, journey) {
   const container = select(root, "[data-unit-progress]");
   const empty = select(root, "[data-unit-progress-empty]");
-  container.replaceChildren(...units.map((unit) => createUnitCard(unit, progressDocuments, homeworkAssignments)));
+  container.replaceChildren(...units.map((unit) => createUnitCard(unit, homeworkAssignments, journey)));
   container.hidden = units.length === 0;
   empty.hidden = units.length > 0;
 }
@@ -475,19 +479,26 @@ function createStatusBadge(status, labels = OBJECTIVE_STATUS_LABELS, emptyAsDash
   return badge;
 }
 
-function createUnitDetails(unit, progressDocuments, homeworkAssignments) {
+function createUnitDetails(unit, progressDocuments, homeworkAssignments, journey) {
   const card = document.createElement("details");
   const summary = document.createElement("summary");
   const title = document.createElement("strong");
-  const objectives = learningObjectivesForUnit(unit);
   const progressMap = progressByObjective(progressDocuments);
+  const objectives = learningObjectivesForUnit(unit).filter((objective) => progressMap.has(objective.id));
+  const physical = physicalProgress(unit, journey, []);
+  const isCurrent = journey?.unitId === unit.id;
   title.textContent = unitName(unit);
-  summary.append(title, createStatusBadge(unitObjectiveStatus(unit, progressDocuments), OBJECTIVE_STATUS_LABELS, true));
+  const physicalLabel = document.createElement("span");
+  physicalLabel.className = "student-unit-physical-progress";
+  physicalLabel.textContent = isCurrent
+    ? `${physical.completed} of ${physical.total} lessons · ${physical.percent}%`
+    : "Not started";
+  summary.append(title, physicalLabel);
   card.className = "student-objective-unit";
   card.append(summary);
   if (objectives.length === 0) {
     const empty = document.createElement("p");
-    empty.textContent = "No learning objectives have been added to this unit yet.";
+    empty.textContent = "No learning targets have been assessed in this unit yet.";
     card.append(empty);
   } else {
     LANGUAGE_SKILL_CATEGORIES.forEach((category) => {
@@ -579,7 +590,7 @@ function createIndependentDetails(progressDocuments, homeworkAssignments) {
   return card;
 }
 
-function renderProgressMatrix(root, units, progressDocuments, homeworkAssignments) {
+function renderProgressMatrix(root, units, progressDocuments, homeworkAssignments, journey) {
   const container = select(root, "[data-student-progress-matrix]");
   const empty = select(root, "[data-student-progress-empty]");
   container.replaceChildren();
@@ -590,7 +601,7 @@ function renderProgressMatrix(root, units, progressDocuments, homeworkAssignment
     empty.hidden = false;
     return;
   }
-  container.append(...units.map((unit) => createUnitDetails(unit, progressDocuments, homeworkAssignments)));
+  container.append(...units.map((unit) => createUnitDetails(unit, progressDocuments, homeworkAssignments, journey)));
   if (independentProgress.length) {
     container.append(createIndependentDetails(independentProgress, homeworkAssignments));
   }
@@ -659,8 +670,8 @@ function renderStudent(root, data) {
     );
   }
   renderDashboardHomework(root, homeworkAssignments, units);
-  renderUnits(root, units, objectiveProgress, homeworkAssignments);
-  renderProgressMatrix(root, units, objectiveProgress, homeworkAssignments);
+  renderUnits(root, units, homeworkAssignments, student.courseJourney);
+  renderProgressMatrix(root, units, objectiveProgress, homeworkAssignments, student.courseJourney);
   renderAchievements(root, achievements);
   renderFeedback(root, feedbackVersions);
 }

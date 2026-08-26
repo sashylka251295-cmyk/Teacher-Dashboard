@@ -12,7 +12,7 @@ import {
   progressScopeKey,
 } from "../../domain/independent-learning.js";
 import { learningObjectivesForUnit } from "../../domain/learning-objectives.js";
-import { createJourneySnapshot } from "../../domain/physical-progress.js";
+import { lessonStopsForUnit } from "../../domain/physical-progress.js";
 import {
   latestLessonCompletion,
   latestObjectiveChange,
@@ -24,8 +24,17 @@ function progressDocumentId(studentId, unitId, objectiveId, scope = "") {
   return [studentId, progressScopeKey(unitId, scope), objectiveId].map(encodeURIComponent).join("__");
 }
 
-function replacementEntry(entry, history, { objectiveChanges, workedOnObjectives, lessonDate, completeLesson }) {
-  const previousStatuses = statusesBeforeProgressEntry(history, entry);
+function replacementEntry(entry, history, {
+  courseId,
+  unitId,
+  lessonId,
+  objectiveChanges,
+  workedOnObjectives,
+  lessonDate,
+  completeLesson,
+  previousLessonCompleted,
+}) {
+  const previousStatuses = statusesBeforeProgressEntry(history, { ...entry, unitId });
   const originalChanges = new Map(
     (Array.isArray(entry.changes) ? entry.changes : []).map((change) => [change.objectiveId, change]),
   );
@@ -35,11 +44,12 @@ function replacementEntry(entry, history, { objectiveChanges, workedOnObjectives
   ].map(({ objectiveId, id, title }) => [objectiveId ?? id, title ?? ""]));
   return {
     ...entry,
+    courseId,
+    unitId,
+    lessonId,
     lessonDate: Timestamp.fromDate(lessonDate),
     completeLesson: completeLesson === true,
-    previousLessonCompleted: typeof entry.previousLessonCompleted === "boolean"
-      ? entry.previousLessonCompleted
-      : false,
+    previousLessonCompleted: previousLessonCompleted === true,
     changes: objectiveChanges.map((change) => ({
       objectiveId: change.objectiveId,
       title: change.title ?? originalChanges.get(change.objectiveId)?.title ?? objectiveTitles.get(change.objectiveId) ?? "",
@@ -71,6 +81,7 @@ export async function reviseLearningUpdate({
   student,
   unit,
   lessons,
+  lessonId = entry?.lessonId ?? "",
   objectiveChanges = [],
   workedOnObjectives = [],
   lessonDate,
@@ -81,7 +92,13 @@ export async function reviseLearningUpdate({
     throw new Error("A valid student progress update is required.");
   }
   const independent = isIndependentProgressEntry(entry);
-  if (!independent && (!unit || unit.id !== entry.unitId)) throw new Error("The update unit is unavailable.");
+  const nextUnitId = independent ? "" : unit?.id ?? "";
+  const nextLessonId = independent ? "" : lessonId;
+  const nextCourseId = independent ? "" : unit?.courseId ?? entry.courseId;
+  if (!independent && (!unit || !nextLessonId || !lessons.some((lesson) =>
+    lesson.id === nextLessonId && lesson.unitId === unit.id))) {
+    throw new Error("Select a valid unit and lesson.");
+  }
   if (!validDate(lessonDate)) throw new Error("Select a valid lesson date.");
 
   const firestore = getFirestoreClient();
@@ -89,29 +106,63 @@ export async function reviseLearningUpdate({
   const updatedAt = serverTimestamp();
   const replacement = remove
     ? null
-    : replacementEntry(entry, history, { objectiveChanges, workedOnObjectives, lessonDate, completeLesson });
+    : replacementEntry(entry, history, {
+      courseId: nextCourseId,
+      unitId: nextUnitId,
+      lessonId: nextLessonId,
+      objectiveChanges,
+      workedOnObjectives,
+      lessonDate,
+      completeLesson,
+      previousLessonCompleted: independent
+        ? false
+        : entry.unitId === nextUnitId
+          && entry.lessonId === nextLessonId
+          && typeof entry.previousLessonCompleted === "boolean"
+          ? entry.previousLessonCompleted
+          : latestLessonCompletion(
+            history.filter(({ id }) => id !== entry.id),
+            student.id,
+            nextUnitId,
+            nextLessonId,
+          ) ?? (
+            student.courseJourney?.unitId === nextUnitId
+            && student.courseJourney.completedLessonIds?.includes(nextLessonId)
+          ),
+    });
   const revisedHistory = historyWithRevision(history, entry, replacement);
-  const affectedObjectiveIds = new Set([
-    ...(Array.isArray(entry.changes) ? entry.changes : []).map(({ objectiveId }) => objectiveId),
-    ...objectiveChanges.map(({ objectiveId }) => objectiveId),
-  ]);
+  const affectedObjectives = new Map();
+  (Array.isArray(entry.changes) ? entry.changes : []).forEach(({ objectiveId }) => {
+    affectedObjectives.set(`${entry.unitId ?? ""}\u0000${objectiveId}`, {
+      unitId: entry.unitId ?? "",
+      objectiveId,
+      scope: entry.scope,
+    });
+  });
+  objectiveChanges.forEach(({ objectiveId }) => {
+    affectedObjectives.set(`${nextUnitId}\u0000${objectiveId}`, {
+      unitId: nextUnitId,
+      objectiveId,
+      scope: replacement?.scope ?? entry.scope,
+    });
+  });
   const originalChanges = new Map(
     (Array.isArray(entry.changes) ? entry.changes : []).map((change) => [change.objectiveId, change]),
   );
 
-  affectedObjectiveIds.forEach((objectiveId) => {
+  affectedObjectives.forEach(({ unitId, objectiveId, scope }) => {
     const progressRef = doc(
       firestore,
       COLLECTIONS.OBJECTIVE_PROGRESS,
-      progressDocumentId(student.id, entry.unitId, objectiveId, entry.scope),
+      progressDocumentId(student.id, unitId, objectiveId, scope),
     );
     const latest = latestObjectiveChange(
       revisedHistory,
       student.id,
-      entry.unitId ?? "",
+      unitId,
       objectiveId,
     );
-    const fallback = originalChanges.get(objectiveId);
+    const fallback = unitId === (entry.unitId ?? "") ? originalChanges.get(objectiveId) : null;
     const status = latest?.change.status ?? fallback?.previousStatus ?? "not_assessed";
     if (status === "not_assessed") {
       batch.delete(progressRef);
@@ -119,38 +170,53 @@ export async function reviseLearningUpdate({
     }
     batch.set(progressRef, {
       studentId: student.id,
-      courseId: latest?.entry.courseId ?? entry.courseId,
-      unitId: entry.unitId ?? "",
+      courseId: latest?.entry.courseId ?? nextCourseId ?? entry.courseId,
+      unitId,
       objectiveId,
       objectiveTitle: latest?.change.title ?? fallback?.title ?? "",
       category: latest?.change.category ?? fallback?.category ?? "",
       status,
-      scope: entry.scope ?? (independent ? "independent" : "course"),
+      scope: latest?.entry.scope ?? scope ?? (independent ? "independent" : "course"),
       updatedAt,
     }, { merge: true });
   });
 
-  const lesson = lessons.find(({ id }) => id === entry.lessonId);
-  if (!independent && lesson && student.courseJourney?.unitId === unit.id) {
-    const latestCompletion = latestLessonCompletion(
-      revisedHistory,
-      student.id,
-      unit.id,
-      lesson.id,
-    );
-    const desiredCompletion = latestCompletion ?? (
-      typeof entry.previousLessonCompleted === "boolean"
-        ? entry.previousLessonCompleted
-        : false
-    );
-    const nextJourney = createJourneySnapshot({
-      courseId: entry.courseId,
-      unit,
-      lessons,
-      previousJourney: student.courseJourney,
-      selectedLessonId: lesson.id,
-      completeLesson: desiredCompletion,
-    });
+  const lesson = lessons.find(({ id }) => id === nextLessonId && unit?.id === nextUnitId);
+  const journeyWasAffected = student.courseJourney?.unitId === entry.unitId
+    || student.courseJourney?.unitId === nextUnitId;
+  if (!independent && lesson && journeyWasAffected) {
+    const stops = lessonStopsForUnit(unit, lessons);
+    const fallbackCompleted = student.courseJourney?.unitId === unit.id
+      ? new Set(student.courseJourney.completedLessonIds ?? [])
+      : new Set();
+    const completedLessonIds = stops.filter((stop) => {
+      const latestCompletion = latestLessonCompletion(
+        revisedHistory,
+        student.id,
+        unit.id,
+        stop.id,
+      );
+      if (latestCompletion !== null) return latestCompletion;
+      if (
+        !remove
+        && entry.unitId === nextUnitId
+        && entry.lessonId !== nextLessonId
+        && stop.id === entry.lessonId
+        && typeof entry.previousLessonCompleted === "boolean"
+      ) return entry.previousLessonCompleted;
+      if (remove && stop.id === entry.lessonId && typeof entry.previousLessonCompleted === "boolean") {
+        return entry.previousLessonCompleted;
+      }
+      return fallbackCompleted.has(stop.id);
+    }).map(({ id }) => id);
+    const completedSet = new Set(completedLessonIds);
+    const nextJourney = {
+      courseId: nextCourseId,
+      unitId: unit.id,
+      completedLessonIds,
+      currentLessonId: stops.find(({ id }) => !completedSet.has(id))?.id ?? "",
+      lessonStops: stops,
+    };
     const latestLearningUpdate = [...revisedHistory]
       .filter((item) => item.studentId === student.id && item.unitId === unit.id)
       .sort((first, second) => {
@@ -200,6 +266,9 @@ export async function reviseLearningUpdate({
   const historyRef = doc(firestore, COLLECTIONS.PROGRESS_HISTORY, entry.id);
   if (remove) batch.delete(historyRef);
   else batch.set(historyRef, {
+    courseId: replacement.courseId,
+    unitId: replacement.unitId,
+    lessonId: replacement.lessonId,
     changes: replacement.changes,
     workedOnObjectives: replacement.workedOnObjectives,
     lessonDate: replacement.lessonDate,

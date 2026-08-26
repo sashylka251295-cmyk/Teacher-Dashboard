@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Teacher Dashboard — Student Progress Tracker</title>
     <link rel="stylesheet" href="./css/styles.css?v=20260825-journey-progress">
-    <link rel="stylesheet" href="./css/admin.css?v=20260826-multi-target-update">
+    <link rel="stylesheet" href="./css/admin.css?v=20260826-progress-editor-refine">
   </head>
   <body>
     <main class="teacher-shell" data-protected-content hidden>
@@ -507,6 +507,16 @@
               <p data-progress-update-context></p>
             </header>
 
+            <details class="progress-update-context-editor" data-progress-update-course-context>
+              <summary>Change unit or lesson</summary>
+              <div>
+                <label for="progress-update-unit">Unit</label>
+                <select id="progress-update-unit" data-progress-update-unit></select>
+                <label for="progress-update-lesson">Lesson</label>
+                <select id="progress-update-lesson" data-progress-update-lesson></select>
+              </div>
+            </details>
+
             <label for="progress-update-date">Lesson date</label>
             <input id="progress-update-date" name="progressUpdateDate" type="date" required>
 
@@ -517,16 +527,34 @@
 
             <fieldset>
               <legend>Learning targets in this update</legend>
-              <p>Untick a target to remove this assessment from the update.</p>
+              <p>Select what was worked on. A status remains optional.</p>
               <div class="progress-update-objectives" data-progress-update-objectives></div>
+              <button class="quick-inline-toggle" type="button" data-progress-objective-add-toggle>+ Add learning objective</button>
+              <div class="quick-objective-creator" data-progress-objective-creator hidden>
+                <label for="progress-objective-title">Objective title</label>
+                <input id="progress-objective-title" type="text" data-progress-objective-title>
+                <label for="progress-objective-skill">Skill area</label>
+                <select id="progress-objective-skill" data-progress-objective-skill>
+                  <option value="vocabulary">Vocabulary</option>
+                  <option value="grammar">Grammar</option>
+                  <option value="reading">Reading</option>
+                  <option value="listening">Listening</option>
+                  <option value="speaking">Speaking</option>
+                  <option value="writing">Writing</option>
+                </select>
+                <div><button type="button" data-progress-objective-add>Save objective</button><button type="button" data-progress-objective-add-cancel>Cancel</button></div>
+                <p data-progress-objective-message role="status" aria-live="polite"></p>
+              </div>
             </fieldset>
 
             <p class="progress-update-dialog__note">This editor changes learning-target statuses and physical lesson completion. Private observations and published feedback remain separate.</p>
             <p data-progress-update-message role="status" aria-live="polite"></p>
             <div class="progress-update-dialog__actions">
-              <button class="button-primary" type="submit" data-progress-update-save>Save changes</button>
-              <button type="button" data-progress-update-close>Cancel</button>
               <button class="button-danger" type="button" data-progress-update-delete>Delete update</button>
+              <div>
+                <button type="button" data-progress-update-close>Cancel</button>
+                <button class="button-primary" type="submit" data-progress-update-save>Save changes</button>
+              </div>
             </div>
           </form>
         </dialog>
@@ -1053,6 +1081,6 @@
     </main>
 
     <p data-page-status role="status" aria-live="polite">Проверка доступа…</p>
-    <script type="module" src="./js/pages/admin-page.js?v=20260826-multi-target-update"></script>
+    <script type="module" src="./js/pages/admin-page.js?v=20260826-progress-editor-refine"></script>
   </body>
 </html>

@@ -1,5 +1,7 @@
 import { reviseLearningUpdate } from "../data/repositories/learning-update-revisions-repository.js";
+import { addObjectiveToLesson } from "../data/repositories/lesson-objectives-repository.js";
 import {
+  LANGUAGE_SKILL_CATEGORIES,
   LANGUAGE_SKILL_LABELS,
   OBJECTIVE_STATUSES,
   OBJECTIVE_STATUS_LABELS,
@@ -9,11 +11,13 @@ import {
   learningObjectivesForUnit,
 } from "../domain/learning-objectives.js";
 import { isIndependentProgressEntry } from "../domain/independent-learning.js";
+import { latestLessonCompletion } from "../domain/progress-revisions.js";
 
 let context = null;
 let currentEntry = null;
 let elements = null;
 let initialized = false;
+let addedIndependentObjectives = [];
 
 function timestampToDate(value) {
   if (!value) return null;
@@ -42,6 +46,28 @@ function createOption(value, label) {
   return option;
 }
 
+function selectedUnit() {
+  return context?.units.find(({ id }) => id === elements.unit.value) ?? null;
+}
+
+function selectedLesson() {
+  return context?.lessons.find(({ id }) => id === elements.lesson.value) ?? null;
+}
+
+function lessonsForUnit(unitId) {
+  return (context?.lessons ?? [])
+    .filter((lesson) => lesson.unitId === unitId && lesson.status !== "archived")
+    .sort((first, second) => (first.order ?? first.number ?? 0) - (second.order ?? second.number ?? 0));
+}
+
+function populateLessonOptions(preferredId = "") {
+  const lessons = lessonsForUnit(elements.unit.value);
+  elements.lesson.replaceChildren(...lessons.map((lesson) =>
+    createOption(lesson.id, lessonName(lesson))));
+  if (lessons.some(({ id }) => id === preferredId)) elements.lesson.value = preferredId;
+  elements.lesson.disabled = lessons.length === 0;
+}
+
 function unitName(unit) {
   return unit?.number ? `Unit ${unit.number} · ${unit.title || "Untitled unit"}` : (unit?.title || "Unknown unit");
 }
@@ -51,12 +77,13 @@ function lessonName(lesson) {
   return `Lesson ${lesson.number ?? lesson.order ?? "—"} · ${lesson.title || "Untitled lesson"}`;
 }
 
-function objectivesForEntry(entry, unit, lesson) {
+function objectivesForEntry(entry, unit, lesson, includeRecorded = true) {
   const byId = new Map(
-    (lesson ? learningObjectivesForLesson(unit, lesson) : learningObjectivesForUnit(unit))
+    (unit ? (lesson ? learningObjectivesForLesson(unit, lesson) : learningObjectivesForUnit(unit)) : [])
       .map((objective) => [objective.id, objective]),
   );
-  (Array.isArray(entry.changes) ? entry.changes : []).forEach((change) => {
+  addedIndependentObjectives.forEach((objective) => byId.set(objective.id, objective));
+  (includeRecorded && Array.isArray(entry.changes) ? entry.changes : []).forEach((change) => {
     if (!byId.has(change.objectiveId)) {
       byId.set(change.objectiveId, {
         id: change.objectiveId,
@@ -65,7 +92,7 @@ function objectivesForEntry(entry, unit, lesson) {
       });
     }
   });
-  (Array.isArray(entry.workedOnObjectives) ? entry.workedOnObjectives : []).forEach((workedOn) => {
+  (includeRecorded && Array.isArray(entry.workedOnObjectives) ? entry.workedOnObjectives : []).forEach((workedOn) => {
     const objectiveId = workedOn.objectiveId ?? workedOn.id;
     if (objectiveId && !byId.has(objectiveId)) {
       byId.set(objectiveId, {
@@ -107,6 +134,74 @@ function createObjectiveRow(objective, entryChange, workedOnIds) {
   return row;
 }
 
+function objectiveRowState() {
+  return new Map([...elements.objectives.querySelectorAll("[data-progress-objective]")].map((row) => [
+    row.dataset.progressObjective,
+    {
+      checked: row.querySelector("[data-progress-objective-enabled]").checked,
+      status: row.querySelector("[data-progress-objective-status]").value,
+    },
+  ]));
+}
+
+function renderObjectives({ preserve = null } = {}) {
+  if (!currentEntry) return;
+  const independent = isIndependentProgressEntry(currentEntry);
+  const unit = independent ? null : selectedUnit();
+  const lesson = independent ? null : selectedLesson();
+  const sameContext = independent || (
+    unit?.id === currentEntry.unitId && lesson?.id === currentEntry.lessonId
+  );
+  const changes = new Map(
+    (sameContext && Array.isArray(currentEntry.changes) ? currentEntry.changes : [])
+      .map((change) => [change.objectiveId, change]),
+  );
+  const workedOnIds = new Set(
+    (sameContext && Array.isArray(currentEntry.workedOnObjectives)
+      ? currentEntry.workedOnObjectives
+      : []).map((objective) => objective.objectiveId ?? objective.id),
+  );
+  elements.objectives.replaceChildren(
+    ...objectivesForEntry(currentEntry, unit, lesson, sameContext).map((objective) =>
+      createObjectiveRow(objective, changes.get(objective.id), workedOnIds)),
+  );
+  if (preserve) {
+    preserve.forEach((state, objectiveId) => {
+      const row = elements.objectives.querySelector(`[data-progress-objective="${objectiveId}"]`);
+      if (!row) return;
+      const checkbox = row.querySelector("[data-progress-objective-enabled]");
+      const select = row.querySelector("[data-progress-objective-status]");
+      checkbox.checked = state.checked;
+      select.value = state.status;
+      select.disabled = !state.checked;
+    });
+  }
+  elements.objectiveAddToggle.disabled = !independent && (!unit || !lesson);
+}
+
+function syncLessonCompletion() {
+  if (!currentEntry || isIndependentProgressEntry(currentEntry)) return;
+  const unit = selectedUnit();
+  const lesson = selectedLesson();
+  if (!unit || !lesson) {
+    elements.completeLesson.checked = false;
+    elements.completeLesson.disabled = true;
+    return;
+  }
+  const latest = latestLessonCompletion(
+    context.progressHistory.filter(({ id }) => id !== currentEntry.id),
+    context.student.id,
+    unit.id,
+    lesson.id,
+  );
+  const journeyCompleted = context.student.courseJourney?.unitId === unit.id
+    && context.student.courseJourney.completedLessonIds?.includes(lesson.id);
+  elements.completeLesson.checked = unit.id === currentEntry.unitId && lesson.id === currentEntry.lessonId
+    ? currentEntry.completeLesson === true
+    : latest ?? journeyCompleted ?? false;
+  elements.completeLesson.disabled = false;
+}
+
 function closeDialog() {
   if (typeof elements.dialog.close === "function") elements.dialog.close();
   else elements.dialog.removeAttribute("open");
@@ -122,17 +217,18 @@ function openDialog(entryId) {
   const independent = isIndependentProgressEntry(entry);
   if (!independent && !unit) return;
   currentEntry = entry;
-  const changes = new Map(
-    (Array.isArray(entry.changes) ? entry.changes : []).map((change) => [change.objectiveId, change]),
-  );
-  const workedOnIds = new Set(
-    (Array.isArray(entry.workedOnObjectives) ? entry.workedOnObjectives : [])
-      .map((objective) => objective.objectiveId ?? objective.id),
-  );
+  addedIndependentObjectives = [];
   elements.context.textContent = independent
     ? "Independent learning — no course or lesson required"
     : `${unitName(unit)} › ${lessonName(lesson)}`;
   elements.date.value = dateInputValue(entry.lessonDate ?? entry.createdAt);
+  elements.courseContext.hidden = independent;
+  if (!independent) {
+    elements.unit.replaceChildren(...context.units.map((candidate) =>
+      createOption(candidate.id, unitName(candidate))));
+    elements.unit.value = unit.id;
+    populateLessonOptions(entry.lessonId);
+  }
   elements.completeRow.hidden = independent;
   elements.completeLesson.checked = independent
     ? false
@@ -142,10 +238,11 @@ function openDialog(entryId) {
         && Array.isArray(context.student.courseJourney.completedLessonIds)
         && context.student.courseJourney.completedLessonIds.includes(entry.lessonId);
   elements.completeLesson.disabled = independent || !lesson || context.student.courseJourney?.unitId !== unit?.id;
-  elements.objectives.replaceChildren(
-    ...objectivesForEntry(entry, unit, lesson).map((objective) =>
-      createObjectiveRow(objective, changes.get(objective.id), workedOnIds)),
-  );
+  if (!independent) syncLessonCompletion();
+  renderObjectives();
+  elements.objectiveCreator.hidden = true;
+  elements.objectiveTitle.value = "";
+  elements.objectiveMessage.textContent = "";
   elements.message.textContent = "";
   elements.save.disabled = false;
   elements.remove.disabled = false;
@@ -170,10 +267,70 @@ function collectObjectiveUpdate() {
   };
 }
 
+async function addInlineObjective() {
+  if (!currentEntry || !context) return;
+  const title = elements.objectiveTitle.value.trim();
+  const category = elements.objectiveSkill.value;
+  if (!title) {
+    elements.objectiveMessage.textContent = "Enter an objective title.";
+    return;
+  }
+  if (!LANGUAGE_SKILL_CATEGORIES.includes(category)) {
+    elements.objectiveMessage.textContent = "Select a valid skill area.";
+    return;
+  }
+
+  const previous = objectiveRowState();
+  elements.objectiveAdd.disabled = true;
+  elements.objectiveMessage.textContent = "Saving objective…";
+  try {
+    let objective;
+    if (isIndependentProgressEntry(currentEntry)) {
+      objective = {
+        id: globalThis.crypto?.randomUUID?.() ?? `independent-${Date.now()}`,
+        title,
+        category,
+        categories: [category],
+      };
+      addedIndependentObjectives.push(objective);
+    } else {
+      const result = await addObjectiveToLesson({
+        unit: selectedUnit(),
+        lesson: selectedLesson(),
+        lessons: context.lessons,
+        title,
+        category,
+      });
+      objective = result.objective;
+      context.units = context.units.map((unit) => unit.id === result.unit.id ? result.unit : unit);
+      context.lessons = result.lessons;
+    }
+    renderObjectives({ preserve: previous });
+    const row = elements.objectives.querySelector(`[data-progress-objective="${objective.id}"]`);
+    if (row) {
+      row.querySelector("[data-progress-objective-enabled]").checked = true;
+      row.querySelector("[data-progress-objective-status]").disabled = false;
+    }
+    elements.objectiveTitle.value = "";
+    elements.objectiveCreator.hidden = true;
+    elements.objectiveMessage.textContent = "";
+  } catch (error) {
+    elements.objectiveMessage.textContent = error instanceof Error ? error.message : "Unable to add the objective.";
+  } finally {
+    elements.objectiveAdd.disabled = false;
+  }
+}
+
 async function submitRevision(event) {
   event.preventDefault();
   if (!currentEntry || !context) return;
-  const unit = context.units.find(({ id }) => id === currentEntry.unitId);
+  const independent = isIndependentProgressEntry(currentEntry);
+  const unit = independent ? null : selectedUnit();
+  const lesson = independent ? null : selectedLesson();
+  if (!independent && (!unit || !lesson)) {
+    elements.message.textContent = "Select a valid unit and lesson.";
+    return;
+  }
   const lessonDate = dateFromInput(elements.date.value);
   if (!lessonDate) {
     elements.message.textContent = "Select a valid lesson date.";
@@ -190,6 +347,7 @@ async function submitRevision(event) {
       student: context.student,
       unit,
       lessons: context.lessons,
+      lessonId: lesson?.id ?? "",
       objectiveChanges: objectiveUpdate.objectiveChanges,
       workedOnObjectives: objectiveUpdate.workedOnObjectives,
       lessonDate,
@@ -253,10 +411,20 @@ function initialize() {
     dialog,
     form,
     context: dialog.querySelector("[data-progress-update-context]"),
+    courseContext: dialog.querySelector("[data-progress-update-course-context]"),
+    unit: dialog.querySelector("[data-progress-update-unit]"),
+    lesson: dialog.querySelector("[data-progress-update-lesson]"),
     date: form.elements.progressUpdateDate,
     completeLesson: dialog.querySelector("[data-progress-update-complete]"),
     completeRow: dialog.querySelector("[data-progress-update-complete-row]"),
     objectives: dialog.querySelector("[data-progress-update-objectives]"),
+    objectiveAddToggle: dialog.querySelector("[data-progress-objective-add-toggle]"),
+    objectiveCreator: dialog.querySelector("[data-progress-objective-creator]"),
+    objectiveTitle: dialog.querySelector("[data-progress-objective-title]"),
+    objectiveSkill: dialog.querySelector("[data-progress-objective-skill]"),
+    objectiveAdd: dialog.querySelector("[data-progress-objective-add]"),
+    objectiveAddCancel: dialog.querySelector("[data-progress-objective-add-cancel]"),
+    objectiveMessage: dialog.querySelector("[data-progress-objective-message]"),
     message: dialog.querySelector("[data-progress-update-message]"),
     save: dialog.querySelector("[data-progress-update-save]"),
     remove: dialog.querySelector("[data-progress-update-delete]"),
@@ -273,6 +441,25 @@ function initialize() {
     event.target.closest("[data-progress-objective]")
       .querySelector("[data-progress-objective-status]").disabled = !event.target.checked;
   });
+  elements.unit.addEventListener("change", () => {
+    populateLessonOptions();
+    renderObjectives();
+    syncLessonCompletion();
+  });
+  elements.lesson.addEventListener("change", () => {
+    renderObjectives();
+    syncLessonCompletion();
+  });
+  elements.objectiveAddToggle.addEventListener("click", () => {
+    elements.objectiveCreator.hidden = false;
+    elements.objectiveTitle.focus();
+  });
+  elements.objectiveAddCancel.addEventListener("click", () => {
+    elements.objectiveCreator.hidden = true;
+    elements.objectiveTitle.value = "";
+    elements.objectiveMessage.textContent = "";
+  });
+  elements.objectiveAdd.addEventListener("click", addInlineObjective);
   form.addEventListener("submit", submitRevision);
   elements.remove.addEventListener("click", removeUpdate);
   elements.close.addEventListener("click", closeDialog);

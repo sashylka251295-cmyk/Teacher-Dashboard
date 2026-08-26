@@ -82,7 +82,11 @@ Saving updates the group's journey, each included student's journey, current obj
 
 ## Revising a published lesson update
 
-Admin Student Profile exposes every available `progressHistory` entry as a Progress Update with an explicit `Edit progress` action. The teacher can change its lesson date, assessed target statuses and physical lesson-completion action, or delete the update entirely. Saving or deleting recalculates affected `objectiveProgress` documents from the remaining ordered history and recalculates the selected lesson in the student's current `courseJourney`.
+Admin Student Profile exposes every available `progressHistory` entry as a Progress Update with an explicit `Edit progress` action. The teacher can change its lesson date, unit/lesson association, selected targets, optional target statuses and physical lesson-completion action, add a lesson objective in place, or delete the update entirely. Saving or deleting recalculates affected `objectiveProgress` documents from the remaining ordered history and recalculates the student's current `courseJourney`.
+
+Unit summary headers use physical progress only: completed lessons / total lessons and the resulting percentage. They never label an unfinished unit `Confident`. Expanding a unit shows the real learning targets accumulated from saved updates, grouped by skill. A later Listening update adds its Listening target to the existing list instead of replacing earlier learning or calculating a skill percentage.
+
+Progress Update cards show the saved result (`Needs practice`, `Developing`, `Confident`, or `Worked on`) rather than the technical initial transition `Not assessed → ...`.
 
 Progress revision is intentionally separate from other lesson records: teacher observations remain private and independent, while published feedback remains an immutable student-facing version. Deleting a progress update therefore never silently deletes an observation, homework assignment or published feedback. Legacy history entries can still revise their learning-target changes; when they lack explicit physical metadata, the current lesson state is used in the editor and deletion falls back to the state before that legacy entry where available.
 
@@ -109,3 +113,4 @@ No new collection or broader rule is required. Admins already own writes to grou
 7. Observation text never appears in `courseJourney` or student-readable lesson snapshots.
 8. Existing feedback, homework and objective history workflows remain operational.
 9. Editing or deleting a Progress Update recalculates only the affected student's current learning and physical progress.
+10. Unit headers show physical percentage, while expanded skill sections accumulate recorded targets without learning percentages.

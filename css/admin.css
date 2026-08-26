@@ -4805,6 +4805,25 @@ th[data-skill="homework"]::before { background-image: url("../assets/images/skil
   cursor: pointer;
 }
 
+.unit-physical-progress {
+  display: inline-flex;
+  gap: 0.55rem;
+  align-items: center;
+  padding: 0.35rem 0.55rem 0.35rem 0.7rem;
+  border: 1px solid #d9e2d0;
+  border-radius: 999px;
+  background: #f0f5e9;
+  color: var(--muted, #6e786f);
+  font-size: 0.78rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.unit-physical-progress strong {
+  color: var(--color-green);
+  font-size: 0.86rem;
+}
+
 .unit-objectives-card section {
   margin-top: 18px;
 }
@@ -4845,6 +4864,11 @@ th[data-skill="homework"]::before { background-image: url("../assets/images/skil
 .learning-status-badge[data-status="confident"],
 .learning-status-badge[data-status="completed"] { background: #dcebd9; color: #365f3e; }
 
+.learning-status-badge--worked-on {
+  background: #edf0ea;
+  color: #657067;
+}
+
 .legacy-progress-note {
   margin-top: 16px;
   color: var(--muted, #6e786f);
@@ -4871,16 +4895,46 @@ th[data-skill="homework"]::before { background-image: url("../assets/images/skil
   justify-content: space-between;
 }
 
-.assessment-history__top > button {
+.assessment-history__top > button,
+.assessment-history__actions > button {
   min-height: 2.15rem;
   padding: 0.35rem 0.7rem;
   white-space: nowrap;
+}
+
+.assessment-history__actions {
+  display: flex;
+  gap: 0.55rem;
+  align-items: center;
+}
+
+.assessment-history__completion {
+  display: inline-flex;
+  padding: 0.3rem 0.55rem;
+  border-radius: 999px;
+  background: #f1eee7;
+  color: var(--muted, #6e786f);
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.assessment-history__completion[data-completed="true"] {
+  background: #dcebd9;
+  color: #365f3e;
 }
 
 [data-assessment-history-list] ul {
   display: grid;
   gap: 5px;
   margin: 8px 0 0;
+}
+
+[data-assessment-history-list] ul > li {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .progress-update-dialog {
@@ -4901,6 +4955,27 @@ th[data-skill="homework"]::before { background-image: url("../assets/images/skil
   min-width: 0;
   margin: 0;
   padding: 0.9rem;
+}
+
+.progress-update-context-editor {
+  border: 1px solid var(--border, #e5dccd);
+  border-radius: 0.8rem;
+  background: #f8faf4;
+}
+
+.progress-update-context-editor > summary {
+  padding: 0.7rem 0.85rem;
+  color: var(--color-green);
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.progress-update-context-editor > div {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 0.5rem 0.65rem;
+  align-items: center;
+  padding: 0 0.85rem 0.85rem;
 }
 
 .progress-update-dialog fieldset > p,
@@ -4946,13 +5021,23 @@ th[data-skill="homework"]::before { background-image: url("../assets/images/skil
   flex-wrap: wrap;
   gap: 0.55rem;
   justify-content: flex-end;
+  align-items: center;
 }
 
 .progress-update-dialog__actions [data-progress-update-delete] {
-  margin-right: auto;
   color: var(--color-danger);
   border-color: #e8c3bd;
   background: var(--color-danger-soft);
+}
+
+.progress-update-dialog__actions > [data-progress-update-delete] {
+  margin-right: auto;
+}
+
+.progress-update-dialog__actions > div {
+  display: flex;
+  gap: 0.55rem;
+  align-items: center;
 }
 
 @media (max-width: 700px) {
@@ -4972,6 +5057,23 @@ th[data-skill="homework"]::before { background-image: url("../assets/images/skil
 
   .assessment-history__top {
     align-items: flex-start;
+  }
+
+  .assessment-history__actions {
+    align-items: flex-end;
+    flex-direction: column;
+  }
+
+  .progress-update-context-editor > div {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .progress-update-dialog__actions {
+    align-items: stretch;
+  }
+
+  .progress-update-dialog__actions > div {
+    margin-left: auto;
   }
 
   .objective-skill-picker > div {
