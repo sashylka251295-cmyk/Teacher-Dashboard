@@ -1,5 +1,5 @@
 import { initializeCoursesCrud } from "./courses-crud.js";
-import { initializeGroupsCrud } from "./groups-crud.js";
+import { initializeGroupsCrud } from "./groups-crud.js?v=20260827-observations-retired";
 import { initializeStudentsCrud } from "./students-crud.js";
 
 let initialized = false;

@@ -99,7 +99,7 @@
           <div>
             <p class="eyebrow">Teacher workspace</p>
             <h3>Keep every learning step visible</h3>
-            <p>Open a student profile to review learning objectives, record statuses, set a goal, or add a private observation.</p>
+            <p>Open a student profile to review learning objectives, record statuses, set a goal, or send feedback.</p>
             <a class="button-link" href="#students" data-dashboard-link="students">Open students</a>
           </div>
           <img src="./assets/images/teacher-workspace-illustration.png" alt="" aria-hidden="true">
@@ -272,79 +272,6 @@
               <ol data-assessment-history-list></ol>
             </section>
 
-            <div class="feedback-workspace">
-              <section class="content-panel observations-panel" aria-labelledby="teacher-observations-heading">
-                <header class="feedback-workspace-heading">
-                  <div>
-                    <p class="eyebrow">Teacher only</p>
-                    <h3 id="teacher-observations-heading">Teacher Observations</h3>
-                    <p class="feedback-workspace-subtitle">Private notes from the lesson</p>
-                  </div>
-                  <span class="private-chip"><span aria-hidden="true">&#128274;</span> Private</span>
-                </header>
-                <p class="feedback-empty-state" data-observations-empty hidden>No private observations yet. Add one through Quick Update after a lesson.</p>
-                <ul data-observations-list></ul>
-                <footer class="observation-feedback-actions">
-                  <p data-feedback-selection-message role="status" aria-live="polite"></p>
-                  <button class="button-primary" type="button" data-generate-feedback disabled>Generate from 0 observations</button>
-                </footer>
-              </section>
-
-              <section class="content-panel feedback-panel" aria-labelledby="student-feedback-heading">
-                <header class="feedback-workspace-heading">
-                  <div>
-                    <p class="eyebrow">Student-facing</p>
-                    <h3 id="student-feedback-heading">Feedback draft</h3>
-                  </div>
-                  <span class="feedback-status-chip" data-feedback-status hidden></span>
-                </header>
-
-                <div class="feedback-empty-state" data-feedback-empty hidden>
-                  <p>No feedback draft yet.</p>
-                  <p>Select one or more private observations, then generate a draft for teacher review.</p>
-                </div>
-
-                <div class="feedback-inline-editor" data-feedback-editor hidden>
-                  <label class="feedback-draft-picker" for="feedback-draft-select" data-feedback-draft-picker hidden>
-                    Feedback record
-                    <select id="feedback-draft-select" data-feedback-draft-select></select>
-                  </label>
-                  <div class="feedback-context-chips" data-feedback-context-chips></div>
-                  <p class="feedback-review-hint" data-feedback-review-hint>Review and edit before publishing</p>
-
-                  <form class="feedback-inline-form" data-feedback-form>
-                    <div class="feedback-editor-surface">
-                      <label for="feedback-message">Teacher message <small>(optional)</small></label>
-                      <textarea id="feedback-message" name="message" rows="3"></textarea>
-
-                      <label for="feedback-went-well">What went well</label>
-                      <textarea id="feedback-went-well" name="whatWentWell" rows="4"></textarea>
-
-                      <label for="feedback-practise">What to practise</label>
-                      <textarea id="feedback-practise" name="whatToPractise" rows="4"></textarea>
-
-                      <label for="feedback-next-step">Next step</label>
-                      <textarea id="feedback-next-step" name="nextStep" rows="4"></textarea>
-                    </div>
-
-                    <p class="feedback-form-message" data-feedback-form-message role="status" aria-live="polite"></p>
-                    <div class="feedback-visibility-state" data-feedback-visibility>
-                      <span aria-hidden="true" data-feedback-visibility-icon>&#128065;&#xFE0E;</span>
-                      <span data-feedback-visibility-text>Not visible to the student yet</span>
-                    </div>
-                    <div class="feedback-inline-actions">
-                      <button type="button" data-feedback-save>Save draft</button>
-                      <button class="button-primary" type="button" data-feedback-publish>Approve &amp; Publish</button>
-                      <button class="button-primary" type="button" data-feedback-republish hidden>Edit and republish</button>
-                      <details class="feedback-more-actions" data-feedback-more-actions>
-                        <summary aria-label="More feedback actions">More</summary>
-                        <button type="button" data-feedback-archive>Archive</button>
-                      </details>
-                    </div>
-                  </form>
-                </div>
-              </section>
-            </div>
           </div>
         </div>
 
@@ -424,27 +351,6 @@
               </fieldset>
             </details>
 
-            <details class="quick-update-optional">
-              <summary>+ Private teacher observation</summary>
-              <fieldset>
-              <legend>Teacher only</legend>
-              <fieldset class="quick-related-targets" aria-labelledby="quick-observation-target-label">
-                <legend id="quick-observation-target-label">Related learning targets</legend>
-                <p>Select one or more targets connected to this note or feedback.</p>
-                <div data-quick-observation-targets></div>
-                <p data-quick-observation-targets-empty hidden>Add a learning objective first.</p>
-              </fieldset>
-              <label for="quick-observation-context">Lesson or context <small>(optional)</small></label>
-              <input id="quick-observation-context" name="observationContext" type="text" placeholder="For example: speaking practice">
-              <label for="quick-observation">Observation</label>
-              <textarea id="quick-observation" name="observation" rows="3"></textarea>
-              <label class="toggle-field" for="quick-observation-feedback" data-quick-include-feedback-row>
-                <input id="quick-observation-feedback" name="includeInFeedback" type="checkbox">
-                Include in feedback
-              </label>
-              </fieldset>
-            </details>
-
             <details class="quick-update-optional quick-student-feedback">
               <summary>+ Student feedback</summary>
               <fieldset>
@@ -494,29 +400,6 @@
               <button type="button" data-quick-update-close>Cancel</button>
               <button type="submit" data-quick-update-save>Save update</button>
               <button class="button-primary" type="submit" data-quick-update-publish-feedback>Save &amp; send feedback</button>
-            </div>
-          </form>
-        </dialog>
-
-        <dialog class="observation-editor-dialog" data-observation-dialog aria-labelledby="observation-editor-heading">
-          <form data-observation-form>
-            <header>
-              <p class="eyebrow">Teacher only</p>
-              <h3 id="observation-editor-heading">Edit observation</h3>
-              <p data-observation-target></p>
-            </header>
-            <label for="observation-context">Lesson context</label>
-            <input id="observation-context" name="lessonContext" type="text">
-            <label for="observation-text">My observation</label>
-            <textarea id="observation-text" name="text" rows="5" required></textarea>
-            <label class="toggle-field" for="observation-include-feedback">
-              <input id="observation-include-feedback" name="includeInFeedback" type="checkbox">
-              Include in feedback
-            </label>
-            <p data-observation-form-message role="status" aria-live="polite"></p>
-            <div class="observation-editor-actions">
-              <button class="button-primary" type="submit">Save observation</button>
-              <button type="button" data-observation-close>Cancel</button>
             </div>
           </form>
         </dialog>
@@ -589,7 +472,7 @@
               <p data-progress-feedback-message role="status" aria-live="polite"></p>
             </fieldset>
 
-            <p class="progress-update-dialog__note">Private observations remain separate. Student feedback changes only when you explicitly publish or republish it.</p>
+            <p class="progress-update-dialog__note">Student feedback changes only when you explicitly publish or republish it.</p>
             <p data-progress-update-message role="status" aria-live="polite"></p>
             <div class="progress-update-dialog__actions">
               <button class="button-danger" type="button" data-progress-update-delete>Delete update</button>
@@ -1123,6 +1006,6 @@
     </main>
 
     <p data-page-status role="status" aria-live="polite">Проверка доступа…</p>
-    <script type="module" src="./js/pages/admin-page.js?v=20260827-profile-resilient"></script>
+    <script type="module" src="./js/pages/admin-page.js?v=20260827-observations-retired"></script>
   </body>
 </html>

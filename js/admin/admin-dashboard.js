@@ -7,9 +7,9 @@ import { unitsRepository } from "../data/repositories/units-repository.js";
 import { OBJECTIVE_STATUS_LABELS } from "../domain/constants.js";
 import { ENTITY_IMAGE_CONFIG, ENTITY_IMAGE_TYPES } from "../domain/entity-images.js";
 import { overallObjectiveStatus } from "../domain/learning-objectives.js";
-import { initializeAdminCrud } from "./admin-crud.js";
+import { initializeAdminCrud } from "./admin-crud.js?v=20260827-observations-retired";
 import { clearStudentAccess } from "./student-access.js";
-import { loadAdminStudentProfile } from "./student-profile.js?v=20260827-profile-resilient";
+import { loadAdminStudentProfile } from "./student-profile.js?v=20260827-observations-retired";
 
 const DEFAULT_SECTION = "overview";
 const STUDENT_PROFILE_SECTION = "student-profile";

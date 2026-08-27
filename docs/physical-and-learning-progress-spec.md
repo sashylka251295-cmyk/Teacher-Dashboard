@@ -77,10 +77,10 @@ Opening Update progress from Lesson Details routes to a matching group. Group Qu
 3. add and persist an unplanned target without leaving the update;
 4. include or exclude students;
 5. override any selected target for an individual student;
-6. optionally update homework, goal, a private observation, or separate student-facing feedback;
+6. optionally update homework, goal, or student-facing feedback;
 7. mark the lesson physically complete and save.
 
-Private observation text and student feedback are separate controls. The compact student-feedback editor uses `What went well`, `Next focus`, and an optional `Teacher message`. `Save update` keeps entered feedback as an admin-only draft. `Save & send feedback` is the explicit publication action.
+The compact student-feedback editor uses `What went well`, `Next focus`, and an optional `Teacher message`. `Save update` keeps entered feedback as an admin-only draft. `Save & send feedback` is the explicit publication action. Teacher Observations are not part of the active workflow.
 
 Saving updates the group's journey, each included student's journey, current objective records and progress history. `workedOnObjectives` are stored separately from assessed status changes. Individual Quick Update uses the same unit/lesson/target and physical-progress logic.
 
@@ -92,11 +92,11 @@ Unit summary headers use physical progress only: completed lessons / total lesso
 
 Progress Update cards show the saved result (`Needs practice`, `Developing`, `Confident`, or `Worked on`) rather than the technical initial transition `Not assessed → ...`.
 
-Progress revision is intentionally separate from other lesson records: teacher observations remain private and independent, while published feedback remains an immutable student-facing version. A feedback draft created with a new lesson update stores its `progressHistoryId`, so Edit progress can revise the linked draft and an explicit Update published feedback action creates a new immutable version. Deleting a progress update therefore never silently deletes an observation, homework assignment or published feedback. Legacy history entries can still revise their learning-target changes; when they lack explicit physical metadata, the current lesson state is used in the editor and deletion falls back to the state before that legacy entry where available.
+Progress revision is intentionally separate from other lesson records, while published feedback remains an immutable student-facing version. A feedback draft created with a new lesson update stores its `progressHistoryId`, so Edit progress can revise the linked draft and an explicit Update published feedback action creates a new immutable version. Deleting a progress update therefore never silently deletes a homework assignment or published feedback. Legacy history entries can still revise their learning-target changes; when they lack explicit physical metadata, the current lesson state is used in the editor and deletion falls back to the state before that legacy entry where available.
 
-## Observations and feedback
+## Feedback
 
-Observations remain teacher-only. New observations may store `groupId`, `courseId`, `unitId`, `lessonId`, learning-target ID/title, category, lesson date/context and observation text. `includeInFeedback` only selects a private source for draft generation. Students can read only their own separately published feedback versions.
+The teacher writes optional student-facing feedback directly in Quick Update. There is no active Teacher Observations UI. Existing `teacherNotes` documents remain an admin-only legacy archive and are not deleted automatically. Students can read only their own separately published feedback versions.
 
 ## Vocabulary migration
 

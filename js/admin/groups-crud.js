@@ -1,5 +1,5 @@
 import { coursesRepository } from "../data/repositories/courses-repository.js";
-import { feedbackVersionsRepository } from "../data/repositories/feedback-versions-repository.js";
+import { feedbackDraftsRepository } from "../data/repositories/feedback-drafts-repository.js?v=20260827-observations-retired";
 import { goalsRepository } from "../data/repositories/goals-repository.js";
 import { groupsRepository } from "../data/repositories/groups-repository.js";
 import { homeworkAssignmentsRepository } from "../data/repositories/homework-assignments-repository.js";
@@ -8,7 +8,6 @@ import { lessonsRepository } from "../data/repositories/lessons-repository.js";
 import { addObjectiveToLesson } from "../data/repositories/lesson-objectives-repository.js";
 import { objectiveProgressRepository } from "../data/repositories/objective-progress-repository.js";
 import { studentsRepository } from "../data/repositories/students-repository.js";
-import { teacherNotesRepository } from "../data/repositories/teacher-notes-repository.js";
 import { unitsRepository } from "../data/repositories/units-repository.js";
 import {
   ACTIVE_GOAL_STATUSES,
@@ -31,7 +30,6 @@ import {
   currentPhysicalUnit,
 } from "../domain/physical-progress.js";
 import { renderCourseJourneyMap } from "../ui/course-journey-map.js";
-import { buildObservationTargetFields } from "../domain/observation-links.js";
 import { isGoalStatus, isNonEmptyText, isStudentStatus } from "../domain/validation.js";
 import {
   closeDialog,
@@ -497,15 +495,11 @@ function createGroupUpdateStudentRow(student) {
   const existingHomework = document.createElement("div");
   const observationSection = document.createElement("section");
   const observationHeading = document.createElement("h4");
-  const feedbackVisibility = document.createElement("select");
   const relatedTargets = document.createElement("fieldset");
   const relatedTargetsLegend = document.createElement("legend");
   const relatedTargetsHint = document.createElement("p");
   const observationTargets = document.createElement("div");
-  const observationContext = document.createElement("input");
   const observationText = document.createElement("textarea");
-  const includeFeedback = document.createElement("input");
-  const includeFeedbackLabel = document.createElement("label");
   const goalSection = document.createElement("section");
   const goalHeading = document.createElement("h4");
   const currentGoalText = document.createElement("p");
@@ -607,15 +601,10 @@ function createGroupUpdateStudentRow(student) {
   }
   homeworkSection.append(homeworkHeading, createHomework, existingHomework);
 
-  observationHeading.textContent = "Optional individual feedback";
-  feedbackVisibility.append(
-    createOption("private", "Private teacher note"),
-    createOption("published", "Published student feedback"),
-  );
-  feedbackVisibility.dataset.groupFeedbackVisibility = "";
+  observationHeading.textContent = "Optional student feedback";
   relatedTargets.className = "quick-related-targets";
   relatedTargetsLegend.textContent = "Related learning targets";
-  relatedTargetsHint.textContent = "Select one or more targets connected to this note or feedback.";
+  relatedTargetsHint.textContent = "Select one or more targets connected to this student-facing feedback.";
   observationTargets.dataset.groupObservationTargets = "";
   LANGUAGE_SKILL_CATEGORIES.forEach((category) => {
     const categoryObjectives = objectives.filter((objective) => objective.category === category);
@@ -636,21 +625,12 @@ function createGroupUpdateStudentRow(student) {
     observationTargets.append(group);
   });
   relatedTargets.append(relatedTargetsLegend, relatedTargetsHint, observationTargets);
-  observationContext.type = "text";
-  observationContext.placeholder = "Lesson or context (optional)";
-  observationContext.dataset.groupObservationContext = "";
   observationText.rows = 3;
   observationText.dataset.groupObservationText = "";
-  includeFeedback.type = "checkbox";
-  includeFeedback.dataset.groupObservationFeedback = "";
-  includeFeedbackLabel.append(includeFeedback, document.createTextNode(" Include in feedback"));
   observationSection.append(
     observationHeading,
-    createLabeledControl("Visibility", feedbackVisibility),
     relatedTargets,
-    createLabeledControl("Lesson or context", observationContext),
-    createLabeledControl("Observation", observationText),
-    includeFeedbackLabel,
+    createLabeledControl("Feedback visible to the student", observationText),
   );
 
   goalHeading.textContent = "Current goal";
@@ -910,21 +890,11 @@ async function saveGroupQuickUpdate(event) {
           .map((checkbox) => checkbox.dataset.groupObservationTarget);
         const observationTargets = observationTargetIds.map((targetId) => objectives.get(targetId)).filter(Boolean);
         if (observationText && !observationTargets.length) {
-          throw new Error(`Select at least one observation learning target for ${student.name}.`);
+          throw new Error(`Select at least one feedback learning target for ${student.name}.`);
         }
-        const existingTargets = progressByObjective(
-          currentGroupDetails.progressDocuments.filter((entry) =>
-            entry.studentId === student.id && entry.unitId === unit.id),
-        );
-        const targetFields = buildObservationTargetFields(observationTargets, (target) => {
-          const changedTarget = objectiveChanges.find((change) => change.objectiveId === target.id);
-          return changedTarget?.status ?? existingTargets.get(target.id)?.status ?? "not_assessed";
-        });
         const observation = observationText ? {
           text: observationText,
-          ...targetFields,
-          lessonContext: card.querySelector("[data-group-observation-context]").value.trim(),
-          includeInFeedback: card.querySelector("[data-group-observation-feedback]").checked,
+          learningTargetIds: observationTargets.map(({ id }) => id),
         } : null;
 
         const goalAction = card.querySelector("[data-group-goal-action]").value;
@@ -957,7 +927,6 @@ async function saveGroupQuickUpdate(event) {
           homeworkToCreate,
           homeworkChanges,
           observation,
-          feedbackVisibility: card.querySelector("[data-group-feedback-visibility]").value,
           goalOperation,
           physicalJourney,
           workedOnObjectives,
@@ -977,7 +946,7 @@ async function saveGroupQuickUpdate(event) {
   setMessage(elements.groupUpdateMessage, `Saving ${plans.length} student updates…`);
   try {
     await Promise.all(plans.map(async (plan) => {
-      await saveLearningUpdate({
+      const progressHistoryId = await saveLearningUpdate({
         studentId: plan.student.id,
         courseId: currentGroupDetails.group.courseId,
         unitId: unit.id,
@@ -987,7 +956,6 @@ async function saveGroupQuickUpdate(event) {
         homeworkToCreate: plan.homeworkToCreate,
         homeworkChanges: plan.homeworkChanges,
         lessonDate,
-        observation: plan.observation?.text ?? "",
         physicalJourney: plan.physicalJourney,
         physicalChange: {
           completeLesson: elements.groupUpdateCompleteLesson.checked,
@@ -1010,34 +978,26 @@ async function saveGroupQuickUpdate(event) {
           studentVisible: true,
         });
       }
-      if (plan.observation && plan.feedbackVisibility === "private") {
-        await teacherNotesRepository.createWithDate({
-          studentId: plan.student.id,
-          groupId: currentGroupDetails.group.id,
-          courseId: currentGroupDetails.group.courseId,
-          unitId: unit.id,
-          lessonId: lesson.id,
-          skillCategory: plan.observation.skillCategory,
-          learningTargetId: plan.observation.learningTargetId,
-          learningTargetTitle: plan.observation.learningTargetTitle,
-          targetStatus: plan.observation.targetStatus,
-          learningTargetIds: plan.observation.learningTargetIds,
-          learningTargetTitles: plan.observation.learningTargetTitles,
-          skillCategories: plan.observation.skillCategories,
-          targetStatuses: plan.observation.targetStatuses,
-          lessonContext: plan.observation.lessonContext,
-          includeInFeedback: plan.observation.includeInFeedback,
-          text: plan.observation.text,
-        }, lessonDate);
-      }
-      if (plan.observation && plan.feedbackVisibility === "published") {
-        await feedbackVersionsRepository.publishQuick({
+      if (plan.observation) {
+        const feedbackId = await feedbackDraftsRepository.createProgressDraft({
           studentId: plan.student.id,
           courseId: currentGroupDetails.group.courseId,
           unitId: unit.id,
           lessonId: lesson.id,
+          progressHistoryId,
           learningTargetIds: plan.observation.learningTargetIds,
-          text: plan.observation.text,
+          content: {
+            message: plan.observation.text,
+            whatWentWell: "",
+            whatToPractise: "",
+            nextStep: "",
+          },
+        });
+        await feedbackDraftsRepository.publish(feedbackId, {
+          message: plan.observation.text,
+          whatWentWell: "",
+          whatToPractise: "",
+          nextStep: "",
         });
       }
     }));

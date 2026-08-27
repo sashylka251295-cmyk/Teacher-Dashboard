@@ -2,7 +2,6 @@ import { goalsRepository } from "../data/repositories/goals-repository.js";
 import { feedbackDraftsRepository } from "../data/repositories/feedback-drafts-repository.js?v=20260827-profile-hotfix";
 import { addObjectiveToLesson } from "../data/repositories/lesson-objectives-repository.js";
 import { saveLearningUpdate } from "../data/repositories/learning-updates-repository.js?v=20260827-profile-hotfix";
-import { teacherNotesRepository } from "../data/repositories/teacher-notes-repository.js";
 import {
   ACTIVE_GOAL_STATUSES,
   HOMEWORK_STATUSES,
@@ -22,7 +21,6 @@ import {
   currentPhysicalUnit,
 } from "../domain/physical-progress.js";
 import { INDEPENDENT_PROGRESS_SCOPE } from "../domain/independent-learning.js";
-import { buildObservationTargetFields } from "../domain/observation-links.js";
 import { hasFeedbackContent, normalizeFeedbackContent } from "../domain/feedback.js?v=20260827-profile-hotfix";
 import { isGoalStatus, isNonEmptyText } from "../domain/validation.js";
 
@@ -193,36 +191,6 @@ function renderHomework() {
   elements.homeworkStatus.value = "assigned";
 }
 
-function selectedObservationTargetIds() {
-  return new Set([...elements.observationTargets.querySelectorAll("[data-observation-target]:checked")]
-    .map((checkbox) => checkbox.dataset.observationTarget));
-}
-
-function renderObservationTargets(selectedIds = new Set()) {
-  const objectives = currentLessonObjectives();
-  elements.observationTargets.replaceChildren();
-  LANGUAGE_SKILL_CATEGORIES.forEach((category) => {
-    const categoryObjectives = objectives.filter((objective) => objective.category === category);
-    if (!categoryObjectives.length) return;
-    const group = document.createElement("section");
-    const heading = document.createElement("h4");
-    heading.textContent = LANGUAGE_SKILL_LABELS[category];
-    group.append(heading, ...categoryObjectives.map((objective) => {
-      const label = document.createElement("label");
-      const checkbox = document.createElement("input");
-      const title = document.createElement("span");
-      checkbox.type = "checkbox";
-      checkbox.dataset.observationTarget = objective.id;
-      checkbox.checked = selectedIds.has(objective.id);
-      title.textContent = objective.title;
-      label.append(checkbox, title);
-      return label;
-    }));
-    elements.observationTargets.append(group);
-  });
-  elements.observationTargetsEmpty.hidden = objectives.length > 0;
-}
-
 function renderUnitFields() {
   if (isIndependentMode()) {
     elements.lesson.replaceChildren(createOption("", "Not needed for an independent update"));
@@ -238,7 +206,6 @@ function renderUnitFields() {
     ? "Add one or more learning objectives for this lesson."
     : "This lesson has no learning objectives yet.";
   renderHomework();
-  renderObservationTargets();
 }
 
 function renderUpdateMode() {
@@ -280,9 +247,6 @@ function openDialog() {
   if (!context) return;
   elements.studentName.textContent = context.student.name ?? "—";
   elements.lessonDate.value = todayInputValue();
-  elements.observation.value = "";
-  elements.observationContext.value = "";
-  elements.includeInFeedback.checked = false;
   elements.feedbackWentWell.value = "";
   elements.feedbackNextFocus.value = "";
   elements.feedbackMessage.value = "";
@@ -360,25 +324,6 @@ function collectGoalOperation() {
   return { type: "create", title, status };
 }
 
-function collectObservation(objectiveChanges) {
-  const text = elements.observation.value.trim();
-  if (!text) return null;
-  const targetIds = selectedObservationTargetIds();
-  const targets = currentLessonObjectives().filter((objective) => targetIds.has(objective.id));
-  if (!targets.length) throw new Error("Select at least one learning target connected to this observation.");
-  const progressMap = progressByObjective(context.objectiveProgress);
-  const targetFields = buildObservationTargetFields(targets, (target) => {
-    const changedStatus = objectiveChanges.find((change) => change.objectiveId === target.id)?.status;
-    return changedStatus ?? progressMap.get(target.id)?.status ?? "not_assessed";
-  });
-  return {
-    text,
-    ...targetFields,
-    lessonContext: elements.observationContext.value.trim(),
-    includeInFeedback: elements.includeInFeedback.checked,
-  };
-}
-
 function collectStudentFeedback() {
   return normalizeFeedbackContent({
     message: elements.feedbackMessage.value,
@@ -391,7 +336,6 @@ function collectStudentFeedback() {
 async function addInlineObjective() {
   if (isIndependentMode()) {
     const previousRows = objectiveRowState();
-    const previousObservationTargets = selectedObservationTargetIds();
     const title = elements.objectiveTitle.value.trim();
     const category = elements.objectiveSkill.value;
     if (!isNonEmptyText(title)) {
@@ -413,7 +357,6 @@ async function addInlineObjective() {
     elements.objectiveCreator.hidden = true;
     renderObjectives();
     restoreObjectiveRowState(previousRows);
-    renderObservationTargets(previousObservationTargets);
     const checkbox = elements.objectives.querySelector(`[data-assess-objective="${objective.id}"]`);
     if (checkbox) {
       checkbox.checked = true;
@@ -425,7 +368,6 @@ async function addInlineObjective() {
   const unit = currentUnit();
   const lesson = currentLesson();
   const previousRows = objectiveRowState();
-  const previousObservationTargets = selectedObservationTargetIds();
   elements.objectiveAdd.disabled = true;
   elements.objectiveMessage.textContent = "Saving objective…";
   try {
@@ -442,7 +384,6 @@ async function addInlineObjective() {
     elements.objectiveCreator.hidden = true;
     renderObjectives();
     restoreObjectiveRowState(previousRows);
-    renderObservationTargets(previousObservationTargets);
     const checkbox = elements.objectives.querySelector(`[data-assess-objective="${result.objective.id}"]`);
     if (checkbox) {
       checkbox.checked = true;
@@ -479,13 +420,11 @@ async function handleSubmit(event) {
   let workedOnObjectives;
   let homework;
   let goalOperation;
-  let observation;
   const studentFeedback = collectStudentFeedback();
   try {
     ({ objectiveChanges, workedOnObjectives } = collectObjectiveUpdate());
     homework = collectHomework();
     goalOperation = collectGoalOperation();
-    observation = collectObservation(objectiveChanges);
   } catch (error) {
     return setMessage(error.message);
   }
@@ -495,7 +434,6 @@ async function handleSubmit(event) {
     && !homework.create
     && homework.changes.length === 0
     && !goalOperation
-    && !observation
     && !hasFeedbackContent(studentFeedback)
   ) {
     return setMessage("Add and select at least one learning objective before saving.");
@@ -527,7 +465,6 @@ async function handleSubmit(event) {
       homeworkToCreate: homework.create,
       homeworkChanges: homework.changes,
       lessonDate,
-      observation: observation?.text ?? "",
       physicalJourney,
       physicalChange: independent ? null : {
         completeLesson: elements.completeLesson.checked,
@@ -539,27 +476,6 @@ async function handleSubmit(event) {
       ensureHistory: hasFeedbackContent(studentFeedback),
     });
     await saveGoal(goalOperation);
-    if (observation) {
-      await teacherNotesRepository.createWithDate({
-        studentId: context.student.id,
-        groupId: context.group?.id ?? "",
-        courseId: independent ? "" : context.student.courseId,
-        unitId: independent ? "" : unit.id,
-        lessonId: independent ? "" : lesson.id,
-        scope: independent ? INDEPENDENT_PROGRESS_SCOPE : "course",
-        skillCategory: observation.skillCategory,
-        learningTargetId: observation.learningTargetId,
-        learningTargetTitle: observation.learningTargetTitle,
-        targetStatus: observation.targetStatus,
-        learningTargetIds: observation.learningTargetIds,
-        learningTargetTitles: observation.learningTargetTitles,
-        skillCategories: observation.skillCategories,
-        targetStatuses: observation.targetStatuses,
-        lessonContext: observation.lessonContext,
-        includeInFeedback: observation.includeInFeedback,
-        text: observation.text,
-      }, lessonDate);
-    }
     if (hasFeedbackContent(studentFeedback)) {
       const feedbackId = await feedbackDraftsRepository.createProgressDraft({
         studentId: context.student.id,
@@ -617,11 +533,6 @@ function initialize() {
     homeworkTitle: form.elements.homeworkTitle,
     homeworkStatus: form.elements.homeworkStatus,
     existingHomework: dialog.querySelector("[data-quick-existing-homework]"),
-    observationTargets: dialog.querySelector("[data-quick-observation-targets]"),
-    observationTargetsEmpty: dialog.querySelector("[data-quick-observation-targets-empty]"),
-    observation: form.elements.observation,
-    observationContext: form.elements.observationContext,
-    includeInFeedback: form.elements.includeInFeedback,
     feedbackWentWell: form.elements.feedbackWentWell,
     feedbackNextFocus: form.elements.feedbackNextFocus,
     feedbackMessage: form.elements.feedbackMessage,
@@ -638,7 +549,6 @@ function initialize() {
   elements.mode.addEventListener("change", renderUpdateMode);
   elements.lesson.addEventListener("change", () => {
     renderObjectives();
-    renderObservationTargets();
   });
   elements.goalAction.addEventListener("change", updateGoalFields);
   elements.homeworkAssigned.addEventListener("change", () => {
@@ -656,12 +566,6 @@ function initialize() {
   dialog.addEventListener("change", (event) => {
     if (event.target.matches("[data-assess-objective]")) {
       event.target.closest(".quick-objective-row").querySelector("select").disabled = !event.target.checked;
-      if (event.target.checked && selectedObservationTargetIds().size === 0) {
-        const relatedTarget = elements.observationTargets.querySelector(
-          `[data-observation-target="${event.target.dataset.assessObjective}"]`,
-        );
-        if (relatedTarget) relatedTarget.checked = true;
-      }
     }
     if (event.target.matches("[data-update-homework]")) event.target.closest(".quick-homework-row").querySelector("select").disabled = !event.target.checked;
   });

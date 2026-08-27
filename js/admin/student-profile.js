@@ -8,7 +8,6 @@ import { objectiveProgressRepository } from "../data/repositories/objective-prog
 import { progressRepository } from "../data/repositories/progress-repository.js";
 import { progressHistoryRepository } from "../data/repositories/progress-history-repository.js";
 import { studentsRepository } from "../data/repositories/students-repository.js";
-import { teacherNotesRepository } from "../data/repositories/teacher-notes-repository.js";
 import { unitsRepository } from "../data/repositories/units-repository.js";
 import {
   ACTIVE_GOAL_STATUSES,
@@ -31,8 +30,7 @@ import {
   cumulativeUnitTargets,
   unitPhysicalProgressFromHistory,
 } from "../domain/progress-display.js?v=20260827-profile-hotfix";
-import { configureQuickUpdate } from "./quick-update.js?v=20260827-profile-hotfix";
-import { configureFeedbackWorkflow } from "./feedback-workflow.js?v=20260827-profile-hotfix";
+import { configureQuickUpdate } from "./quick-update.js?v=20260827-observations-retired";
 import { configureProgressUpdateEditor } from "./progress-update-editor.js?v=20260827-profile-hotfix";
 import { configureStudentAccess } from "./student-access.js";
 
@@ -616,7 +614,7 @@ function renderAssessmentHistory(root, history, units, lessons) {
 }
 
 function renderProfile(root, data, onQuickUpdateSaved) {
-  const { student, group, course, units, lessons, objectiveProgress, homeworkAssignments, progressHistory, legacyProgress, goals, teacherNotes } = data;
+  const { student, group, course, units, lessons, objectiveProgress, homeworkAssignments, progressHistory, legacyProgress, goals } = data;
   const warnings = [...(data.loadWarnings ?? [])];
   const initial = displayValue(student.name).trim().charAt(0).toUpperCase() || "S";
   setText(root, "[data-profile-initial]", initial);
@@ -650,8 +648,6 @@ function renderProfile(root, data, onQuickUpdateSaved) {
   ), warnings);
   renderProfilePart("learning summary", () => renderSummary(root, units, objectiveProgress), warnings);
   renderProfilePart("current goal", () => renderCurrentGoal(root, goals), warnings);
-  renderProfilePart("teacher observations", () =>
-    renderObservations(root, teacherNotes, units, course), warnings);
   renderProfilePart("progress updates", () =>
     renderAssessmentHistory(root, progressHistory, units, lessons), warnings);
   select(root, "[data-legacy-progress-note]").hidden = legacyProgress.length === 0;
@@ -659,8 +655,6 @@ function renderProfile(root, data, onQuickUpdateSaved) {
     configureQuickUpdate({ ...data, onSaved: onQuickUpdateSaved }));
   configureProfileFeature("Progress Update editor", () =>
     configureProgressUpdateEditor({ ...data, onSaved: onQuickUpdateSaved }));
-  configureProfileFeature("feedback workflow", () =>
-    configureFeedbackWorkflow({ ...data, onSaved: onQuickUpdateSaved }));
   configureProfileFeature("student access", () => configureStudentAccess(root, student));
   select(root, "[data-profile-state]").hidden = true;
   select(root, "[data-profile-content]").hidden = false;
@@ -681,7 +675,7 @@ async function loadProfileData(studentId) {
     : null;
   const courseId = group?.courseId || student.courseId || "";
   const effectiveStudent = courseId === student.courseId ? student : { ...student, courseId };
-  const [course, units, lessons, objectiveProgress, homeworkAssignments, progressHistory, legacyProgress, goals, teacherNotes, feedbackDrafts] = await Promise.all([
+  const [course, units, lessons, objectiveProgress, homeworkAssignments, progressHistory, legacyProgress, goals, feedbackDrafts] = await Promise.all([
     loadProfilePart("course", courseId ? coursesRepository.getById(courseId) : Promise.resolve(null), null, loadWarnings),
     loadProfilePart("units", courseId ? unitsRepository.listByCourse(courseId) : Promise.resolve([]), [], loadWarnings),
     loadProfilePart("lessons", courseId ? lessonsRepository.listByCourse(courseId) : Promise.resolve([]), [], loadWarnings),
@@ -690,10 +684,9 @@ async function loadProfileData(studentId) {
     loadProfilePart("progress updates", progressHistoryRepository.listByStudent(studentId), [], loadWarnings),
     loadProfilePart("legacy progress", progressRepository.listByStudent(studentId), [], loadWarnings),
     loadProfilePart("goals", goalsRepository.listByStudent(studentId), [], loadWarnings),
-    loadProfilePart("teacher observations", teacherNotesRepository.listByStudent(studentId), [], loadWarnings),
     loadProfilePart("feedback drafts", feedbackDraftsRepository.listByStudent(studentId), [], loadWarnings),
   ]);
-  return { student: effectiveStudent, group, course, units, lessons, objectiveProgress, homeworkAssignments, progressHistory, legacyProgress, goals, teacherNotes, feedbackDrafts, loadWarnings };
+  return { student: effectiveStudent, group, course, units, lessons, objectiveProgress, homeworkAssignments, progressHistory, legacyProgress, goals, feedbackDrafts, loadWarnings };
 }
 
 export async function loadAdminStudentProfile(studentId, successMessage = "") {

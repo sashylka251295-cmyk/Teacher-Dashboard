@@ -1,52 +1,46 @@
-# Teacher Feedback Workflow
+# Direct Student Feedback Workflow
 
-## Goal
+## Product decision
 
-Convert private lesson observations into teacher-reviewed student feedback without exposing raw notes or publishing automatically.
+Teacher Observations are no longer part of the active Teacher Dashboard workflow. The teacher writes student-facing feedback directly after a lesson without maintaining a second private observation record.
 
 ```text
-Private observations
-  → Generate feedback
-  → Editable draft
-  → Teacher review
-  → Approve & Publish
-  → Student profile
+Quick Update
+  -> Write feedback
+  -> Save private draft or explicitly send
+  -> Published feedback in the linked student profile
 ```
 
-## Observation contract
+Existing `teacherNotes` documents are preserved as a protected legacy archive. The application does not display, create, edit, publish, migrate, or delete those records. Students cannot read them.
 
-New Quick Update observations are stored in `teacherNotes` with:
+## Quick Update
+
+The optional Student feedback section contains:
+
+- `What went well`;
+- `Next focus` (stored as `whatToPractise`);
+- optional `Teacher message`.
+
+`Save update` may store the entered feedback as an admin-only draft. `Save & send feedback` is the explicit student-facing publication action. Feedback is optional and a normal learning-progress update does not require it.
+
+Group Quick Update provides optional student-facing feedback inside each included student card. It has no Private teacher note mode. Saving the group update publishes only feedback that the teacher explicitly entered for that student.
+
+## Draft contract
+
+`feedbackDrafts/{feedbackId}` stores the editable working record:
 
 ```text
 studentId
 courseId
 unitId
-lessonDate
-lessonContext
-skillCategory
-learningTargetId
-learningTargetTitle
-targetStatus
-text
-includeInFeedback
-createdAt
-```
-
-`teacherNotes` is admin-only. Older notes without a linked learning target remain readable to the teacher but cannot generate feedback until a new linked observation is recorded.
-
-## Draft contract
-
-`feedbackDrafts/{feedbackId}` stores the editable working document:
-
-```text
-studentId
-courseId
-sourceObservationIds[]
+lessonId
+progressHistoryId
+learningTargetIds[]
 content.whatWentWell
 content.whatToPractise
 content.nextStep
 content.message
-generator
+source: progress_update
 status: draft | published | archived
 latestVersionNumber
 latestPublishedVersionId
@@ -55,76 +49,29 @@ updatedAt
 publishedAt
 ```
 
-Drafts are always admin-only, including drafts whose workflow status is `published`.
+Drafts are always admin-only. A draft is never visible in the Student Portal.
 
-A draft created directly from Quick Update also stores `source: "progress_update"`, `progressHistoryId`, `unitId`, `lessonId`, and `learningTargetIds[]`. Its compact teacher-authored fields are labelled `What went well`, `Next focus` (stored as `whatToPractise`), and optional `Teacher message`. These records use the same immutable publication mechanism as observation-generated drafts.
+## Published versions
 
-## Teacher workspace
+Publishing creates a new immutable `feedbackVersions/{versionId}` snapshot. It belongs to exactly one `studentId` and copies the reviewed content and progress context. Students can read only their own records with `status == "published"`.
 
-The admin student profile presents this workflow as one compact responsive workspace:
-
-- the left column (about 45%) lists private observation cards with skill/date, course and unit, learning target, lesson context and the full private note;
-- each linked observation can be selected with `Include in feedback`; the Generate action reflects the live selection count and is disabled at zero;
-- observation editing updates only the private `teacherNotes` document and cannot mutate an existing published version;
-- the right column (about 55%) contains the active feedback record, its status and source unit/category chips;
-- drafts are editable inline and require an explicit `Approve & Publish` action;
-- published records are read-only until `Edit and republish` prepares the next editable draft;
-- when no draft exists, the right column shows an empty state and no synthetic feedback;
-- at tablet and mobile widths, observations are shown first and feedback second without horizontal scrolling.
-
-## Published version contract
-
-Approve & Publish creates a new immutable `feedbackVersions/{versionId}`:
-
-```text
-feedbackId
-studentId
-courseId
-sourceObservationIds[]
-content.whatWentWell
-content.whatToPractise
-content.nextStep
-status: published
-versionNumber
-publishedAt
-```
-
-The content is copied as a snapshot. Later observation edits, draft edits or republishing cannot modify an existing version. Edit and republish creates the next version number.
-
-Edit progress loads the draft linked by `progressHistoryId`. Saving ordinary progress changes may keep feedback as a draft; only the explicit Publish feedback / Update published feedback action creates a student-visible version. Editing a published record never mutates its existing version.
-
-## Generator boundary
-
-`FeedbackGenerator` is the stable interface. `TemplateFeedbackGenerator` is the current implementation because the project has no secure server-side AI endpoint. It:
-
-- performs no network request;
-- needs no API key;
-- uses target titles, categories and status metadata;
-- never copies raw observation text to the student draft;
-- always requires teacher review before publication.
-
-A future AI adapter must run behind an authenticated server endpoint, verify the caller is admin, keep all credentials server-side and return only a draft. It must never publish automatically.
+Edit progress loads feedback linked by `progressHistoryId`. `Update published feedback` creates the next immutable version; it never mutates an earlier published version. Deleting a progress update does not silently delete already published feedback.
 
 ## Security
 
-- Admin can read/write `teacherNotes` and `feedbackDrafts`.
-- Admin can create published versions.
+- Admin can read/write feedback drafts and create published versions.
 - Published versions cannot be updated or deleted by client code.
-- Student can query only their own `feedbackVersions` where `status == published`.
-- Student cannot read observations or drafts and cannot create, edit or publish feedback.
+- Student can read only their own published feedback versions.
+- Student cannot read drafts or legacy `teacherNotes`.
+- Student cannot create, edit, publish, or republish feedback.
 
 ## Manual acceptance test
 
-1. As admin, add a linked observation in Quick Update and select Include in feedback.
-2. Select one or more observations and generate a draft.
-3. Confirm the student account cannot see the draft.
-4. Edit all three sections and click Approve & Publish.
-5. Confirm only the linked student sees the published version.
-6. Edit the original observation and confirm the published version is unchanged.
-7. Click Edit and republish, change the draft, and publish again.
-8. Confirm a new version appears while the earlier version remains unchanged.
-9. Select zero, one and multiple observations and verify the Generate label and disabled state.
-10. Check long targets and notes at desktop and mobile viewport widths.
-11. Create feedback in Quick Update with Save update and confirm it remains an admin-only draft.
-12. Use Save & send feedback, then confirm only the linked student sees the immutable version.
-13. Open Edit progress, change the linked feedback and explicitly republish; confirm the student sees the new version and the previous version is unchanged.
+1. Save a Quick Update without feedback and confirm progress still saves.
+2. Enter feedback and click Save update; confirm it remains a private draft.
+3. Enter feedback and click Save & send feedback; confirm only the linked student sees it.
+4. Open Edit progress, change the feedback and explicitly republish it.
+5. Confirm the new version is visible and the previous published version is unchanged.
+6. Run a Group Quick Update with feedback for one student and confirm no other student receives it.
+7. Confirm no Teacher Observations panel or Private teacher observation field appears.
+8. Confirm existing legacy `teacherNotes` remain unreadable to student accounts.

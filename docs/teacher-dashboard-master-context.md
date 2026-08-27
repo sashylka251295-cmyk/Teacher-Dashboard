@@ -315,36 +315,19 @@ This is a fixed product requirement, not an optional visual enhancement.
 
 ---
 
-## 12. Teacher observations
+## 12. Direct student feedback
 
-Teacher observations are stored in `teacherNotes` and remain teacher-only. New observations created through Quick Update are linked to:
+Teacher Observations are retired from the active product. Quick Update does not create or display private observation records. Existing `teacherNotes` remain an admin-only legacy archive and are preserved without automatic migration or deletion.
 
-- student;
-- date;
-- course;
-- unit;
-- language skill category;
-- stable learning target ID and title snapshot;
-- lesson/context;
-- observation text;
-- the target status at the time of the observation;
-- `includeInFeedback` selection.
+The approved active workflow is: **Quick Update → Feedback draft or explicit send → Student profile**.
 
-Raw observation text is never exposed directly to a student.
-
-### Observation to feedback workflow
-
-The approved workflow is: **Private observations → Feedback draft → Teacher review → Approve & Publish → Student profile**.
-
-- One or more linked observations can generate an editable `feedbackDrafts` document.
-- Draft sections are What went well, What to practise and Next step.
-- Drafts have `draft`, `published` and `archived` statuses and remain admin-only in every state.
-- Only the explicit Approve & Publish action creates an immutable `feedbackVersions` snapshot.
-- A student reads only their own documents in `feedbackVersions` with status `published`.
-- Edit and republish returns the working draft to `draft` and the next approval creates a new version; earlier published versions remain unchanged.
-- Quick Update separates private observation text from student-facing feedback. Its compact feedback fields are What went well, Next focus and optional Teacher message. Saving can keep a linked admin-only draft; Save & send feedback publishes explicitly.
-- Progress-linked drafts store `progressHistoryId`. Edit progress can change the linked draft, while Update published feedback creates a new immutable student-facing version.
-- No secure server-side AI generation endpoint currently exists. The application uses an isolated `FeedbackGenerator` interface with `TemplateFeedbackGenerator` as a safe fallback. It makes no external request, uses no secret key, and does not copy raw observation text into student feedback.
+- Compact fields are What went well, Next focus and optional Teacher message.
+- Drafts remain admin-only in every state.
+- `Save & send feedback` is the explicit publication action.
+- A student reads only their own `feedbackVersions` records with status `published`.
+- Published versions are immutable.
+- Progress-linked drafts store `progressHistoryId`; Edit progress can update and explicitly republish a new version.
+- Group Quick Update has optional student-facing feedback per student and no private-note visibility mode.
 
 The detailed contract is in `docs/feedback-workflow-spec.md`.
 
@@ -698,8 +681,8 @@ Treat the following as **approved project decisions** unless explicitly changed 
 - Teachers can add and persist a Unit/Lesson objective directly inside Progress Update.
 - Progress-history entries remain editable and deletable, including date, unit/lesson, target selection, optional statuses and physical completion; current physical and learning progress is recalculated from remaining history.
 - Teacher notes/goals/strengths/weaknesses belong on the student side of the system.
-- Teacher observations are required.
-- Raw observations and feedback drafts are teacher-only; students see only their own explicitly published feedback versions.
+- Teacher Observations are retired from the active UI; existing `teacherNotes` remain a protected legacy archive and are not deleted automatically.
+- Feedback drafts are teacher-only; students see only their own explicitly published feedback versions.
 - Publishing feedback always requires an explicit teacher action and published versions are immutable.
 - Calendar and To‑Do are separate.
 - Students have persistent calendar colors.
@@ -807,7 +790,7 @@ When this file is supplied in a new session, assume:
 
 Use this when a short context is enough:
 
-> I am building a private Teacher Dashboard for an online English teacher using Firebase/Firestore. Its core hierarchy is Course → Unit → Lesson → Learning Target. Physical progress is completed lessons / total lessons and is the only percentage; learning targets use Needs practice, Developing and Confident. Group Quick Update applies a lesson's shared target results and individual overrides, then publishes physical Course Journey snapshots to the group and included students. Homework is a separate Learning habits block; observations remain teacher-only and students see only published feedback. Vocabulary lists live in Miro rather than the platform. Admin and student roles must remain separated. Student components are shared across child, teen and adult themes. The UI is cozy, Ghibli-like but not childish, and local gallery assets are selected through admin forms. Use the attached master-context file as the source of truth and do not change approved decisions without explicitly proposing the change.
+> I am building a private Teacher Dashboard for an online English teacher using Firebase/Firestore. Its core hierarchy is Course → Unit → Lesson → Learning Target. Physical progress is completed lessons / total lessons and is the only percentage; learning targets use Needs practice, Developing and Confident. Group Quick Update applies a lesson's shared target results and individual overrides, then publishes physical Course Journey snapshots to the group and included students. Homework is a separate Learning habits block. Teacher Observations are retired; feedback is written directly and students see only explicitly published versions. Vocabulary lists live in Miro rather than the platform. Admin and student roles must remain separated. Student components are shared across child, teen and adult themes. The UI is cozy, Ghibli-like but not childish, and local gallery assets are selected through admin forms. Use the attached master-context file as the source of truth and do not change approved decisions without explicitly proposing the change.
 
 ---
 
@@ -837,8 +820,8 @@ An individual student may have no `courseId`. In that case the interface uses th
 Student Quick Update supports two scopes:
 
 - `course`: the existing Course → Unit → Lesson workflow, including optional physical lesson completion;
-- `independent`: date plus teacher-created learning objectives, with optional statuses, homework, observation, feedback and goal changes.
+- `independent`: date plus teacher-created learning objectives, with optional statuses, homework, feedback and goal changes.
 
-Independent updates do not create placeholder curriculum documents and do not affect Course Journey percentages. They are stored in progress history with `scope: "independent"`, can be edited or deleted, and publish only a safe current-target snapshot to the student document. Raw observations remain teacher-only.
+Independent updates do not create placeholder curriculum documents and do not affect Course Journey percentages. They are stored in progress history with `scope: "independent"`, can be edited or deleted, and publish only a safe current-target snapshot to the student document. Feedback remains private until the teacher explicitly publishes it.
 
 See `docs/independent-learning-updates-spec.md`.
