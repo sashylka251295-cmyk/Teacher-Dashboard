@@ -33,6 +33,8 @@ lessonStops[]
 updatedAt
 ```
 
+Students also keep `unitJourneys.{unitId}` snapshots. They preserve the physical completion of earlier units while `courseJourney` continues to identify the current unit. An admin can mark an entire unit complete when lessons were finished before the dashboard was introduced. This sets that unit to 100% without creating learning-target statuses. A manual completion can be undone; real saved lesson updates remain intact.
+
 `lessonStops` is a safe student-readable snapshot containing only lesson ID, number/order, title, skill tags and up to three public learning-target snapshots. It must never contain private teacher notes, activities, resources or observations. Group publication writes the group journey and an independent copy on every included student, so an individual can later diverge without changing the group.
 
 The same safe projection is maintained as `units/{unitId}.lessonStops` when a course program is installed or an admin saves/deletes a lesson. This lets a student see real lesson titles before the first progress publication without granting access to private `lessons` documents. Once a journey is published, its independent snapshot preserves the learner's current path.
@@ -75,8 +77,10 @@ Opening Update progress from Lesson Details routes to a matching group. Group Qu
 3. add and persist an unplanned target without leaving the update;
 4. include or exclude students;
 5. override any selected target for an individual student;
-6. optionally update homework, goal, private observation or explicitly published feedback;
+6. optionally update homework, goal, a private observation, or separate student-facing feedback;
 7. mark the lesson physically complete and save.
+
+Private observation text and student feedback are separate controls. The compact student-feedback editor uses `What went well`, `Next focus`, and an optional `Teacher message`. `Save update` keeps entered feedback as an admin-only draft. `Save & send feedback` is the explicit publication action.
 
 Saving updates the group's journey, each included student's journey, current objective records and progress history. `workedOnObjectives` are stored separately from assessed status changes. Individual Quick Update uses the same unit/lesson/target and physical-progress logic.
 
@@ -88,7 +92,7 @@ Unit summary headers use physical progress only: completed lessons / total lesso
 
 Progress Update cards show the saved result (`Needs practice`, `Developing`, `Confident`, or `Worked on`) rather than the technical initial transition `Not assessed → ...`.
 
-Progress revision is intentionally separate from other lesson records: teacher observations remain private and independent, while published feedback remains an immutable student-facing version. Deleting a progress update therefore never silently deletes an observation, homework assignment or published feedback. Legacy history entries can still revise their learning-target changes; when they lack explicit physical metadata, the current lesson state is used in the editor and deletion falls back to the state before that legacy entry where available.
+Progress revision is intentionally separate from other lesson records: teacher observations remain private and independent, while published feedback remains an immutable student-facing version. A feedback draft created with a new lesson update stores its `progressHistoryId`, so Edit progress can revise the linked draft and an explicit Update published feedback action creates a new immutable version. Deleting a progress update therefore never silently deletes an observation, homework assignment or published feedback. Legacy history entries can still revise their learning-target changes; when they lack explicit physical metadata, the current lesson state is used in the editor and deletion falls back to the state before that legacy entry where available.
 
 ## Observations and feedback
 
@@ -114,3 +118,5 @@ No new collection or broader rule is required. Admins already own writes to grou
 8. Existing feedback, homework and objective history workflows remain operational.
 9. Editing or deleting a Progress Update recalculates only the affected student's current learning and physical progress.
 10. Unit headers show physical percentage, while expanded skill sections accumulate recorded targets without learning percentages.
+11. Manual Complete unit changes only the selected unit snapshot and can be undone without deleting real lesson history.
+12. Saving feedback without publication leaves an admin-only draft; publishing or republishing requires its own teacher action.

@@ -409,13 +409,13 @@ function createFeedbackCard(feedback) {
   excerpt.textContent = displayValue(previewText, "Your teacher has shared new feedback.");
   published.textContent = formatDate(feedback.publishedAt);
   summary.textContent = "Read feedback →";
-  const sections = content.message
-    ? [createFeedbackSection("Teacher feedback", content.message)]
-    : [
-      createFeedbackSection("What went well", content.whatWentWell),
-      createFeedbackSection("What to practise", content.whatToPractise),
-      createFeedbackSection("Next step", content.nextStep),
-    ];
+  const sections = [
+    ["What went well", content.whatWentWell],
+    ["Next focus", content.whatToPractise],
+    ["Next step", content.nextStep],
+    ["Message from your teacher", content.message],
+  ].filter(([, value]) => typeof value === "string" && value.trim())
+    .map(([title, value]) => createFeedbackSection(title, value));
   full.append(...sections);
   details.append(summary, full);
   body.append(excerpt);
@@ -436,7 +436,7 @@ function renderFeedback(root, feedbackVersions) {
   empty.hidden = sorted.length > 0;
 }
 
-function createUnitCard(unit, homeworkAssignments, journey) {
+function createUnitCard(unit, homeworkAssignments, journey, isCurrent) {
   const card = document.createElement("article");
   const number = document.createElement("span");
   const title = document.createElement("h4");
@@ -444,14 +444,13 @@ function createUnitCard(unit, homeworkAssignments, journey) {
   const homework = homeworkAssignments.filter((item) => item.unitId === unit.id);
   const completedHomework = homework.filter((item) => item.status === "completed").length;
   const physical = physicalProgress(unit, journey, []);
-  const isCurrent = journey?.unitId === unit.id;
   card.dataset.unitState = isCurrent
     ? physical.percent === 100 ? "complete" : "current"
-    : "upcoming";
+    : physical.percent === 100 ? "complete" : "upcoming";
 
   number.textContent = unit.number ? `Unit ${unit.number}` : "Unit";
   title.textContent = unitName(unit);
-  value.textContent = isCurrent
+  value.textContent = journey?.unitId === unit.id
     ? `${physical.completed} of ${physical.total} lessons · ${physical.percent}% complete`
     : "Not started";
   card.append(number, title, value);
@@ -463,10 +462,14 @@ function createUnitCard(unit, homeworkAssignments, journey) {
   return card;
 }
 
-function renderUnits(root, units, homeworkAssignments, journey) {
+function renderUnits(root, units, homeworkAssignments, student) {
   const container = select(root, "[data-unit-progress]");
   const empty = select(root, "[data-unit-progress-empty]");
-  container.replaceChildren(...units.map((unit) => createUnitCard(unit, homeworkAssignments, journey)));
+  container.replaceChildren(...units.map((unit) => {
+    const journey = student.unitJourneys?.[unit.id]
+      ?? (student.courseJourney?.unitId === unit.id ? student.courseJourney : null);
+    return createUnitCard(unit, homeworkAssignments, journey, student.courseJourney?.unitId === unit.id);
+  }));
   container.hidden = units.length === 0;
   empty.hidden = units.length > 0;
 }
@@ -486,11 +489,10 @@ function createUnitDetails(unit, progressDocuments, homeworkAssignments, journey
   const progressMap = progressByObjective(progressDocuments);
   const objectives = learningObjectivesForUnit(unit).filter((objective) => progressMap.has(objective.id));
   const physical = physicalProgress(unit, journey, []);
-  const isCurrent = journey?.unitId === unit.id;
   title.textContent = unitName(unit);
   const physicalLabel = document.createElement("span");
   physicalLabel.className = "student-unit-physical-progress";
-  physicalLabel.textContent = isCurrent
+  physicalLabel.textContent = journey?.unitId === unit.id
     ? `${physical.completed} of ${physical.total} lessons · ${physical.percent}%`
     : "Not started";
   summary.append(title, physicalLabel);
@@ -590,7 +592,7 @@ function createIndependentDetails(progressDocuments, homeworkAssignments) {
   return card;
 }
 
-function renderProgressMatrix(root, units, progressDocuments, homeworkAssignments, journey) {
+function renderProgressMatrix(root, units, progressDocuments, homeworkAssignments, student) {
   const container = select(root, "[data-student-progress-matrix]");
   const empty = select(root, "[data-student-progress-empty]");
   container.replaceChildren();
@@ -601,7 +603,13 @@ function renderProgressMatrix(root, units, progressDocuments, homeworkAssignment
     empty.hidden = false;
     return;
   }
-  container.append(...units.map((unit) => createUnitDetails(unit, progressDocuments, homeworkAssignments, journey)));
+  container.append(...units.map((unit) => createUnitDetails(
+    unit,
+    progressDocuments,
+    homeworkAssignments,
+    student.unitJourneys?.[unit.id]
+      ?? (student.courseJourney?.unitId === unit.id ? student.courseJourney : null),
+  )));
   if (independentProgress.length) {
     container.append(createIndependentDetails(independentProgress, homeworkAssignments));
   }
@@ -670,8 +678,8 @@ function renderStudent(root, data) {
     );
   }
   renderDashboardHomework(root, homeworkAssignments, units);
-  renderUnits(root, units, homeworkAssignments, student.courseJourney);
-  renderProgressMatrix(root, units, objectiveProgress, homeworkAssignments, student.courseJourney);
+  renderUnits(root, units, homeworkAssignments, student);
+  renderProgressMatrix(root, units, objectiveProgress, homeworkAssignments, student);
   renderAchievements(root, achievements);
   renderFeedback(root, feedbackVersions);
 }

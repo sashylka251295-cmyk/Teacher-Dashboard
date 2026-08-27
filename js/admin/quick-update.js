@@ -1,5 +1,5 @@
 import { goalsRepository } from "../data/repositories/goals-repository.js";
-import { feedbackVersionsRepository } from "../data/repositories/feedback-versions-repository.js";
+import { feedbackDraftsRepository } from "../data/repositories/feedback-drafts-repository.js";
 import { addObjectiveToLesson } from "../data/repositories/lesson-objectives-repository.js";
 import { saveLearningUpdate } from "../data/repositories/learning-updates-repository.js";
 import { teacherNotesRepository } from "../data/repositories/teacher-notes-repository.js";
@@ -23,6 +23,7 @@ import {
 } from "../domain/physical-progress.js";
 import { INDEPENDENT_PROGRESS_SCOPE } from "../domain/independent-learning.js";
 import { buildObservationTargetFields } from "../domain/observation-links.js";
+import { hasFeedbackContent, normalizeFeedbackContent } from "../domain/feedback.js";
 import { isGoalStatus, isNonEmptyText } from "../domain/validation.js";
 
 let context = null;
@@ -282,8 +283,9 @@ function openDialog() {
   elements.observation.value = "";
   elements.observationContext.value = "";
   elements.includeInFeedback.checked = false;
-  elements.feedbackVisibility.value = "private";
-  elements.includeFeedbackRow.hidden = false;
+  elements.feedbackWentWell.value = "";
+  elements.feedbackNextFocus.value = "";
+  elements.feedbackMessage.value = "";
   elements.objectiveCreator.hidden = true;
   elements.objectiveTitle.value = "";
   elements.objectiveMessage.textContent = "";
@@ -363,7 +365,7 @@ function collectObservation(objectiveChanges) {
   if (!text) return null;
   const targetIds = selectedObservationTargetIds();
   const targets = currentLessonObjectives().filter((objective) => targetIds.has(objective.id));
-  if (!targets.length) throw new Error("Select at least one learning target connected to this feedback.");
+  if (!targets.length) throw new Error("Select at least one learning target connected to this observation.");
   const progressMap = progressByObjective(context.objectiveProgress);
   const targetFields = buildObservationTargetFields(targets, (target) => {
     const changedStatus = objectiveChanges.find((change) => change.objectiveId === target.id)?.status;
@@ -375,6 +377,15 @@ function collectObservation(objectiveChanges) {
     lessonContext: elements.observationContext.value.trim(),
     includeInFeedback: elements.includeInFeedback.checked,
   };
+}
+
+function collectStudentFeedback() {
+  return normalizeFeedbackContent({
+    message: elements.feedbackMessage.value,
+    whatWentWell: elements.feedbackWentWell.value,
+    whatToPractise: elements.feedbackNextFocus.value,
+    nextStep: "",
+  });
 }
 
 async function addInlineObjective() {
@@ -456,6 +467,7 @@ async function saveGoal(operation) {
 
 async function handleSubmit(event) {
   event.preventDefault();
+  const publishFeedback = event.submitter === elements.publishFeedbackButton;
   const independent = isIndependentMode();
   const unit = currentUnit();
   const lesson = currentLesson();
@@ -468,6 +480,7 @@ async function handleSubmit(event) {
   let homework;
   let goalOperation;
   let observation;
+  const studentFeedback = collectStudentFeedback();
   try {
     ({ objectiveChanges, workedOnObjectives } = collectObjectiveUpdate());
     homework = collectHomework();
@@ -483,8 +496,12 @@ async function handleSubmit(event) {
     && homework.changes.length === 0
     && !goalOperation
     && !observation
+    && !hasFeedbackContent(studentFeedback)
   ) {
     return setMessage("Add and select at least one learning objective before saving.");
+  }
+  if (publishFeedback && !hasFeedbackContent(studentFeedback)) {
+    return setMessage("Add student feedback before publishing.");
   }
   const physicalJourney = independent ? null : createJourneySnapshot({
     courseId: context.student.courseId,
@@ -496,9 +513,10 @@ async function handleSubmit(event) {
   });
 
   elements.saveButton.disabled = true;
+  elements.publishFeedbackButton.disabled = true;
   setMessage("Saving update…");
   try {
-    await saveLearningUpdate({
+    const progressHistoryId = await saveLearningUpdate({
       studentId: context.student.id,
       courseId: independent ? "" : context.student.courseId,
       unitId: independent ? "" : unit.id,
@@ -518,9 +536,10 @@ async function handleSubmit(event) {
           && context.student.courseJourney.completedLessonIds.includes(lesson.id),
       },
       workedOnObjectives,
+      ensureHistory: hasFeedbackContent(studentFeedback),
     });
     await saveGoal(goalOperation);
-    if (observation && elements.feedbackVisibility.value === "private") {
+    if (observation) {
       await teacherNotesRepository.createWithDate({
         studentId: context.student.id,
         groupId: context.group?.id ?? "",
@@ -541,15 +560,17 @@ async function handleSubmit(event) {
         text: observation.text,
       }, lessonDate);
     }
-    if (observation && elements.feedbackVisibility.value === "published") {
-      await feedbackVersionsRepository.publishQuick({
+    if (hasFeedbackContent(studentFeedback)) {
+      const feedbackId = await feedbackDraftsRepository.createProgressDraft({
         studentId: context.student.id,
         courseId: independent ? "" : context.student.courseId,
         unitId: independent ? "" : unit.id,
         lessonId: independent ? "" : lesson.id,
-        learningTargetIds: observation.learningTargetIds,
-        text: observation.text,
+        progressHistoryId,
+        learningTargetIds: workedOnObjectives.map(({ id, objectiveId }) => objectiveId ?? id),
+        content: studentFeedback,
       });
+      if (publishFeedback) await feedbackDraftsRepository.publish(feedbackId, studentFeedback);
     }
     closeDialog();
     await context.onSaved(`${context.student.name}'s learning update was saved.`);
@@ -558,6 +579,7 @@ async function handleSubmit(event) {
     setMessage("Unable to save the update. Please try again.");
   } finally {
     elements.saveButton.disabled = false;
+    elements.publishFeedbackButton.disabled = false;
   }
 }
 
@@ -572,6 +594,7 @@ function initialize() {
     openButton,
     closeButton: dialog.querySelector("[data-quick-update-close]"),
     saveButton: dialog.querySelector("[data-quick-update-save]"),
+    publishFeedbackButton: dialog.querySelector("[data-quick-update-publish-feedback]"),
     message: dialog.querySelector("[data-quick-update-message]"),
     studentName: dialog.querySelector("[data-quick-student-name]"),
     lessonDate: form.elements.lessonDate,
@@ -599,8 +622,9 @@ function initialize() {
     observation: form.elements.observation,
     observationContext: form.elements.observationContext,
     includeInFeedback: form.elements.includeInFeedback,
-    feedbackVisibility: dialog.querySelector("[data-quick-feedback-visibility]"),
-    includeFeedbackRow: dialog.querySelector("[data-quick-include-feedback-row]"),
+    feedbackWentWell: form.elements.feedbackWentWell,
+    feedbackNextFocus: form.elements.feedbackNextFocus,
+    feedbackMessage: form.elements.feedbackMessage,
     currentGoal: dialog.querySelector("[data-quick-current-goal]"),
     goalAction: dialog.querySelector("[data-quick-goal-action]"),
     goalUpdateOption: dialog.querySelector("[data-goal-update-option]"),
@@ -629,11 +653,6 @@ function initialize() {
     elements.objectiveMessage.textContent = "";
   });
   elements.objectiveAdd.addEventListener("click", addInlineObjective);
-  elements.feedbackVisibility.addEventListener("change", () => {
-    const published = elements.feedbackVisibility.value === "published";
-    elements.includeFeedbackRow.hidden = published;
-    elements.includeInFeedback.checked = false;
-  });
   dialog.addEventListener("change", (event) => {
     if (event.target.matches("[data-assess-objective]")) {
       event.target.closest(".quick-objective-row").querySelector("select").disabled = !event.target.checked;

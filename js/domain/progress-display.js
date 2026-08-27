@@ -49,6 +49,9 @@ export function unitPhysicalProgressFromHistory({
   fallbackJourney = null,
 }) {
   const stops = lessonStopsForUnit(unit, lessons);
+  if (fallbackJourney?.unitId === unit?.id && fallbackJourney.completedManually === true) {
+    return physicalProgress(unit, fallbackJourney, lessons);
+  }
   const physicalEntries = history.filter((entry) =>
     entry.studentId === studentId
     && entry.unitId === unit?.id

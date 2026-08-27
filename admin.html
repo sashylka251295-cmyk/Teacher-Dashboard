@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Teacher Dashboard — Student Progress Tracker</title>
     <link rel="stylesheet" href="./css/styles.css?v=20260825-journey-progress">
-    <link rel="stylesheet" href="./css/admin.css?v=20260826-progress-editor-refine">
+    <link rel="stylesheet" href="./css/admin.css?v=20260827-unit-feedback">
   </head>
   <body>
     <main class="teacher-shell" data-protected-content hidden>
@@ -314,14 +314,17 @@
 
                   <form class="feedback-inline-form" data-feedback-form>
                     <div class="feedback-editor-surface">
+                      <label for="feedback-message">Teacher message <small>(optional)</small></label>
+                      <textarea id="feedback-message" name="message" rows="3"></textarea>
+
                       <label for="feedback-went-well">What went well</label>
-                      <textarea id="feedback-went-well" name="whatWentWell" rows="4" required></textarea>
+                      <textarea id="feedback-went-well" name="whatWentWell" rows="4"></textarea>
 
                       <label for="feedback-practise">What to practise</label>
-                      <textarea id="feedback-practise" name="whatToPractise" rows="4" required></textarea>
+                      <textarea id="feedback-practise" name="whatToPractise" rows="4"></textarea>
 
                       <label for="feedback-next-step">Next step</label>
-                      <textarea id="feedback-next-step" name="nextStep" rows="4" required></textarea>
+                      <textarea id="feedback-next-step" name="nextStep" rows="4"></textarea>
                     </div>
 
                     <p class="feedback-form-message" data-feedback-form-message role="status" aria-live="polite"></p>
@@ -422,11 +425,9 @@
             </details>
 
             <details class="quick-update-optional">
-              <summary>+ Add individual feedback</summary>
+              <summary>+ Private teacher observation</summary>
               <fieldset>
-              <legend>Optional individual feedback</legend>
-              <label for="quick-feedback-visibility">Visibility</label>
-              <select id="quick-feedback-visibility" data-quick-feedback-visibility><option value="private">Private teacher note</option><option value="published">Published student feedback</option></select>
+              <legend>Teacher only</legend>
               <fieldset class="quick-related-targets" aria-labelledby="quick-observation-target-label">
                 <legend id="quick-observation-target-label">Related learning targets</legend>
                 <p>Select one or more targets connected to this note or feedback.</p>
@@ -441,6 +442,24 @@
                 <input id="quick-observation-feedback" name="includeInFeedback" type="checkbox">
                 Include in feedback
               </label>
+              </fieldset>
+            </details>
+
+            <details class="quick-update-optional quick-student-feedback">
+              <summary>+ Student feedback</summary>
+              <fieldset>
+                <legend>Student-facing feedback</legend>
+                <p>Write only what the student may see. Save it as a draft or publish it with the update.</p>
+                <div class="quick-feedback-grid">
+                  <label for="quick-feedback-went-well">What went well
+                    <textarea id="quick-feedback-went-well" name="feedbackWentWell" rows="3" placeholder="A success from this lesson"></textarea>
+                  </label>
+                  <label for="quick-feedback-next-focus">Next focus
+                    <textarea id="quick-feedback-next-focus" name="feedbackNextFocus" rows="3" placeholder="What to work on next"></textarea>
+                  </label>
+                </div>
+                <label for="quick-feedback-message">Teacher message <small>(optional)</small></label>
+                <textarea id="quick-feedback-message" name="feedbackMessage" rows="3" placeholder="A personal message for the student"></textarea>
               </fieldset>
             </details>
 
@@ -471,8 +490,11 @@
             </details>
 
             <p data-quick-update-message role="status" aria-live="polite"></p>
-            <button type="submit" data-quick-update-save>Save update</button>
-            <button type="button" data-quick-update-close>Cancel</button>
+            <div class="quick-update-submit-actions">
+              <button type="button" data-quick-update-close>Cancel</button>
+              <button type="submit" data-quick-update-save>Save update</button>
+              <button class="button-primary" type="submit" data-quick-update-publish-feedback>Save &amp; send feedback</button>
+            </div>
           </form>
         </dialog>
 
@@ -547,7 +569,27 @@
               </div>
             </fieldset>
 
-            <p class="progress-update-dialog__note">This editor changes learning-target statuses and physical lesson completion. Private observations and published feedback remain separate.</p>
+            <fieldset class="progress-feedback-editor">
+              <legend>Student feedback</legend>
+              <div class="progress-feedback-editor__heading">
+                <p>Edit the feedback connected to this lesson update.</p>
+                <span data-progress-feedback-status>Not added</span>
+              </div>
+              <div class="quick-feedback-grid">
+                <label for="progress-feedback-went-well">What went well
+                  <textarea id="progress-feedback-went-well" name="progressFeedbackWentWell" rows="3"></textarea>
+                </label>
+                <label for="progress-feedback-next-focus">Next focus
+                  <textarea id="progress-feedback-next-focus" name="progressFeedbackNextFocus" rows="3"></textarea>
+                </label>
+              </div>
+              <label for="progress-feedback-message">Teacher message <small>(optional)</small></label>
+              <textarea id="progress-feedback-message" name="progressFeedbackMessage" rows="3"></textarea>
+              <button class="button-primary" type="submit" data-progress-feedback-publish>Publish feedback</button>
+              <p data-progress-feedback-message role="status" aria-live="polite"></p>
+            </fieldset>
+
+            <p class="progress-update-dialog__note">Private observations remain separate. Student feedback changes only when you explicitly publish or republish it.</p>
             <p data-progress-update-message role="status" aria-live="polite"></p>
             <div class="progress-update-dialog__actions">
               <button class="button-danger" type="button" data-progress-update-delete>Delete update</button>
@@ -1081,6 +1123,6 @@
     </main>
 
     <p data-page-status role="status" aria-live="polite">Проверка доступа…</p>
-    <script type="module" src="./js/pages/admin-page.js?v=20260826-progress-editor-refine"></script>
+    <script type="module" src="./js/pages/admin-page.js?v=20260827-unit-feedback"></script>
   </body>
 </html>

@@ -2,7 +2,7 @@ import { feedbackDraftsRepository } from "../data/repositories/feedback-drafts-r
 import { teacherNotesRepository } from "../data/repositories/teacher-notes-repository.js";
 import { FEEDBACK_STATUS_LABELS, LANGUAGE_SKILL_LABELS } from "../domain/constants.js";
 import {
-  isFeedbackContentComplete,
+  hasFeedbackContent,
   normalizeFeedbackContent,
 } from "../domain/feedback.js";
 import { createFeedbackGenerator } from "../feedback/feedback-generator.js";
@@ -93,6 +93,12 @@ function renderContextChips(draft) {
     if (category) labels.push(category);
   });
 
+  if (!observations.length && draft.progressHistoryId) {
+    const unit = unitsById.get(draft.unitId);
+    if (unit) labels.push(`Unit: ${unitName(unit)}`);
+    labels.push("Lesson update");
+  }
+
   const uniqueLabels = [...new Set(labels)];
   if (!uniqueLabels.length) {
     uniqueLabels.push(`${draft.sourceObservationIds?.length ?? 0} private observations`);
@@ -128,6 +134,7 @@ function renderActiveDraft() {
   elements.form.elements.whatWentWell.value = content.whatWentWell;
   elements.form.elements.whatToPractise.value = content.whatToPractise;
   elements.form.elements.nextStep.value = content.nextStep;
+  elements.form.elements.message.value = content.message;
   [...elements.form.querySelectorAll("textarea")].forEach((textarea) => {
     textarea.readOnly = !isDraft;
   });
@@ -153,6 +160,7 @@ function renderActiveDraft() {
 
 function collectContent() {
   return normalizeFeedbackContent({
+    message: elements.form.elements.message.value,
     whatWentWell: elements.form.elements.whatWentWell.value,
     whatToPractise: elements.form.elements.whatToPractise.value,
     nextStep: elements.form.elements.nextStep.value,
@@ -207,8 +215,8 @@ async function generateFeedback() {
 async function saveDraft() {
   if (!activeDraft || activeDraft.status !== "draft") return;
   const content = collectContent();
-  if (!isFeedbackContentComplete(content)) {
-    setMessage("Complete all three feedback sections.");
+  if (!hasFeedbackContent(content)) {
+    setMessage("Add at least one student-facing feedback section.");
     return;
   }
   elements.save.disabled = true;
@@ -230,8 +238,8 @@ async function saveDraft() {
 async function publishDraft() {
   if (!activeDraft || activeDraft.status !== "draft") return;
   const content = collectContent();
-  if (!isFeedbackContentComplete(content)) {
-    setMessage("Complete all three feedback sections before publishing.");
+  if (!hasFeedbackContent(content)) {
+    setMessage("Add at least one feedback section before publishing.");
     return;
   }
   elements.publish.disabled = true;

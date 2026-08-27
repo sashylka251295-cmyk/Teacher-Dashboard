@@ -26,6 +26,7 @@ import {
   strongestObjectiveCategory,
 } from "../domain/learning-objectives.js";
 import { isIndependentProgressEntry } from "../domain/independent-learning.js";
+import { lessonStopsForUnit } from "../domain/physical-progress.js";
 import {
   cumulativeUnitTargets,
   unitPhysicalProgressFromHistory,
@@ -144,11 +145,13 @@ function createHomeworkBlock(assignments) {
 
 function createUnitObjectives({
   unit,
+  units,
   objectiveProgress,
   homeworkAssignments,
   progressHistory,
   lessons,
   student,
+  onSaved,
 }) {
   const card = document.createElement("details");
   const summary = document.createElement("summary");
@@ -160,12 +163,115 @@ function createUnitObjectives({
     lessons,
     history: progressHistory,
     studentId: student.id,
-    fallbackJourney: student.courseJourney?.unitId === unit.id ? student.courseJourney : null,
+    fallbackJourney: student.unitJourneys?.[unit.id]
+      ?? (student.courseJourney?.unitId === unit.id ? student.courseJourney : null),
   });
+  const storedUnitJourney = student.unitJourneys?.[unit.id]
+    ?? (student.courseJourney?.unitId === unit.id ? student.courseJourney : null);
+  const manuallyCompleted = storedUnitJourney?.completedManually === true;
   title.textContent = unitName(unit);
   summary.append(title, physicalProgressBadge(physical));
   card.className = "unit-objectives-card";
   card.append(summary);
+
+  const physicalActions = document.createElement("div");
+  const completeUnit = document.createElement("button");
+  physicalActions.className = "unit-physical-actions";
+  completeUnit.type = "button";
+  completeUnit.textContent = manuallyCompleted
+    ? "Undo manual completion"
+    : physical.percent === 100
+      ? "Unit completed"
+      : "Complete unit";
+  completeUnit.disabled = (!manuallyCompleted && physical.percent === 100) || physical.total === 0;
+  completeUnit.addEventListener("click", async () => {
+    if (manuallyCompleted) {
+      const confirmed = window.confirm(
+        `Undo the manual 100% completion for ${unitName(unit)}? Saved lesson updates will remain unchanged.`,
+      );
+      if (!confirmed) return;
+      const recordedPhysical = unitPhysicalProgressFromHistory({
+        unit,
+        lessons,
+        history: progressHistory,
+        studentId: student.id,
+        fallbackJourney: null,
+      });
+      const restoredJourney = {
+        courseId: unit.courseId ?? student.courseId ?? "",
+        unitId: unit.id,
+        completedLessonIds: recordedPhysical.completedLessonIds,
+        currentLessonId: recordedPhysical.currentLessonId,
+        lessonStops: lessonStopsForUnit(unit, lessons),
+        currentLearningTargets: storedUnitJourney?.currentLearningTargets ?? [],
+        completedManually: false,
+        updatedAt: new Date(),
+      };
+      completeUnit.disabled = true;
+      completeUnit.textContent = "Restoring…";
+      try {
+        const changes = { [`unitJourneys.${unit.id}`]: restoredJourney };
+        if (student.courseJourney?.unitId === unit.id) changes.courseJourney = restoredJourney;
+        await studentsRepository.update(student.id, changes);
+        await onSaved(`${unitName(unit)} restored to its saved lesson progress.`);
+      } catch (error) {
+        console.error("Unable to undo the manual unit completion.", error);
+        completeUnit.disabled = false;
+        completeUnit.textContent = "Undo manual completion";
+        window.alert("Unable to restore the unit progress. Please try again.");
+      }
+      return;
+    }
+    const confirmed = window.confirm(
+      `Mark all ${physical.total} lessons in ${unitName(unit)} as completed? Learning-target statuses will not change.`,
+    );
+    if (!confirmed) return;
+    const stops = lessonStopsForUnit(unit, lessons);
+    const completedJourney = {
+      courseId: unit.courseId ?? student.courseId ?? "",
+      unitId: unit.id,
+      completedLessonIds: stops.map(({ id }) => id),
+      currentLessonId: "",
+      lessonStops: stops,
+      completedManually: true,
+      updatedAt: new Date(),
+    };
+    completeUnit.disabled = true;
+    completeUnit.textContent = "Completing…";
+    try {
+      const changes = {
+        [`unitJourneys.${unit.id}`]: completedJourney,
+      };
+      if (!student.courseJourney?.unitId || student.courseJourney.unitId === unit.id) {
+        const orderedUnits = [...units].sort((first, second) =>
+          (first.order ?? first.number ?? 0) - (second.order ?? second.number ?? 0));
+        const currentIndex = orderedUnits.findIndex(({ id }) => id === unit.id);
+        const nextUnit = currentIndex >= 0 ? orderedUnits[currentIndex + 1] : null;
+        if (nextUnit) {
+          const nextStops = lessonStopsForUnit(nextUnit, lessons);
+          changes.courseJourney = {
+            courseId: nextUnit.courseId ?? student.courseId ?? "",
+            unitId: nextUnit.id,
+            completedLessonIds: [],
+            currentLessonId: nextStops[0]?.id ?? "",
+            lessonStops: nextStops,
+            updatedAt: new Date(),
+          };
+        } else {
+          changes.courseJourney = completedJourney;
+        }
+      }
+      await studentsRepository.update(student.id, changes);
+      await onSaved(`${unitName(unit)} marked 100% complete. Learning statuses were not changed.`);
+    } catch (error) {
+      console.error("Unable to complete the unit.", error);
+      completeUnit.disabled = false;
+      completeUnit.textContent = "Complete unit";
+      window.alert("Unable to complete the unit. Please try again.");
+    }
+  });
+  physicalActions.append(completeUnit);
+  card.append(physicalActions);
 
   if (objectives.length === 0) {
     const empty = document.createElement("p");
@@ -227,6 +333,7 @@ function renderLearningObjectives(
   progressHistory,
   lessons,
   student,
+  onSaved,
 ) {
   const state = select(root, "[data-progress-state]");
   const container = select(root, "[data-progress-matrix]");
@@ -240,11 +347,13 @@ function renderLearningObjectives(
   state.hidden = true;
   container.append(...units.map((unit) => createUnitObjectives({
     unit,
+    units,
     objectiveProgress,
     homeworkAssignments,
     progressHistory,
     lessons,
     student,
+    onSaved,
   })));
   if (independentProgress.length) {
     container.append(createIndependentObjectives(independentProgress, homeworkAssignments));
@@ -501,7 +610,16 @@ function renderProfile(root, data, onQuickUpdateSaved) {
   setText(root, "[data-profile-course]", student.courseId ? relatedName(course, "Unknown course") : "Independent learning");
   setText(root, "[data-profile-status]", displayValue(student.status ?? student.active));
   select(root, "[data-profile-edit-student]").dataset.editStudent = student.id;
-  renderLearningObjectives(root, units, objectiveProgress, homeworkAssignments, progressHistory, lessons, student);
+  renderLearningObjectives(
+    root,
+    units,
+    objectiveProgress,
+    homeworkAssignments,
+    progressHistory,
+    lessons,
+    student,
+    onQuickUpdateSaved,
+  );
   renderSummary(root, units, objectiveProgress);
   renderCurrentGoal(root, goals);
   renderObservations(root, teacherNotes, units, course);

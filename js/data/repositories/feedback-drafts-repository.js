@@ -35,8 +35,52 @@ export const feedbackDraftsRepository = Object.freeze({
       updatedAt: now,
     });
   },
+  createProgressDraft({
+    studentId,
+    courseId,
+    unitId,
+    lessonId,
+    progressHistoryId,
+    learningTargetIds = [],
+    content,
+  }) {
+    const now = serverTimestamp();
+    return repository.create({
+      studentId,
+      courseId,
+      unitId,
+      lessonId,
+      progressHistoryId,
+      learningTargetIds: [...new Set(learningTargetIds)],
+      sourceObservationIds: [],
+      content: normalizeFeedbackContent(content),
+      generator: "teacher-written",
+      source: "progress_update",
+      status: "draft",
+      latestVersionNumber: 0,
+      createdAt: now,
+      updatedAt: now,
+    });
+  },
   saveDraft(id, content) {
     return repository.update(id, {
+      content: normalizeFeedbackContent(content),
+      status: "draft",
+      updatedAt: serverTimestamp(),
+    });
+  },
+  saveProgressDraft(id, {
+    courseId,
+    unitId,
+    lessonId,
+    learningTargetIds = [],
+    content,
+  }) {
+    return repository.update(id, {
+      courseId,
+      unitId,
+      lessonId,
+      learningTargetIds: [...new Set(learningTargetIds)],
       content: normalizeFeedbackContent(content),
       status: "draft",
       updatedAt: serverTimestamp(),
@@ -65,6 +109,10 @@ export const feedbackDraftsRepository = Object.freeze({
         feedbackId: id,
         studentId: draft.studentId,
         courseId: draft.courseId,
+        unitId: draft.unitId ?? "",
+        lessonId: draft.lessonId ?? "",
+        progressHistoryId: draft.progressHistoryId ?? "",
+        learningTargetIds: [...(draft.learningTargetIds ?? [])],
         sourceObservationIds: [...(draft.sourceObservationIds ?? [])],
         content: normalizedContent,
         status: "published",

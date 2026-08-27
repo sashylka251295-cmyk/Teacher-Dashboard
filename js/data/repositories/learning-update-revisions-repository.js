@@ -235,12 +235,25 @@ export async function reviseLearningUpdate({
     batch.set(doc(firestore, COLLECTIONS.STUDENTS, student.id), {
       courseJourney: {
         ...nextJourney,
+        completedManually: false,
         currentLearningTargets: latestLearningTargets.map(
           ({ objectiveId, title, category }) => ({
             id: objectiveId, title, category, categories: [category],
           }),
         ),
         updatedAt,
+      },
+      unitJourneys: {
+        [unit.id]: {
+          ...nextJourney,
+          completedManually: false,
+          currentLearningTargets: latestLearningTargets.map(
+            ({ objectiveId, title, category }) => ({
+              id: objectiveId, title, category, categories: [category],
+            }),
+          ),
+          updatedAt,
+        },
       },
     }, { merge: true });
   }

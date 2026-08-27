@@ -1,5 +1,6 @@
 import { reviseLearningUpdate } from "../data/repositories/learning-update-revisions-repository.js";
 import { addObjectiveToLesson } from "../data/repositories/lesson-objectives-repository.js";
+import { feedbackDraftsRepository } from "../data/repositories/feedback-drafts-repository.js";
 import {
   LANGUAGE_SKILL_CATEGORIES,
   LANGUAGE_SKILL_LABELS,
@@ -12,12 +13,14 @@ import {
 } from "../domain/learning-objectives.js";
 import { isIndependentProgressEntry } from "../domain/independent-learning.js";
 import { latestLessonCompletion } from "../domain/progress-revisions.js";
+import { hasFeedbackContent, normalizeFeedbackContent } from "../domain/feedback.js";
 
 let context = null;
 let currentEntry = null;
 let elements = null;
 let initialized = false;
 let addedIndependentObjectives = [];
+let activeFeedbackDraft = null;
 
 function timestampToDate(value) {
   if (!value) return null;
@@ -202,10 +205,106 @@ function syncLessonCompletion() {
   elements.completeLesson.disabled = false;
 }
 
+function feedbackContent() {
+  return normalizeFeedbackContent({
+    message: elements.feedbackMessage.value,
+    whatWentWell: elements.feedbackWentWell.value,
+    whatToPractise: elements.feedbackNextFocus.value,
+    nextStep: activeFeedbackDraft?.content?.nextStep ?? "",
+  });
+}
+
+function feedbackChanged(content) {
+  if (!activeFeedbackDraft) return hasFeedbackContent(content);
+  const previous = normalizeFeedbackContent(activeFeedbackDraft.content);
+  return Object.keys(content).some((key) => content[key] !== previous[key]);
+}
+
+function renderLinkedFeedback() {
+  activeFeedbackDraft = (context?.feedbackDrafts ?? []).find((draft) =>
+    draft.progressHistoryId === currentEntry?.id) ?? null;
+  const content = normalizeFeedbackContent(activeFeedbackDraft?.content);
+  elements.feedbackMessage.value = content.message;
+  elements.feedbackWentWell.value = content.whatWentWell;
+  elements.feedbackNextFocus.value = content.whatToPractise;
+  if (!activeFeedbackDraft) {
+    elements.feedbackStatus.textContent = "Not added";
+    elements.feedbackStatus.dataset.status = "empty";
+    elements.feedbackPublish.textContent = "Publish feedback";
+  } else if (activeFeedbackDraft.status === "published") {
+    elements.feedbackStatus.textContent = `Published · v${activeFeedbackDraft.latestVersionNumber || 1}`;
+    elements.feedbackStatus.dataset.status = "published";
+    elements.feedbackPublish.textContent = "Update published feedback";
+  } else {
+    elements.feedbackStatus.textContent = "Draft · not visible yet";
+    elements.feedbackStatus.dataset.status = "draft";
+    elements.feedbackPublish.textContent = "Publish feedback";
+  }
+  elements.feedbackMessageState.textContent = "";
+}
+
+async function saveLinkedFeedback({ publish = false } = {}) {
+  const content = feedbackContent();
+  if (!hasFeedbackContent(content)) {
+    if (publish) throw new Error("Add student feedback before publishing.");
+    return;
+  }
+  if (!publish && !feedbackChanged(content)) return;
+
+  const independent = isIndependentProgressEntry(currentEntry);
+  const courseId = independent ? "" : selectedUnit()?.courseId ?? currentEntry.courseId;
+  const unitId = independent ? "" : selectedUnit()?.id ?? currentEntry.unitId;
+  const lessonId = independent ? "" : selectedLesson()?.id ?? currentEntry.lessonId;
+  const learningTargetIds = collectObjectiveUpdate().workedOnObjectives
+    .map(({ objectiveId }) => objectiveId);
+
+  if (!activeFeedbackDraft) {
+    const id = await feedbackDraftsRepository.createProgressDraft({
+      studentId: context.student.id,
+      courseId,
+      unitId,
+      lessonId,
+      progressHistoryId: currentEntry.id,
+      learningTargetIds,
+      content,
+    });
+    activeFeedbackDraft = {
+      id,
+      studentId: context.student.id,
+      progressHistoryId: currentEntry.id,
+      content,
+      status: "draft",
+      latestVersionNumber: 0,
+    };
+    context.feedbackDrafts.push(activeFeedbackDraft);
+  } else {
+    if (activeFeedbackDraft.status === "published") {
+      await feedbackDraftsRepository.prepareRepublish(activeFeedbackDraft.id);
+      activeFeedbackDraft.status = "draft";
+    }
+    await feedbackDraftsRepository.saveProgressDraft(activeFeedbackDraft.id, {
+      courseId,
+      unitId,
+      lessonId,
+      learningTargetIds,
+      content,
+    });
+    activeFeedbackDraft.content = content;
+  }
+
+  if (publish) {
+    const result = await feedbackDraftsRepository.publish(activeFeedbackDraft.id, content);
+    activeFeedbackDraft.status = "published";
+    activeFeedbackDraft.latestVersionNumber = result.versionNumber;
+    activeFeedbackDraft.content = content;
+  }
+}
+
 function closeDialog() {
   if (typeof elements.dialog.close === "function") elements.dialog.close();
   else elements.dialog.removeAttribute("open");
   currentEntry = null;
+  activeFeedbackDraft = null;
 }
 
 function openDialog(entryId) {
@@ -243,6 +342,7 @@ function openDialog(entryId) {
   elements.objectiveCreator.hidden = true;
   elements.objectiveTitle.value = "";
   elements.objectiveMessage.textContent = "";
+  renderLinkedFeedback();
   elements.message.textContent = "";
   elements.save.disabled = false;
   elements.remove.disabled = false;
@@ -324,6 +424,7 @@ async function addInlineObjective() {
 async function submitRevision(event) {
   event.preventDefault();
   if (!currentEntry || !context) return;
+  const publishFeedback = event.submitter === elements.feedbackPublish;
   const independent = isIndependentProgressEntry(currentEntry);
   const unit = independent ? null : selectedUnit();
   const lesson = independent ? null : selectedLesson();
@@ -338,6 +439,7 @@ async function submitRevision(event) {
   }
   elements.save.disabled = true;
   elements.remove.disabled = true;
+  elements.feedbackPublish.disabled = true;
   elements.message.textContent = "Saving changes…";
   try {
     const objectiveUpdate = collectObjectiveUpdate();
@@ -353,8 +455,11 @@ async function submitRevision(event) {
       lessonDate,
       completeLesson: elements.completeLesson.checked,
     });
+    await saveLinkedFeedback({ publish: publishFeedback });
     closeDialog();
-    await context.onSaved("The progress update was edited and current progress was recalculated.");
+    await context.onSaved(publishFeedback
+      ? "Progress updated and the new feedback version was published to the student."
+      : "The progress update was edited and current progress was recalculated.");
   } catch (error) {
     console.error("Unable to revise the progress update.", error);
     elements.message.textContent = error instanceof Error && error.message
@@ -363,6 +468,7 @@ async function submitRevision(event) {
   } finally {
     elements.save.disabled = false;
     elements.remove.disabled = false;
+    elements.feedbackPublish.disabled = false;
   }
 }
 
@@ -376,6 +482,7 @@ async function removeUpdate() {
   const lessonDate = timestampToDate(currentEntry.lessonDate ?? currentEntry.createdAt) ?? new Date();
   elements.save.disabled = true;
   elements.remove.disabled = true;
+  elements.feedbackPublish.disabled = true;
   elements.message.textContent = "Deleting update…";
   try {
     await reviseLearningUpdate({
@@ -398,6 +505,7 @@ async function removeUpdate() {
   } finally {
     elements.save.disabled = false;
     elements.remove.disabled = false;
+    elements.feedbackPublish.disabled = false;
   }
 }
 
@@ -425,6 +533,12 @@ function initialize() {
     objectiveAdd: dialog.querySelector("[data-progress-objective-add]"),
     objectiveAddCancel: dialog.querySelector("[data-progress-objective-add-cancel]"),
     objectiveMessage: dialog.querySelector("[data-progress-objective-message]"),
+    feedbackStatus: dialog.querySelector("[data-progress-feedback-status]"),
+    feedbackWentWell: form.elements.progressFeedbackWentWell,
+    feedbackNextFocus: form.elements.progressFeedbackNextFocus,
+    feedbackMessage: form.elements.progressFeedbackMessage,
+    feedbackPublish: dialog.querySelector("[data-progress-feedback-publish]"),
+    feedbackMessageState: dialog.querySelector("[data-progress-feedback-message]"),
     message: dialog.querySelector("[data-progress-update-message]"),
     save: dialog.querySelector("[data-progress-update-save]"),
     remove: dialog.querySelector("[data-progress-update-delete]"),

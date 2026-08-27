@@ -32,6 +32,7 @@ export async function saveLearningUpdate({
   physicalChange = null,
   workedOnObjectives = [],
   scope = "course",
+  ensureHistory = false,
 }) {
   const firestore = getFirestoreClient();
   const batch = writeBatch(firestore);
@@ -61,7 +62,7 @@ export async function saveLearningUpdate({
   }
 
   let historyId = "";
-  if (objectiveChanges.length > 0 || workedOnObjectives.length > 0 || physicalJourney) {
+  if (objectiveChanges.length > 0 || workedOnObjectives.length > 0 || physicalJourney || ensureHistory) {
     const historyRef = doc(collection(firestore, COLLECTIONS.PROGRESS_HISTORY));
     historyId = historyRef.id;
     const historyEntry = {
@@ -99,6 +100,7 @@ export async function saveLearningUpdate({
     batch.set(studentRef, {
       courseJourney: {
         ...physicalJourney,
+        completedManually: false,
         currentLearningTargets: workedOnObjectives.map(({ id, objectiveId, title, category }) => ({
           id: objectiveId ?? id,
           title,
@@ -106,6 +108,19 @@ export async function saveLearningUpdate({
           categories: [category],
         })),
         updatedAt,
+      },
+      unitJourneys: {
+        [unitId]: {
+          ...physicalJourney,
+          completedManually: false,
+          currentLearningTargets: workedOnObjectives.map(({ id, objectiveId, title, category }) => ({
+            id: objectiveId ?? id,
+            title,
+            category,
+            categories: [category],
+          })),
+          updatedAt,
+        },
       },
     }, { merge: true });
   } else if (scope === INDEPENDENT_PROGRESS_SCOPE && workedOnObjectives.length > 0) {

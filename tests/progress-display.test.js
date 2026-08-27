@@ -68,3 +68,26 @@ test("new physical history keeps completed lessons from an existing safe journey
   assert.deepEqual(progress.completedLessonIds, ["lesson-1", "lesson-2"]);
   assert.equal(progress.percent, 67);
 });
+
+test("an explicit manual unit completion remains 100 percent", () => {
+  const progress = unitPhysicalProgressFromHistory({
+    unit,
+    lessons,
+    history: [{
+      id: "older-update",
+      studentId: "student",
+      unitId: unit.id,
+      lessonId: "lesson-2",
+      completeLesson: false,
+    }],
+    studentId: "student",
+    fallbackJourney: {
+      unitId: unit.id,
+      completedLessonIds: lessons.map(({ id }) => id),
+      completedManually: true,
+    },
+  });
+
+  assert.equal(progress.completed, 3);
+  assert.equal(progress.percent, 100);
+});

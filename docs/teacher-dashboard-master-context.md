@@ -165,6 +165,8 @@ Physical progress uses the hierarchy `Course → Unit → Lesson` and the `cours
 
 Only publishing a lesson completion changes this percentage. Objective statuses, homework and teacher observations never change it.
 
+`students/{studentId}.unitJourneys.{unitId}` preserves physical snapshots for earlier units while `courseJourney` identifies the current unit. The teacher may explicitly mark an entire historical unit 100% complete without adding mastery statuses. Manual completion is reversible and never deletes real lesson-update history.
+
 ### Learning progress
 
 Learning progress is structured by **specific learning targets**, not by manually entered percentages.
@@ -204,7 +206,8 @@ The old `progress` percentage documents are legacy read-only data. They are pres
 ### Implemented Firestore model
 
 - `units/{unitId}.objectives`: ordered array of `{ id, category, categories[], title, order }`; IDs remain stable while descriptions, skill associations and order are edited.
-- `groups/{groupId}.courseJourney` and `students/{studentId}.courseJourney`: physical-progress snapshots with completed/current lesson IDs and safe lesson stops.
+- `groups/{groupId}.courseJourney` and `students/{studentId}.courseJourney`: current physical-progress snapshots with completed/current lesson IDs and safe lesson stops.
+- `students/{studentId}.unitJourneys.{unitId}`: per-unit physical snapshots, including an explicit reversible `completedManually` marker when the teacher records a previously finished unit.
 - `objectiveProgress/{studentId__unitId__objectiveId}`: current `{ studentId, courseId, unitId, objectiveId, category, status, updatedAt }`.
 - `progressHistory/{historyId}`: admin-only lesson update containing the student/unit/lesson, lesson date, changed objective statuses and physical completion action. New records also keep the previous physical state needed for safe revision. An admin can edit or delete an update; affected `objectiveProgress` and the student's current `courseJourney` are recalculated without deleting separate observations or feedback.
 - `homeworkAssignments/{assignmentId}`: separate `{ studentId, courseId, unitId, title, status, lessonDate, createdAt, updatedAt }` record.
@@ -339,6 +342,8 @@ The approved workflow is: **Private observations → Feedback draft → Teacher 
 - Only the explicit Approve & Publish action creates an immutable `feedbackVersions` snapshot.
 - A student reads only their own documents in `feedbackVersions` with status `published`.
 - Edit and republish returns the working draft to `draft` and the next approval creates a new version; earlier published versions remain unchanged.
+- Quick Update separates private observation text from student-facing feedback. Its compact feedback fields are What went well, Next focus and optional Teacher message. Saving can keep a linked admin-only draft; Save & send feedback publishes explicitly.
+- Progress-linked drafts store `progressHistoryId`. Edit progress can change the linked draft, while Update published feedback creates a new immutable student-facing version.
 - No secure server-side AI generation endpoint currently exists. The application uses an isolated `FeedbackGenerator` interface with `TemplateFeedbackGenerator` as a safe fallback. It makes no external request, uses no secret key, and does not copy raw observation text into student feedback.
 
 The detailed contract is in `docs/feedback-workflow-spec.md`.

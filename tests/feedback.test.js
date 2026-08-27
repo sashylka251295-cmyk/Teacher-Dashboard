@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  hasFeedbackContent,
   isFeedbackContentComplete,
   normalizeFeedbackContent,
 } from "../js/domain/feedback.js";
@@ -14,6 +15,12 @@ test("feedback requires all three reviewed sections", () => {
     nextStep: "Use it in a dialogue",
   }), true);
   assert.equal(isFeedbackContentComplete({ whatWentWell: "Clear speaking" }), false);
+});
+
+test("a lightweight lesson feedback can contain any student-facing section", () => {
+  assert.equal(hasFeedbackContent({ message: "Great effort today" }), true);
+  assert.equal(hasFeedbackContent({ whatToPractise: "Question forms" }), true);
+  assert.equal(hasFeedbackContent({}), false);
 });
 
 test("template generator does not copy private observation text", async () => {

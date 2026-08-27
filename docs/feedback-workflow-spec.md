@@ -45,6 +45,7 @@ sourceObservationIds[]
 content.whatWentWell
 content.whatToPractise
 content.nextStep
+content.message
 generator
 status: draft | published | archived
 latestVersionNumber
@@ -55,6 +56,8 @@ publishedAt
 ```
 
 Drafts are always admin-only, including drafts whose workflow status is `published`.
+
+A draft created directly from Quick Update also stores `source: "progress_update"`, `progressHistoryId`, `unitId`, `lessonId`, and `learningTargetIds[]`. Its compact teacher-authored fields are labelled `What went well`, `Next focus` (stored as `whatToPractise`), and optional `Teacher message`. These records use the same immutable publication mechanism as observation-generated drafts.
 
 ## Teacher workspace
 
@@ -88,6 +91,8 @@ publishedAt
 
 The content is copied as a snapshot. Later observation edits, draft edits or republishing cannot modify an existing version. Edit and republish creates the next version number.
 
+Edit progress loads the draft linked by `progressHistoryId`. Saving ordinary progress changes may keep feedback as a draft; only the explicit Publish feedback / Update published feedback action creates a student-visible version. Editing a published record never mutates its existing version.
+
 ## Generator boundary
 
 `FeedbackGenerator` is the stable interface. `TemplateFeedbackGenerator` is the current implementation because the project has no secure server-side AI endpoint. It:
@@ -120,3 +125,6 @@ A future AI adapter must run behind an authenticated server endpoint, verify the
 8. Confirm a new version appears while the earlier version remains unchanged.
 9. Select zero, one and multiple observations and verify the Generate label and disabled state.
 10. Check long targets and notes at desktop and mobile viewport widths.
+11. Create feedback in Quick Update with Save update and confirm it remains an admin-only draft.
+12. Use Save & send feedback, then confirm only the linked student sees the immutable version.
+13. Open Edit progress, change the linked feedback and explicitly republish; confirm the student sees the new version and the previous version is unchanged.

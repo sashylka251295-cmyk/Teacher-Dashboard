@@ -763,6 +763,11 @@
   margin-top: var(--space-4);
 }
 
+.profile-workspace > .progress-panel,
+.profile-workspace > .assessment-history-panel {
+  grid-column: 1 / -1;
+}
+
 .content-panel {
   min-width: 0;
   padding: var(--space-5);
@@ -4828,6 +4833,18 @@ th[data-skill="homework"]::before { background-image: url("../assets/images/skil
   margin-top: 18px;
 }
 
+.unit-physical-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.65rem;
+}
+
+.unit-physical-actions button {
+  min-height: 2.15rem;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.82rem;
+}
+
 .unit-objectives-card ul,
 .unit-homework-block ul {
   display: grid;
@@ -4878,7 +4895,7 @@ th[data-skill="homework"]::before { background-image: url("../assets/images/skil
 [data-assessment-history-list] {
   display: grid;
   gap: 12px;
-  padding-left: 20px;
+  padding-left: 1.4rem;
 }
 
 [data-assessment-history-list] > li {
@@ -4889,10 +4906,18 @@ th[data-skill="homework"]::before { background-image: url("../assets/images/skil
 }
 
 .assessment-history__top {
-  display: flex;
-  gap: 1rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.65rem;
   align-items: center;
   justify-content: space-between;
+}
+
+.assessment-history__top > strong {
+  min-width: 0;
+  line-height: 1.35;
+  overflow-wrap: normal;
+  word-break: normal;
 }
 
 .assessment-history__top > button,
@@ -4927,7 +4952,8 @@ th[data-skill="homework"]::before { background-image: url("../assets/images/skil
 [data-assessment-history-list] ul {
   display: grid;
   gap: 5px;
-  margin: 8px 0 0;
+  margin: 0.65rem 0 0;
+  padding-left: 1.15rem;
 }
 
 [data-assessment-history-list] ul > li {
@@ -5017,10 +5043,9 @@ th[data-skill="homework"]::before { background-image: url("../assets/images/skil
 }
 
 .progress-update-dialog__actions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
   gap: 0.55rem;
-  justify-content: flex-end;
   align-items: center;
 }
 
@@ -5031,13 +5056,97 @@ th[data-skill="homework"]::before { background-image: url("../assets/images/skil
 }
 
 .progress-update-dialog__actions > [data-progress-update-delete] {
-  margin-right: auto;
+  justify-self: start;
 }
 
 .progress-update-dialog__actions > div {
   display: flex;
   gap: 0.55rem;
   align-items: center;
+  justify-self: end;
+}
+
+.progress-update-dialog__actions button {
+  min-height: 2.35rem;
+  padding: 0.42rem 0.72rem;
+  font-size: 0.88rem;
+}
+
+.quick-feedback-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.quick-feedback-grid > label {
+  display: grid;
+  align-content: start;
+  gap: 0.35rem;
+  margin: 0 !important;
+}
+
+.quick-feedback-grid textarea {
+  width: 100%;
+  min-height: 5.5rem;
+  resize: vertical;
+}
+
+.quick-update-submit-actions {
+  display: flex;
+  grid-column: 1 / -1;
+  gap: 0.55rem;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.progress-feedback-editor {
+  display: grid;
+  gap: 0.7rem;
+  background: #fafbf7;
+}
+
+.progress-feedback-editor__heading {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.progress-feedback-editor__heading > p {
+  margin: 0;
+  color: var(--muted, #6e786f);
+  font-size: 0.82rem;
+}
+
+.progress-feedback-editor__heading > span {
+  padding: 0.28rem 0.55rem;
+  border-radius: 999px;
+  background: #ece9e1;
+  color: #536057;
+  font-size: 0.75rem;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.progress-feedback-editor__heading > span[data-status="published"] {
+  background: #dcebd9;
+  color: #365f3e;
+}
+
+.progress-feedback-editor__heading > span[data-status="draft"] {
+  background: #f6e9c9;
+  color: #80601c;
+}
+
+.progress-feedback-editor > [data-progress-feedback-publish] {
+  justify-self: end;
+}
+
+.progress-feedback-editor > [data-progress-feedback-message] {
+  min-height: 1.2rem;
+  margin: 0;
+  color: var(--muted, #6e786f);
+  font-size: 0.8rem;
 }
 
 @media (max-width: 700px) {
@@ -5069,11 +5178,15 @@ th[data-skill="homework"]::before { background-image: url("../assets/images/skil
   }
 
   .progress-update-dialog__actions {
-    align-items: stretch;
+    align-items: center;
   }
 
   .progress-update-dialog__actions > div {
-    margin-left: auto;
+    margin-left: 0;
+  }
+
+  .quick-feedback-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .objective-skill-picker > div {
