@@ -98,6 +98,25 @@ function configureProfileFeature(label, callback) {
   }
 }
 
+function renderProfilePart(label, callback, warnings) {
+  try {
+    callback();
+  } catch (error) {
+    console.error(`Unable to render ${label}.`, error);
+    warnings.push(label);
+  }
+}
+
+async function loadProfilePart(label, operation, fallback, warnings) {
+  try {
+    return await operation;
+  } catch (error) {
+    console.error(`Unable to load ${label}.`, error);
+    warnings.push(label);
+    return fallback;
+  }
+}
+
 function createObjectiveItem(objective, progressMap) {
   const item = document.createElement("li");
   const title = document.createElement("span");
@@ -598,6 +617,7 @@ function renderAssessmentHistory(root, history, units, lessons) {
 
 function renderProfile(root, data, onQuickUpdateSaved) {
   const { student, group, course, units, lessons, objectiveProgress, homeworkAssignments, progressHistory, legacyProgress, goals, teacherNotes } = data;
+  const warnings = [...(data.loadWarnings ?? [])];
   const initial = displayValue(student.name).trim().charAt(0).toUpperCase() || "S";
   setText(root, "[data-profile-initial]", initial);
   const avatarImage = select(root, "[data-profile-avatar-image]");
@@ -618,7 +638,7 @@ function renderProfile(root, data, onQuickUpdateSaved) {
   setText(root, "[data-profile-course]", student.courseId ? relatedName(course, "Unknown course") : "Independent learning");
   setText(root, "[data-profile-status]", displayValue(student.status ?? student.active));
   select(root, "[data-profile-edit-student]").dataset.editStudent = student.id;
-  renderLearningObjectives(
+  renderProfilePart("learning objectives", () => renderLearningObjectives(
     root,
     units,
     objectiveProgress,
@@ -627,11 +647,13 @@ function renderProfile(root, data, onQuickUpdateSaved) {
     lessons,
     student,
     onQuickUpdateSaved,
-  );
-  renderSummary(root, units, objectiveProgress);
-  renderCurrentGoal(root, goals);
-  renderObservations(root, teacherNotes, units, course);
-  renderAssessmentHistory(root, progressHistory, units, lessons);
+  ), warnings);
+  renderProfilePart("learning summary", () => renderSummary(root, units, objectiveProgress), warnings);
+  renderProfilePart("current goal", () => renderCurrentGoal(root, goals), warnings);
+  renderProfilePart("teacher observations", () =>
+    renderObservations(root, teacherNotes, units, course), warnings);
+  renderProfilePart("progress updates", () =>
+    renderAssessmentHistory(root, progressHistory, units, lessons), warnings);
   select(root, "[data-legacy-progress-note]").hidden = legacyProgress.length === 0;
   configureProfileFeature("Quick Update", () =>
     configureQuickUpdate({ ...data, onSaved: onQuickUpdateSaved }));
@@ -642,32 +664,36 @@ function renderProfile(root, data, onQuickUpdateSaved) {
   configureProfileFeature("student access", () => configureStudentAccess(root, student));
   select(root, "[data-profile-state]").hidden = true;
   select(root, "[data-profile-content]").hidden = false;
+  return warnings;
 }
 
 async function loadProfileData(studentId) {
   const student = await studentsRepository.getById(studentId);
   if (!student) return null;
+  const loadWarnings = [];
   const group = student.groupId
-    ? await groupsRepository.getById(student.groupId)
+    ? await loadProfilePart(
+      "group",
+      groupsRepository.getById(student.groupId),
+      null,
+      loadWarnings,
+    )
     : null;
   const courseId = group?.courseId || student.courseId || "";
   const effectiveStudent = courseId === student.courseId ? student : { ...student, courseId };
   const [course, units, lessons, objectiveProgress, homeworkAssignments, progressHistory, legacyProgress, goals, teacherNotes, feedbackDrafts] = await Promise.all([
-    courseId ? coursesRepository.getById(courseId) : Promise.resolve(null),
-    courseId ? unitsRepository.listByCourse(courseId) : Promise.resolve([]),
-    courseId ? lessonsRepository.listByCourse(courseId) : Promise.resolve([]),
-    objectiveProgressRepository.listByStudent(studentId),
-    homeworkAssignmentsRepository.listByStudent(studentId),
-    progressHistoryRepository.listByStudent(studentId),
-    progressRepository.listByStudent(studentId),
-    goalsRepository.listByStudent(studentId),
-    teacherNotesRepository.listByStudent(studentId),
-    feedbackDraftsRepository.listByStudent(studentId).catch((error) => {
-      console.error("Unable to load feedback drafts for the student profile.", error);
-      return [];
-    }),
+    loadProfilePart("course", courseId ? coursesRepository.getById(courseId) : Promise.resolve(null), null, loadWarnings),
+    loadProfilePart("units", courseId ? unitsRepository.listByCourse(courseId) : Promise.resolve([]), [], loadWarnings),
+    loadProfilePart("lessons", courseId ? lessonsRepository.listByCourse(courseId) : Promise.resolve([]), [], loadWarnings),
+    loadProfilePart("learning progress", objectiveProgressRepository.listByStudent(studentId), [], loadWarnings),
+    loadProfilePart("homework", homeworkAssignmentsRepository.listByStudent(studentId), [], loadWarnings),
+    loadProfilePart("progress updates", progressHistoryRepository.listByStudent(studentId), [], loadWarnings),
+    loadProfilePart("legacy progress", progressRepository.listByStudent(studentId), [], loadWarnings),
+    loadProfilePart("goals", goalsRepository.listByStudent(studentId), [], loadWarnings),
+    loadProfilePart("teacher observations", teacherNotesRepository.listByStudent(studentId), [], loadWarnings),
+    loadProfilePart("feedback drafts", feedbackDraftsRepository.listByStudent(studentId), [], loadWarnings),
   ]);
-  return { student: effectiveStudent, group, course, units, lessons, objectiveProgress, homeworkAssignments, progressHistory, legacyProgress, goals, teacherNotes, feedbackDrafts };
+  return { student: effectiveStudent, group, course, units, lessons, objectiveProgress, homeworkAssignments, progressHistory, legacyProgress, goals, teacherNotes, feedbackDrafts, loadWarnings };
 }
 
 export async function loadAdminStudentProfile(studentId, successMessage = "") {
@@ -680,8 +706,11 @@ export async function loadAdminStudentProfile(studentId, successMessage = "") {
     const data = await loadProfileData(studentId);
     if (requestId !== activeRequestId) return;
     if (!data) return setProfileState(root, "Student not found.");
-    renderProfile(root, data, (message) => loadAdminStudentProfile(studentId, message));
-    setText(root, "[data-profile-action-message]", successMessage);
+    const warnings = renderProfile(root, data, (message) => loadAdminStudentProfile(studentId, message));
+    const warningMessage = warnings.length
+      ? `Profile loaded, but these sections need attention: ${[...new Set(warnings)].join(", ")}.`
+      : "";
+    setText(root, "[data-profile-action-message]", successMessage || warningMessage);
   } catch (error) {
     if (requestId !== activeRequestId) return;
     console.error("Unable to load the admin student profile.", error);
