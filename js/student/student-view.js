@@ -26,7 +26,7 @@ import { isIndependentProgressEntry } from "../domain/independent-learning.js";
 import { normalizeHomeworkResources } from "../domain/homework.js";
 import { applyStudentTheme } from "./student-theme.js";
 import { currentPhysicalUnit, physicalProgress } from "../domain/physical-progress.js";
-import { renderCourseJourneyMap } from "../ui/course-journey-map.js";
+import { renderCourseJourneyMap } from "../ui/course-journey-map.js?v=20260827-unit-journeys";
 
 const DEFAULT_SECTION = "dashboard";
 const PAGE_TITLES = Object.freeze({
@@ -599,7 +599,7 @@ function createStatusBadge(status, labels = OBJECTIVE_STATUS_LABELS, emptyAsDash
   return badge;
 }
 
-function createUnitDetails(unit, progressDocuments, homeworkAssignments, journey) {
+function createUnitDetails(unit, progressDocuments, homeworkAssignments, journey, theme) {
   const card = document.createElement("details");
   const summary = document.createElement("summary");
   const title = document.createElement("strong");
@@ -615,6 +615,17 @@ function createUnitDetails(unit, progressDocuments, homeworkAssignments, journey
   summary.append(title, physicalLabel);
   card.className = "student-objective-unit";
   card.append(summary);
+
+  const journeyMap = document.createElement("div");
+  journeyMap.className = "student-objective-journey";
+  journeyMap.setAttribute("aria-label", `${unitName(unit)} course journey`);
+  renderCourseJourneyMap(journeyMap, {
+    unit,
+    journey,
+    theme,
+    showCurrent: Boolean(journey),
+  });
+  card.append(journeyMap);
   if (objectives.length === 0) {
     const empty = document.createElement("p");
     empty.textContent = "No learning targets have been assessed in this unit yet.";
@@ -709,7 +720,7 @@ function createIndependentDetails(progressDocuments, homeworkAssignments) {
   return card;
 }
 
-function renderProgressMatrix(root, units, progressDocuments, homeworkAssignments, student) {
+function renderProgressMatrix(root, units, progressDocuments, homeworkAssignments, student, theme) {
   const container = select(root, "[data-student-progress-matrix]");
   const empty = select(root, "[data-student-progress-empty]");
   container.replaceChildren();
@@ -726,6 +737,7 @@ function renderProgressMatrix(root, units, progressDocuments, homeworkAssignment
     homeworkAssignments,
     student.unitJourneys?.[unit.id]
       ?? (student.courseJourney?.unitId === unit.id ? student.courseJourney : null),
+    theme,
   )));
   if (independentProgress.length) {
     container.append(createIndependentDetails(independentProgress, homeworkAssignments));
@@ -797,7 +809,7 @@ function renderStudent(root, data) {
   renderDashboardHomework(root, homeworkAssignments, units);
   renderHomeworkPage(root, homeworkAssignments, units);
   renderUnits(root, units, homeworkAssignments, student);
-  renderProgressMatrix(root, units, objectiveProgress, homeworkAssignments, student);
+  renderProgressMatrix(root, units, objectiveProgress, homeworkAssignments, student, theme);
   renderAchievements(root, achievements);
   renderFeedback(root, feedbackVersions);
 }

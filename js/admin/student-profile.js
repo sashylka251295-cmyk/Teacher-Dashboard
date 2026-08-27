@@ -30,6 +30,7 @@ import {
   cumulativeUnitTargets,
   unitPhysicalProgressFromHistory,
 } from "../domain/progress-display.js?v=20260827-profile-hotfix";
+import { renderCourseJourneyMap } from "../ui/course-journey-map.js?v=20260827-unit-journeys";
 import { configureQuickUpdate } from "./quick-update.js?v=20260827-homework-details";
 import { configureProgressUpdateEditor } from "./progress-update-editor.js?v=20260827-profile-hotfix";
 import { configureStudentAccess } from "./student-access.js";
@@ -198,6 +199,25 @@ function createUnitObjectives({
   summary.append(title, physicalProgressBadge(physical));
   card.className = "unit-objectives-card";
   card.append(summary);
+
+  const journeyMap = document.createElement("div");
+  const displayJourney = {
+    ...(storedUnitJourney ?? {}),
+    unitId: unit.id,
+    completedLessonIds: physical.completedLessonIds,
+    currentLessonId: physical.currentLessonId,
+    lessonStops: physical.stops,
+  };
+  journeyMap.className = "unit-objectives-journey";
+  journeyMap.setAttribute("aria-label", `${unitName(unit)} course journey`);
+  renderCourseJourneyMap(journeyMap, {
+    unit,
+    journey: displayJourney,
+    lessons,
+    theme: "adult",
+    showCurrent: Boolean(storedUnitJourney) || physical.completed > 0,
+  });
+  card.append(journeyMap);
 
   const physicalActions = document.createElement("div");
   const completeUnit = document.createElement("button");

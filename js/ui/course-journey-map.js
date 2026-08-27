@@ -25,6 +25,7 @@ export function renderCourseJourneyMap(container, {
   journey = null,
   lessons = [],
   theme = "adult",
+  showCurrent = true,
   emptyMessage = "No lessons are available for this unit yet.",
 } = {}) {
   container.replaceChildren();
@@ -67,7 +68,10 @@ export function renderCourseJourneyMap(container, {
 
   const track = document.createElement("ol");
   track.className = "course-journey-map__track";
-  progress.stops.forEach((stop) => {
+  progress.stops.forEach((progressStop) => {
+    const stop = !showCurrent && progressStop.state === "current"
+      ? { ...progressStop, state: "upcoming" }
+      : progressStop;
     const item = document.createElement("li");
     const callout = document.createElement("span");
     const marker = document.createElement("span");

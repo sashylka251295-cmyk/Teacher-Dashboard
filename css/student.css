@@ -2714,6 +2714,19 @@ body.student-menu-open {
   cursor: pointer;
 }
 
+.student-objective-journey {
+  margin-top: 0.9rem;
+  padding: 0.7rem 0.75rem 0.35rem;
+  border: 1px solid color-mix(in srgb, var(--student-accent) 20%, var(--student-border));
+  border-radius: 0.9rem;
+  background: color-mix(in srgb, var(--student-accent-soft) 22%, #fffdf8);
+  box-shadow: inset 0 1px rgb(255 255 255 / 80%);
+}
+
+.student-objective-journey .course-journey-map__route {
+  margin-top: 0.2rem;
+}
+
 .student-unit-physical-progress {
   display: inline-flex;
   padding: 0.35rem 0.65rem;
