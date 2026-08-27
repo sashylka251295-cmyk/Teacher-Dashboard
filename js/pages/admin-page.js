@@ -1,6 +1,6 @@
 import { requireRole } from "../auth/route-guards.js";
 import { signOutCurrentUser } from "../auth/auth-service.js";
-import { initializeAdminDashboard } from "../admin/admin-dashboard.js?v=20260827-group-journey";
+import { initializeAdminDashboard } from "../admin/admin-dashboard.js?v=20260827-homework-details";
 import { revealProtectedContent, setText } from "../core/dom.js";
 import { PAGE_PATHS, navigateTo } from "../core/navigation.js";
 import { USER_ROLES } from "../domain/constants.js";

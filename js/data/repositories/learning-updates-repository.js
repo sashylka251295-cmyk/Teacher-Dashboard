@@ -11,6 +11,7 @@ import {
   INDEPENDENT_PROGRESS_SCOPE,
   progressScopeKey,
 } from "../../domain/independent-learning.js";
+import { normalizeHomeworkResources } from "../../domain/homework.js";
 import { COLLECTIONS } from "../collection-names.js";
 
 function progressDocumentId(studentId, unitId, objectiveId, scope = "") {
@@ -140,12 +141,20 @@ export async function saveLearningUpdate({
 
   if (homeworkToCreate) {
     const homeworkRef = doc(collection(firestore, COLLECTIONS.HOMEWORK_ASSIGNMENTS));
+    const dueDate = homeworkToCreate.dueDate instanceof Date
+      && !Number.isNaN(homeworkToCreate.dueDate.getTime())
+      ? Timestamp.fromDate(homeworkToCreate.dueDate)
+      : null;
     batch.set(homeworkRef, {
       studentId,
       courseId,
       unitId,
+      lessonId,
       scope,
       title: homeworkToCreate.title,
+      description: String(homeworkToCreate.description ?? "").trim(),
+      dueDate,
+      resources: normalizeHomeworkResources(homeworkToCreate.resources),
       status: homeworkToCreate.status,
       lessonDate: Timestamp.fromDate(lessonDate),
       createdAt: updatedAt,

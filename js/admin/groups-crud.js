@@ -3,7 +3,7 @@ import { feedbackDraftsRepository } from "../data/repositories/feedback-drafts-r
 import { goalsRepository } from "../data/repositories/goals-repository.js";
 import { groupsRepository } from "../data/repositories/groups-repository.js";
 import { homeworkAssignmentsRepository } from "../data/repositories/homework-assignments-repository.js";
-import { saveLearningUpdate } from "../data/repositories/learning-updates-repository.js";
+import { saveLearningUpdate } from "../data/repositories/learning-updates-repository.js?v=20260827-homework-details";
 import { lessonsRepository } from "../data/repositories/lessons-repository.js";
 import { addObjectiveToLesson } from "../data/repositories/lesson-objectives-repository.js";
 import { objectiveProgressRepository } from "../data/repositories/objective-progress-repository.js";
@@ -29,6 +29,7 @@ import {
   currentPhysicalUnit,
 } from "../domain/physical-progress.js";
 import { renderCourseJourneyMap } from "../ui/course-journey-map.js";
+import { normalizeHomeworkResources } from "../domain/homework.js";
 import { isGoalStatus, isNonEmptyText, isStudentStatus } from "../domain/validation.js";
 import {
   closeDialog,
@@ -785,6 +786,11 @@ async function openGroupQuickUpdate(studentId = "", selection = null) {
   if (journeyUnit) elements.groupUpdateUnit.value = journeyUnit.id;
   elements.groupUpdateHomeworkAssigned.value = "no";
   elements.groupUpdateHomeworkTitle.value = "";
+  elements.groupUpdateHomeworkDescription.value = "";
+  elements.groupUpdateHomeworkDueDate.value = "";
+  elements.groupUpdateHomeworkResourceTitle.value = "";
+  elements.groupUpdateHomeworkResourceUrl.value = "";
+  elements.groupUpdateHomeworkResourceType.value = "";
   elements.groupUpdateHomeworkStatus.value = "assigned";
   elements.groupObjectiveCreator.hidden = true;
   elements.groupObjectiveTitle.value = "";
@@ -855,6 +861,22 @@ async function saveGroupQuickUpdate(event) {
   );
   let plans;
   try {
+    const assigningHomework = elements.groupUpdateHomeworkAssigned.value === "yes";
+    const resourceUrl = elements.groupUpdateHomeworkResourceUrl.value.trim();
+    const resources = normalizeHomeworkResources(assigningHomework && resourceUrl ? [{
+      title: elements.groupUpdateHomeworkResourceTitle.value,
+      url: resourceUrl,
+      type: elements.groupUpdateHomeworkResourceType.value,
+    }] : []);
+    if (assigningHomework && resourceUrl && resources.length === 0) {
+      throw new Error("Enter a valid HTTPS link or a PDF path from assets/materials/homework.");
+    }
+    const dueDate = assigningHomework && elements.groupUpdateHomeworkDueDate.value
+      ? dateFromInput(elements.groupUpdateHomeworkDueDate.value)
+      : null;
+    if (assigningHomework && elements.groupUpdateHomeworkDueDate.value && !dueDate) {
+      throw new Error("Select a valid homework due date.");
+    }
     plans = [...elements.groupUpdateStudents.querySelectorAll("[data-group-update-include]:checked")]
       .map((checkbox) => {
         const card = checkbox.closest("[data-group-update-student]");
@@ -881,6 +903,9 @@ async function saveGroupQuickUpdate(event) {
         const homeworkToCreate = elements.groupUpdateHomeworkAssigned.value === "yes" && assignHomework.checked
           ? {
             title: card.querySelector("[data-group-student-homework-title]").value.trim() || "Homework",
+            description: elements.groupUpdateHomeworkDescription.value.trim(),
+            dueDate,
+            resources,
             status: card.querySelector("[data-group-student-homework-status]").value,
           }
           : null;
@@ -1145,6 +1170,11 @@ export function initializeGroupsCrud(options) {
     groupUpdateHomeworkAssigned: dashboard?.querySelector("[data-group-update-homework-assigned]"),
     groupUpdateHomeworkFields: dashboard?.querySelector("[data-group-update-homework-fields]"),
     groupUpdateHomeworkTitle: dashboard?.querySelector("#group-update-homework-title"),
+    groupUpdateHomeworkDescription: dashboard?.querySelector("#group-update-homework-description"),
+    groupUpdateHomeworkDueDate: dashboard?.querySelector("#group-update-homework-due-date"),
+    groupUpdateHomeworkResourceTitle: dashboard?.querySelector("#group-update-homework-resource-title"),
+    groupUpdateHomeworkResourceUrl: dashboard?.querySelector("#group-update-homework-resource-url"),
+    groupUpdateHomeworkResourceType: dashboard?.querySelector("#group-update-homework-resource-type"),
     groupUpdateHomeworkStatus: dashboard?.querySelector("#group-update-homework-status"),
     groupUpdateSelectAll: dashboard?.querySelector("[data-group-update-select-all]"),
     groupUpdateEmpty: dashboard?.querySelector("[data-group-update-empty]"),

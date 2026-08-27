@@ -30,7 +30,7 @@ import {
   cumulativeUnitTargets,
   unitPhysicalProgressFromHistory,
 } from "../domain/progress-display.js?v=20260827-profile-hotfix";
-import { configureQuickUpdate } from "./quick-update.js?v=20260827-observations-retired";
+import { configureQuickUpdate } from "./quick-update.js?v=20260827-homework-details";
 import { configureProgressUpdateEditor } from "./progress-update-editor.js?v=20260827-profile-hotfix";
 import { configureStudentAccess } from "./student-access.js";
 

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Learning — Student Progress Tracker</title>
     <link rel="stylesheet" href="./css/styles.css?v=20260825-journey-progress">
-    <link rel="stylesheet" href="./css/student.css?v=20260827-unit-feedback">
+    <link rel="stylesheet" href="./css/student.css?v=20260827-homework-details">
   </head>
   <body data-student-theme="neutral">
     <svg class="student-icon-sprite" aria-hidden="true">
@@ -66,7 +66,7 @@
           <a href="#progress" data-student-link="progress"><svg aria-hidden="true"><use href="#student-icon-progress"/></svg><span>My Progress</span></a>
           <a href="#my-goals" data-student-unavailable aria-disabled="true"><svg aria-hidden="true"><use href="#student-icon-target"/></svg><span>My Goals</span></a>
           <a href="#feedback" data-student-unavailable aria-disabled="true"><svg aria-hidden="true"><use href="#student-icon-message"/></svg><span>Feedback</span></a>
-          <a href="#homework" data-student-unavailable aria-disabled="true"><svg aria-hidden="true"><use href="#student-icon-clipboard"/></svg><span>Homework</span></a>
+          <a href="#homework" data-student-link="homework"><svg aria-hidden="true"><use href="#student-icon-clipboard"/></svg><span>Homework</span></a>
           <a href="#achievements" data-student-link="achievements"><svg aria-hidden="true"><use href="#student-icon-star"/></svg><span>Achievements</span></a>
         </nav>
 
@@ -183,6 +183,17 @@
           </section>
         </section>
 
+        <section class="student-page student-homework-page" id="homework" data-student-section="homework" hidden>
+          <div class="student-page-heading">
+            <div><p class="student-eyebrow">Learning habits</p><h2>Homework</h2><p>Open an assignment to see the complete instructions and learning resources.</p></div>
+          </div>
+          <div class="homework-assignment-list" data-homework-assignment-list></div>
+          <div class="student-empty student-empty--large" data-homework-assignment-empty hidden>
+            <strong>No homework has been assigned yet.</strong>
+            <span>Your next assignment will appear here.</span>
+          </div>
+        </section>
+
         <section class="student-page student-achievements-page" id="achievements" data-student-section="achievements" hidden>
           <div class="student-page-heading">
             <div><p class="student-eyebrow">Your milestones</p><h2>Achievements</h2><p>Celebrate the meaningful steps in your learning journey.</p></div>
@@ -198,6 +209,6 @@
     </main>
 
     <p data-page-status role="status" aria-live="polite">Checking access…</p>
-    <script type="module" src="./js/pages/student-page.js?v=20260827-profile-hotfix"></script>
+    <script type="module" src="./js/pages/student-page.js?v=20260827-homework-details"></script>
   </body>
 </html>

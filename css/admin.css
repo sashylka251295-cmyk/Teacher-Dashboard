@@ -3856,6 +3856,24 @@ a.overview-stat-card:hover {
   font-weight: 750;
 }
 
+[data-group-update-homework-fields] .group-homework-field-wide {
+  grid-column: 1 / -1;
+}
+
+[data-quick-new-homework] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.35rem;
+}
+
+[data-quick-new-homework][hidden] {
+  display: none;
+}
+
+[data-quick-new-homework] > * {
+  min-width: 0;
+}
+
 .group-update-roster__heading {
   display: flex;
   align-items: end;

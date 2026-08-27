@@ -1,7 +1,7 @@
 import { goalsRepository } from "../data/repositories/goals-repository.js";
 import { feedbackDraftsRepository } from "../data/repositories/feedback-drafts-repository.js?v=20260827-profile-hotfix";
 import { addObjectiveToLesson } from "../data/repositories/lesson-objectives-repository.js";
-import { saveLearningUpdate } from "../data/repositories/learning-updates-repository.js?v=20260827-profile-hotfix";
+import { saveLearningUpdate } from "../data/repositories/learning-updates-repository.js?v=20260827-homework-details";
 import {
   ACTIVE_GOAL_STATUSES,
   HOMEWORK_STATUSES,
@@ -21,6 +21,7 @@ import {
   currentPhysicalUnit,
 } from "../domain/physical-progress.js";
 import { INDEPENDENT_PROGRESS_SCOPE } from "../domain/independent-learning.js";
+import { normalizeHomeworkResources } from "../domain/homework.js";
 import { hasFeedbackContent, normalizeFeedbackContent } from "../domain/feedback.js?v=20260827-profile-hotfix";
 import { isGoalStatus, isNonEmptyText } from "../domain/validation.js";
 
@@ -188,6 +189,11 @@ function renderHomework() {
   elements.homeworkAssigned.value = "no";
   elements.newHomework.hidden = true;
   elements.homeworkTitle.value = "";
+  elements.homeworkDescription.value = "";
+  elements.homeworkDueDate.value = "";
+  elements.homeworkResourceTitle.value = "";
+  elements.homeworkResourceUrl.value = "";
+  elements.homeworkResourceType.value = "";
   elements.homeworkStatus.value = "assigned";
 }
 
@@ -294,8 +300,25 @@ function collectObjectiveUpdate() {
 }
 
 function collectHomework() {
-  const create = elements.homeworkAssigned.value === "yes" ? {
+  const isCreating = elements.homeworkAssigned.value === "yes";
+  const resourceUrl = elements.homeworkResourceUrl.value.trim();
+  const resources = normalizeHomeworkResources(isCreating && resourceUrl ? [{
+    title: elements.homeworkResourceTitle.value,
+    url: resourceUrl,
+    type: elements.homeworkResourceType.value,
+  }] : []);
+  if (isCreating && resourceUrl && resources.length === 0) {
+    throw new Error("Enter a valid HTTPS link or a PDF path from assets/materials/homework.");
+  }
+  const dueDate = isCreating && elements.homeworkDueDate.value
+    ? dateFromInput(elements.homeworkDueDate.value)
+    : null;
+  if (isCreating && elements.homeworkDueDate.value && !dueDate) throw new Error("Select a valid homework due date.");
+  const create = isCreating ? {
     title: elements.homeworkTitle.value.trim() || "Homework",
+    description: elements.homeworkDescription.value.trim(),
+    dueDate,
+    resources,
     status: elements.homeworkStatus.value,
   } : null;
   if (create && !HOMEWORK_STATUSES.includes(create.status)) throw new Error("Select a valid homework status.");
@@ -531,6 +554,11 @@ function initialize() {
     homeworkAssigned: dialog.querySelector("[data-quick-homework-assigned]"),
     newHomework: dialog.querySelector("[data-quick-new-homework]"),
     homeworkTitle: form.elements.homeworkTitle,
+    homeworkDescription: form.elements.homeworkDescription,
+    homeworkDueDate: form.elements.homeworkDueDate,
+    homeworkResourceTitle: form.elements.homeworkResourceTitle,
+    homeworkResourceUrl: form.elements.homeworkResourceUrl,
+    homeworkResourceType: form.elements.homeworkResourceType,
     homeworkStatus: form.elements.homeworkStatus,
     existingHomework: dialog.querySelector("[data-quick-existing-homework]"),
     feedbackWentWell: form.elements.feedbackWentWell,

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Teacher Dashboard — Student Progress Tracker</title>
     <link rel="stylesheet" href="./css/styles.css?v=20260825-journey-progress">
-    <link rel="stylesheet" href="./css/admin.css?v=20260827-group-journey">
+    <link rel="stylesheet" href="./css/admin.css?v=20260827-homework-details">
   </head>
   <body>
     <main class="teacher-shell" data-protected-content hidden>
@@ -340,6 +340,20 @@
               <div data-quick-new-homework hidden>
                 <label for="quick-homework-title">Homework</label>
                 <input id="quick-homework-title" name="homeworkTitle" type="text" placeholder="Homework for this lesson">
+                <label for="quick-homework-description">Instructions</label>
+                <textarea id="quick-homework-description" name="homeworkDescription" rows="3" placeholder="What the student needs to do"></textarea>
+                <label for="quick-homework-due-date">Due date (optional)</label>
+                <input id="quick-homework-due-date" name="homeworkDueDate" type="date">
+                <label for="quick-homework-resource-title">Resource title (optional)</label>
+                <input id="quick-homework-resource-title" name="homeworkResourceTitle" type="text" placeholder="Worksheet or useful website">
+                <label for="quick-homework-resource-url">PDF or web link (optional)</label>
+                <input id="quick-homework-resource-url" name="homeworkResourceUrl" type="text" inputmode="url" placeholder="https://… or ./assets/materials/homework/file.pdf">
+                <label for="quick-homework-resource-type">Resource type</label>
+                <select id="quick-homework-resource-type" name="homeworkResourceType">
+                  <option value="">Detect automatically</option>
+                  <option value="pdf">PDF</option>
+                  <option value="link">Website</option>
+                </select>
                 <label for="quick-homework-status">Status</label>
                 <select id="quick-homework-status" name="homeworkStatus">
                   <option value="assigned">Assigned</option>
@@ -680,6 +694,11 @@
             <label for="group-update-homework-assigned">Assign the same homework to selected students?<select id="group-update-homework-assigned" data-group-update-homework-assigned><option value="no">No</option><option value="yes">Yes</option></select></label>
             <div data-group-update-homework-fields hidden>
               <label for="group-update-homework-title">Homework<input id="group-update-homework-title" type="text" placeholder="Homework for this lesson"></label>
+              <label class="group-homework-field-wide" for="group-update-homework-description">Instructions<textarea id="group-update-homework-description" rows="3" placeholder="What the students need to do"></textarea></label>
+              <label for="group-update-homework-due-date">Due date<input id="group-update-homework-due-date" type="date"></label>
+              <label for="group-update-homework-resource-title">Resource title<input id="group-update-homework-resource-title" type="text" placeholder="Worksheet or useful website"></label>
+              <label class="group-homework-field-wide" for="group-update-homework-resource-url">PDF or web link<input id="group-update-homework-resource-url" type="text" inputmode="url" placeholder="https://… or ./assets/materials/homework/file.pdf"></label>
+              <label for="group-update-homework-resource-type">Resource type<select id="group-update-homework-resource-type"><option value="">Detect automatically</option><option value="pdf">PDF</option><option value="link">Website</option></select></label>
               <label for="group-update-homework-status">Status<select id="group-update-homework-status"><option value="assigned">Assigned</option><option value="completed">Completed</option><option value="needs_completion">Needs completion</option></select></label>
             </div>
             </fieldset>
@@ -1006,6 +1025,6 @@
     </main>
 
     <p data-page-status role="status" aria-live="polite">Проверка доступа…</p>
-    <script type="module" src="./js/pages/admin-page.js?v=20260827-group-journey"></script>
+    <script type="module" src="./js/pages/admin-page.js?v=20260827-homework-details"></script>
   </body>
 </html>

@@ -199,6 +199,8 @@ Needs practice, Developing and Confident map internally to 1, 2 and 3. Category 
 
 Homework is not a language skill and is never included in language-category or overall learning-status calculations. It is stored and displayed as a separate Learning habits block. A lesson defaults to no homework. When homework is assigned, its status is one of Assigned, Completed or Needs completion. Completion summaries use assigned homework only; no homework does not lower progress.
 
+Homework assignments can include full student-facing instructions, an optional due date and safe PDF/web resources. The Student Dashboard card and sidebar open a dedicated Homework page where each real assignment expands inline. Resources accept HTTPS links or public repository PDFs under `assets/materials/homework/`; runtime file upload is not supported because the project intentionally avoids Firebase Storage and Blaze. See `docs/homework-details-spec.md`.
+
 ### Compatibility
 
 The old `progress` percentage documents are legacy read-only data. They are preserved for migration but are not mixed into objective-based status calculations or the current UI.
@@ -210,7 +212,7 @@ The old `progress` percentage documents are legacy read-only data. They are pres
 - `students/{studentId}.unitJourneys.{unitId}`: per-unit physical snapshots, including an explicit reversible `completedManually` marker when the teacher records a previously finished unit.
 - `objectiveProgress/{studentId__unitId__objectiveId}`: current `{ studentId, courseId, unitId, objectiveId, category, status, updatedAt }`.
 - `progressHistory/{historyId}`: admin-only lesson update containing the student/unit/lesson, lesson date, changed objective statuses and physical completion action. New records also keep the previous physical state needed for safe revision. An admin can edit or delete an update; affected `objectiveProgress` and the student's current `courseJourney` are recalculated without deleting separate observations or feedback.
-- `homeworkAssignments/{assignmentId}`: separate `{ studentId, courseId, unitId, title, status, lessonDate, createdAt, updatedAt }` record.
+- `homeworkAssignments/{assignmentId}`: separate `{ studentId, courseId, unitId, lessonId, title, description, dueDate, resources, status, lessonDate, createdAt, updatedAt }` record.
 
 Admins can write these records. A student can read only their own `objectiveProgress` and `homeworkAssignments`, plus the units of their assigned course. Students cannot write learning data and cannot read `progressHistory` or `teacherNotes`.
 

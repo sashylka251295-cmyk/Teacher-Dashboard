@@ -23,6 +23,7 @@ import {
   strongestObjectiveCategory,
 } from "../domain/learning-objectives.js";
 import { isIndependentProgressEntry } from "../domain/independent-learning.js";
+import { normalizeHomeworkResources } from "../domain/homework.js";
 import { applyStudentTheme } from "./student-theme.js";
 import { currentPhysicalUnit, physicalProgress } from "../domain/physical-progress.js";
 import { renderCourseJourneyMap } from "../ui/course-journey-map.js";
@@ -31,6 +32,7 @@ const DEFAULT_SECTION = "dashboard";
 const PAGE_TITLES = Object.freeze({
   dashboard: "Dashboard",
   progress: "My Progress",
+  homework: "Homework",
   achievements: "Achievements",
 });
 
@@ -301,7 +303,7 @@ function renderDashboardHomework(root, assignments, units) {
   empty.hidden = Boolean(active);
   if (!active) return;
 
-  const item = document.createElement("div");
+  const item = document.createElement("a");
   const image = document.createElement("img");
   const body = document.createElement("div");
   const title = document.createElement("strong");
@@ -309,6 +311,10 @@ function renderDashboardHomework(root, assignments, units) {
   const status = createStatusBadge(active.status, HOMEWORK_STATUS_LABELS);
   const unit = units.find((candidate) => candidate.id === active.unitId);
   item.className = "dashboard-homework-item";
+  item.href = "#homework";
+  item.dataset.studentLink = "homework";
+  item.dataset.homeworkId = active.id;
+  item.setAttribute("aria-label", `Open homework: ${displayValue(active.title, "Homework")}`);
   image.src = DASHBOARD_ASSETS.homework;
   image.alt = "";
   title.textContent = displayValue(active.title, "Homework");
@@ -317,6 +323,117 @@ function renderDashboardHomework(root, assignments, units) {
   if (meta.textContent) body.append(meta);
   item.append(image, body, status);
   container.append(item);
+}
+
+function homeworkResourceHost(url) {
+  try {
+    const resourceUrl = new URL(url, document.baseURI);
+    return resourceUrl.origin === window.location.origin ? "Course file" : resourceUrl.hostname;
+  } catch {
+    return "Learning resource";
+  }
+}
+
+function createHomeworkResource(resource) {
+  const card = document.createElement("article");
+  const identity = document.createElement("div");
+  const type = document.createElement("span");
+  const title = document.createElement("strong");
+  const source = document.createElement("small");
+  const link = document.createElement("a");
+  card.className = "homework-resource-card";
+  card.dataset.resourceType = resource.type;
+  type.className = "homework-resource-card__type";
+  type.textContent = resource.type === "pdf" ? "PDF" : "WEB";
+  title.textContent = resource.title;
+  source.textContent = homeworkResourceHost(resource.url);
+  identity.append(title, source);
+  link.href = resource.url;
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
+  link.textContent = resource.type === "pdf" ? "Open PDF" : "Open link";
+  card.append(type, identity, link);
+
+  if (resource.type === "pdf") {
+    const preview = document.createElement("iframe");
+    preview.src = resource.url;
+    preview.title = `${resource.title} PDF preview`;
+    preview.loading = "lazy";
+    preview.referrerPolicy = "no-referrer";
+    card.append(preview);
+  }
+  return card;
+}
+
+function createHomeworkAssignment(assignment, units) {
+  const details = document.createElement("details");
+  const summary = document.createElement("summary");
+  const identity = document.createElement("div");
+  const title = document.createElement("strong");
+  const meta = document.createElement("span");
+  const content = document.createElement("div");
+  const instructions = document.createElement("section");
+  const instructionsHeading = document.createElement("h3");
+  const instructionsText = document.createElement("p");
+  const unit = units.find((candidate) => candidate.id === assignment.unitId);
+  const resources = normalizeHomeworkResources(assignment.resources);
+  const assignedDate = formatDate(assignment.lessonDate ?? assignment.createdAt);
+  const dueDate = formatDate(assignment.dueDate);
+  details.className = "homework-assignment-card";
+  details.dataset.homeworkAssignment = assignment.id;
+  title.textContent = displayValue(assignment.title, "Homework");
+  meta.textContent = [unit ? unitName(unit) : "Independent learning", assignedDate ? `Assigned ${assignedDate}` : ""]
+    .filter(Boolean).join(" · ");
+  identity.append(title, meta);
+  summary.append(identity, createStatusBadge(assignment.status, HOMEWORK_STATUS_LABELS));
+  instructionsHeading.textContent = "What to do";
+  instructionsText.textContent = displayValue(
+    assignment.description,
+    "No additional instructions were added. Ask your teacher if anything is unclear.",
+  );
+  instructions.append(instructionsHeading, instructionsText);
+  content.className = "homework-assignment-card__content";
+  content.append(instructions);
+
+  if (dueDate) {
+    const deadline = document.createElement("p");
+    const deadlineLabel = document.createElement("strong");
+    const deadlineValue = document.createElement("span");
+    deadline.className = "homework-assignment-card__deadline";
+    deadlineLabel.textContent = "Due date";
+    deadlineValue.textContent = dueDate;
+    deadline.append(deadlineLabel, deadlineValue);
+    content.append(deadline);
+  }
+
+  if (resources.length > 0) {
+    const resourcesSection = document.createElement("section");
+    const resourcesHeading = document.createElement("h3");
+    const resourceList = document.createElement("div");
+    resourcesHeading.textContent = "Resources";
+    resourceList.className = "homework-resource-list";
+    resourceList.append(...resources.map(createHomeworkResource));
+    resourcesSection.append(resourcesHeading, resourceList);
+    content.append(resourcesSection);
+  }
+
+  details.append(summary, content);
+  return details;
+}
+
+function renderHomeworkPage(root, assignments, units) {
+  const container = select(root, "[data-homework-assignment-list]");
+  const empty = select(root, "[data-homework-assignment-empty]");
+  const ordered = [...assignments].sort((first, second) => {
+    const firstComplete = first.status === "completed" ? 1 : 0;
+    const secondComplete = second.status === "completed" ? 1 : 0;
+    if (firstComplete !== secondComplete) return firstComplete - secondComplete;
+    return timestampMillis(second.lessonDate ?? second.createdAt)
+      - timestampMillis(first.lessonDate ?? first.createdAt);
+  });
+  container.replaceChildren(...ordered.map((assignment) => createHomeworkAssignment(assignment, units)));
+  container.hidden = ordered.length === 0;
+  empty.hidden = ordered.length > 0;
 }
 
 function createAchievementMarker(achievement) {
@@ -678,6 +795,7 @@ function renderStudent(root, data) {
     );
   }
   renderDashboardHomework(root, homeworkAssignments, units);
+  renderHomeworkPage(root, homeworkAssignments, units);
   renderUnits(root, units, homeworkAssignments, student);
   renderProgressMatrix(root, units, objectiveProgress, homeworkAssignments, student);
   renderAchievements(root, achievements);
@@ -785,6 +903,16 @@ function initializeNavigation(root) {
     const sectionName = link.dataset.studentLink;
     window.history.pushState(null, "", `#${sectionName}`);
     activateSection(root, sectionName);
+    if (sectionName === "homework" && link.dataset.homeworkId) {
+      const assignment = select(
+        root,
+        `[data-homework-assignment="${CSS.escape(link.dataset.homeworkId)}"]`,
+      );
+      if (assignment) {
+        assignment.open = true;
+        requestAnimationFrame(() => assignment.scrollIntoView({ behavior: "smooth", block: "start" }));
+      }
+    }
   });
   window.addEventListener("popstate", () => activateSection(root, sectionFromHash()));
   activateSection(root, sectionFromHash());
