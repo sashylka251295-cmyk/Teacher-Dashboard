@@ -2355,29 +2355,120 @@ dialog:not(:has(> form)) > button {
 .lesson-target-editor {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.45rem;
+  gap: 0.55rem;
 }
 
-.lesson-target-editor label {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 0.05rem 0.55rem;
-  align-items: start;
-  padding: 0.55rem 0.65rem;
+.lesson-target-skill {
+  overflow: hidden;
   border: 1px solid var(--color-border);
-  border-radius: 0.7rem;
+  border-radius: 0.75rem;
   background: #fffefa;
 }
 
-.lesson-target-editor input {
-  grid-row: 1 / 3;
-  min-height: auto;
-  margin-top: 0.15rem;
+.lesson-target-skill[open] {
+  border-color: #afc0a8;
+  box-shadow: 0 0 0 0.18rem rgb(91 126 87 / 8%);
 }
 
-.lesson-target-editor small {
+.lesson-target-skill > summary {
+  display: flex;
+  min-height: 3rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  padding: 0.65rem 0.75rem;
+  cursor: pointer;
+  color: var(--color-green-dark);
+  list-style: none;
+}
+
+.lesson-target-skill > summary::-webkit-details-marker {
+  display: none;
+}
+
+.lesson-target-skill > summary::after {
+  content: "+";
+  color: var(--color-green);
+  font-size: 1rem;
+  font-weight: 750;
+}
+
+.lesson-target-skill[open] > summary::after {
+  content: "−";
+}
+
+.lesson-target-skill > summary strong {
+  font-size: 0.9rem;
+}
+
+.lesson-target-skill > summary span {
+  margin-left: auto;
   color: var(--color-muted);
-  font-size: 0.7rem;
+  font-size: 0.68rem;
+  font-weight: 650;
+}
+
+.lesson-target-skill > div {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0 0.7rem 0.7rem;
+  border-top: 1px solid rgb(225 217 202 / 72%);
+}
+
+.lesson-target-skill__list {
+  display: grid;
+  gap: 0.4rem;
+  padding-top: 0.65rem;
+}
+
+.lesson-target-skill__list label {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid #e3ddcf;
+  border-radius: 0.6rem;
+  background: #faf8f2;
+}
+
+.lesson-target-skill__list input {
+  min-height: auto;
+}
+
+.lesson-target-skill__list p {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.74rem;
+}
+
+.lesson-target-skill__creator {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.45rem;
+}
+
+.lesson-target-skill__creator input,
+.lesson-target-skill__creator button {
+  min-height: 2.45rem;
+}
+
+.lesson-target-skill__creator input {
+  min-width: 0;
+}
+
+.lesson-target-skill__creator button {
+  padding: 0.4rem 0.65rem;
+  color: #fff;
+  background: var(--color-green);
+  white-space: nowrap;
+}
+
+.lesson-target-message {
+  min-height: 1.2rem;
+  margin: 0.55rem 0 0;
+  color: var(--color-muted);
+  font-size: 0.75rem;
 }
 
 .lesson-target-list {
@@ -2393,26 +2484,6 @@ dialog:not(:has(> form)) > button {
   color: var(--color-green-dark);
   background: #eef2e8;
   font-size: 0.78rem;
-}
-
-.lesson-skill-tags > div {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-}
-
-.lesson-skill-tags label {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.35rem 0.6rem;
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  background: #fffefa;
-}
-
-.lesson-skill-tags input {
-  min-height: auto;
 }
 
 [data-unit-dialog] fieldset:has(.unit-skill-goals) {
@@ -2577,6 +2648,14 @@ dialog:not(:has(> form)) > button {
 @media (max-width: 48rem) {
   .lesson-target-editor {
     grid-template-columns: 1fr;
+  }
+
+  .lesson-target-skill__creator {
+    grid-template-columns: 1fr;
+  }
+
+  .lesson-target-skill__creator button {
+    width: 100%;
   }
 
   .group-quick-update-controls {

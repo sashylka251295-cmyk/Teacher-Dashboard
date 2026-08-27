@@ -2,7 +2,7 @@ import { coursesRepository } from "../data/repositories/courses-repository.js";
 import { OWN_IT_A2_PROGRAM } from "../data/course-programs/own-it-a2-course.js";
 import { WIDER_WORLD_1_UNIT_4_LESSON_PLAN } from "../data/course-programs/wider-world-1-unit-4-lessons.js";
 import { courseProgramPrivateRepository } from "../data/repositories/course-program-private-repository.js";
-import { lessonsRepository } from "../data/repositories/lessons-repository.js";
+import { lessonsRepository } from "../data/repositories/lessons-repository.js?v=20260827-lesson-targets";
 import { unitsRepository } from "../data/repositories/units-repository.js";
 import {
   LESSON_STATUSES,
@@ -68,6 +68,8 @@ let currentUnitDetails = null;
 let currentUnitLessons = [];
 let editingLessonId = null;
 let creatingLesson = false;
+let lessonObjectiveCatalog = [];
+let lessonSelectedTargetIds = new Set();
 let unitVocabularyQuickFilter = "all";
 let visibleUnitVocabulary = [];
 let courseImageField = null;
@@ -1398,28 +1400,89 @@ function renderLessonDetailsList(root, entries) {
   }));
 }
 
-function renderLessonTargetsEditor(lesson) {
-  const objectives = learningObjectivesForUnit(currentUnitDetails);
-  const explicitIds = Array.isArray(lesson?.learningTargetIds) ? lesson.learningTargetIds : [];
-  const selectedIds = new Set(explicitIds.length
-    ? explicitIds
-    : learningObjectivesForLesson(currentUnitDetails, lesson).slice(0, 3).map(({ id }) => id));
-  elements.lessonTargetEditor.replaceChildren(...objectives.map((objective) => {
-    const label = document.createElement("label");
-    const checkbox = document.createElement("input");
-    const text = document.createElement("span");
-    const category = document.createElement("small");
-    checkbox.type = "checkbox";
-    checkbox.value = objective.id;
-    checkbox.checked = selectedIds.has(objective.id);
-    checkbox.dataset.lessonTarget = objective.id;
-    text.textContent = objective.title;
-    category.textContent = LANGUAGE_SKILL_LABELS[objective.category] ?? objective.category;
-    label.append(checkbox, text, category);
-    return label;
+function renderLessonTargetsEditor(openSkill = "") {
+  const selectedCount = lessonSelectedTargetIds.size;
+  elements.lessonTargetEditor.replaceChildren(...LANGUAGE_SKILL_CATEGORIES.map((skill) => {
+    const group = document.createElement("details");
+    const summary = document.createElement("summary");
+    const heading = document.createElement("strong");
+    const count = document.createElement("span");
+    const content = document.createElement("div");
+    const list = document.createElement("div");
+    const creator = document.createElement("div");
+    const input = document.createElement("input");
+    const add = document.createElement("button");
+    const objectives = lessonObjectiveCatalog.filter(({ category }) => category === skill);
+    const selectedForSkill = objectives.filter(({ id }) => lessonSelectedTargetIds.has(id)).length;
+    group.className = "lesson-target-skill";
+    group.dataset.lessonTargetSkill = skill;
+    group.open = openSkill === skill || selectedForSkill > 0;
+    heading.textContent = LANGUAGE_SKILL_LABELS[skill];
+    count.textContent = selectedForSkill ? `${selectedForSkill} selected` : `${objectives.length} available`;
+    summary.append(heading, count);
+    list.className = "lesson-target-skill__list";
+    if (objectives.length > 0) {
+      list.append(...objectives.map((objective) => {
+        const label = document.createElement("label");
+        const checkbox = document.createElement("input");
+        const title = document.createElement("span");
+        checkbox.type = "checkbox";
+        checkbox.value = objective.id;
+        checkbox.checked = lessonSelectedTargetIds.has(objective.id);
+        checkbox.disabled = !checkbox.checked && selectedCount >= 3;
+        checkbox.dataset.lessonTarget = objective.id;
+        title.textContent = objective.title;
+        label.append(checkbox, title);
+        return label;
+      }));
+    } else {
+      const empty = document.createElement("p");
+      empty.textContent = `No ${LANGUAGE_SKILL_LABELS[skill].toLowerCase()} targets yet.`;
+      list.append(empty);
+    }
+    creator.className = "lesson-target-skill__creator";
+    input.type = "text";
+    input.placeholder = `What specifically for ${LANGUAGE_SKILL_LABELS[skill]}?`;
+    input.setAttribute("aria-label", `New ${LANGUAGE_SKILL_LABELS[skill]} learning target`);
+    input.dataset.lessonNewTarget = skill;
+    add.type = "button";
+    add.dataset.addLessonTarget = skill;
+    add.textContent = "+ Add target";
+    creator.append(input, add);
+    content.append(list, creator);
+    group.append(summary, content);
+    return group;
   }));
-  elements.lessonTargetEditor.hidden = objectives.length === 0;
-  elements.lessonTargetEmpty.hidden = objectives.length > 0;
+}
+
+function addLessonTarget(skill) {
+  const input = elements.lessonTargetEditor.querySelector(`[data-lesson-new-target="${skill}"]`);
+  const title = input?.value.trim() ?? "";
+  if (!isLanguageSkillCategory(skill) || !title) {
+    setMessage(elements.lessonTargetMessage, "Write a specific learning target first.");
+    input?.focus();
+    return;
+  }
+  const existing = lessonObjectiveCatalog.find((objective) =>
+    objective.category === skill && objective.title.toLocaleLowerCase() === title.toLocaleLowerCase());
+  if ((!existing || !lessonSelectedTargetIds.has(existing.id)) && lessonSelectedTargetIds.size >= 3) {
+    setMessage(elements.lessonTargetMessage, "Choose no more than three key learning targets.");
+    return;
+  }
+  const objective = existing ?? {
+    id: createProgramItemId("objective"),
+    category: skill,
+    categories: [skill],
+    title,
+    order: lessonObjectiveCatalog.length + 1,
+  };
+  if (!existing) lessonObjectiveCatalog.push(objective);
+  lessonSelectedTargetIds.add(objective.id);
+  setMessage(
+    elements.lessonTargetMessage,
+    `${LANGUAGE_SKILL_LABELS[skill]} target selected. It will be saved with this lesson.`,
+  );
+  renderLessonTargetsEditor(skill);
 }
 
 function openLessonDetails(lessonId) {
@@ -1545,7 +1608,16 @@ async function openLessonForm(lessonId = null) {
     ? lesson.status
     : "planned";
   textField(elements.lessonForm, "mainGoal", lesson?.mainGoal);
-  renderLessonTargetsEditor(lesson);
+  lessonObjectiveCatalog = learningObjectivesForUnit(currentUnitDetails);
+  const explicitTargetIds = Array.isArray(lesson?.learningTargetIds) ? lesson.learningTargetIds : [];
+  const availableTargetIds = new Set(lessonObjectiveCatalog.map(({ id }) => id));
+  lessonSelectedTargetIds = new Set((explicitTargetIds.length
+    ? explicitTargetIds
+    : lesson
+      ? learningObjectivesForLesson(currentUnitDetails, lesson).slice(0, 3).map(({ id }) => id)
+      : []).filter((id) => availableTargetIds.has(id)));
+  setMessage(elements.lessonTargetMessage, "");
+  renderLessonTargetsEditor();
   const skillGoals = normalizeSkillGoals(lesson?.skillGoals);
   LANGUAGE_SKILL_CATEGORIES.forEach((skill) => textField(
     elements.lessonForm,
@@ -1557,10 +1629,6 @@ async function openLessonForm(lessonId = null) {
     "resultNotes", "plannedDate", "actualDate",
   ]
     .forEach((name) => textField(elements.lessonForm, name, lesson?.[name]));
-  const selectedSkillTags = new Set(lessonFocuses(lesson, []));
-  elements.lessonForm.querySelectorAll("[data-lesson-skill-tag]").forEach((checkbox) => {
-    checkbox.checked = selectedSkillTags.has(checkbox.value);
-  });
   lessonVocabulary = [];
   lessonActivities = Array.isArray(lesson?.activities)
     ? normalizeTextItems(lesson.activities)
@@ -1605,9 +1673,8 @@ async function saveLesson(event) {
     setMessage(elements.lessonFormMessage, "Every resource needs a title.");
     return;
   }
-  const learningTargetIds = [...elements.lessonTargetEditor.querySelectorAll("[data-lesson-target]:checked")]
-    .map((checkbox) => checkbox.value);
-  const availableTargets = learningObjectivesForUnit(currentUnitDetails);
+  const learningTargetIds = [...lessonSelectedTargetIds];
+  const availableTargets = lessonObjectiveCatalog;
   if (availableTargets.length > 0 && learningTargetIds.length === 0) {
     setMessage(elements.lessonFormMessage, "Select at least one key learning target.");
     return;
@@ -1617,11 +1684,9 @@ async function saveLesson(event) {
     return;
   }
   const selectedTargets = availableTargets.filter(({ id }) => learningTargetIds.includes(id));
-  const selectedSkillTags = [...elements.lessonForm.querySelectorAll("[data-lesson-skill-tag]:checked")]
-    .map((checkbox) => checkbox.value);
-  const skillTags = selectedSkillTags.length
-    ? selectedSkillTags
-    : [...new Set(selectedTargets.flatMap((target) => target.categories ?? [target.category]))];
+  const skillTags = [...new Set(selectedTargets.flatMap(
+    (target) => target.categories ?? [target.category],
+  ))];
   const payload = {
     courseId: currentUnitDetails.courseId,
     unitId: currentUnitDetails.id,
@@ -1671,12 +1736,16 @@ async function saveLesson(event) {
     const nextLessons = creatingLesson
       ? [...currentUnitLessons, savedLesson]
       : currentUnitLessons.map((lesson) => lesson.id === editingLessonId ? savedLesson : lesson);
-    if (creatingLesson) await lessonsRepository.createWithId(editingLessonId, payload);
-    else await lessonsRepository.update(editingLessonId, payload);
-    await unitsRepository.update(currentUnitDetails.id, {
+    const nextObjectives = lessonObjectiveCatalog.map((objective, index) => ({
+      ...objective,
+      order: index + 1,
+    }));
+    const nextUnit = { ...currentUnitDetails, objectives: nextObjectives };
+    await lessonsRepository.saveWithUnitProgramme(editingLessonId, payload, currentUnitDetails.id, {
+      objectives: nextObjectives,
       vocabulary: catalog,
       activeVocabulary: activeVocabularyCompatibility(catalog),
-      lessonStops: lessonStopsForUnit(currentUnitDetails, nextLessons),
+      lessonStops: lessonStopsForUnit(nextUnit, nextLessons),
     });
     const { courseId, id: unitId } = currentUnitDetails;
     closeDialog(elements.lessonDialog);
@@ -1996,7 +2065,7 @@ export function initializeCoursesCrud(options) {
     lessonFormTitle: dashboard?.querySelector("[data-lesson-form-title]"),
     lessonFormMessage: dashboard?.querySelector("[data-lesson-form-message]"),
     lessonTargetEditor: dashboard?.querySelector("[data-lesson-target-editor]"),
-    lessonTargetEmpty: dashboard?.querySelector("[data-lesson-target-empty]"),
+    lessonTargetMessage: dashboard?.querySelector("[data-lesson-target-message]"),
     lessonVocabularyEditor: dashboard?.querySelector("[data-lesson-vocabulary-editor]"),
     lessonActivitiesEditor: dashboard?.querySelector("[data-lesson-activities-editor]"),
     lessonResourcesEditor: dashboard?.querySelector("[data-lesson-resources-editor]"),
@@ -2052,6 +2121,30 @@ export function initializeCoursesCrud(options) {
     void removeUnit(editingUnitId, unitCourseId, elements.unitDelete, elements.unitFormMessage);
   });
   elements.unitObjectives.addEventListener("click", handleObjectiveEditorClick);
+  elements.lessonTargetEditor.addEventListener("click", (event) => {
+    const target = event.target instanceof Element ? event.target.closest("[data-add-lesson-target]") : null;
+    if (target) addLessonTarget(target.dataset.addLessonTarget);
+  });
+  elements.lessonTargetEditor.addEventListener("change", (event) => {
+    if (!(event.target instanceof HTMLInputElement) || !event.target.matches("[data-lesson-target]")) return;
+    const skill = event.target.closest("[data-lesson-target-skill]")?.dataset.lessonTargetSkill ?? "";
+    if (event.target.checked) {
+      if (lessonSelectedTargetIds.size >= 3) {
+        event.target.checked = false;
+        setMessage(elements.lessonTargetMessage, "Choose no more than three key learning targets.");
+        return;
+      }
+      lessonSelectedTargetIds.add(event.target.value);
+    } else lessonSelectedTargetIds.delete(event.target.value);
+    setMessage(elements.lessonTargetMessage, "");
+    renderLessonTargetsEditor(skill);
+  });
+  elements.lessonTargetEditor.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" || !(event.target instanceof HTMLInputElement)
+      || !event.target.matches("[data-lesson-new-target]")) return;
+    event.preventDefault();
+    addLessonTarget(event.target.dataset.lessonNewTarget);
+  });
   elements.courseClose.addEventListener("click", () => closeDialog(elements.courseDialog));
   elements.courseDetailsClose.addEventListener("click", () =>
     closeDialog(elements.courseDetailsDialog),

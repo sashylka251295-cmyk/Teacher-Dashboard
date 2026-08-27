@@ -1,4 +1,4 @@
-import { initializeCoursesCrud } from "./courses-crud.js";
+import { initializeCoursesCrud } from "./courses-crud.js?v=20260827-lesson-targets";
 import { initializeGroupsCrud } from "./groups-crud.js?v=20260827-homework-details";
 import { initializeStudentsCrud } from "./students-crud.js";
 

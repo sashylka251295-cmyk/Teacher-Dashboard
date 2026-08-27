@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Teacher Dashboard — Student Progress Tracker</title>
     <link rel="stylesheet" href="./css/styles.css?v=20260825-journey-progress">
-    <link rel="stylesheet" href="./css/admin.css?v=20260827-homework-details">
+    <link rel="stylesheet" href="./css/admin.css?v=20260827-lesson-targets">
   </head>
   <body>
     <main class="teacher-shell" data-protected-content hidden>
@@ -986,8 +986,7 @@
           <label>Title<input name="title" type="text" required></label>
           <label>Lesson setup status<select name="status"><option value="planned">Planned</option><option value="active">Ready</option><option value="completed">Archived content</option><option value="paused">Paused</option></select></label>
           <label class="form-field-wide">Main lesson goal<textarea name="mainGoal" rows="2"></textarea></label>
-          <fieldset class="unit-program-fields form-field-wide"><legend>Learning targets for this lesson</legend><p>Select 1–3 key targets. Quick Update will pre-fill them after the lesson.</p><div class="lesson-target-editor" data-lesson-target-editor></div><p data-lesson-target-empty hidden>Add learning targets to the Unit first.</p></fieldset>
-          <fieldset class="unit-program-fields form-field-wide lesson-skill-tags"><legend>Skill tags</legend><div><label><input type="checkbox" value="vocabulary" data-lesson-skill-tag> Vocabulary</label><label><input type="checkbox" value="grammar" data-lesson-skill-tag> Grammar</label><label><input type="checkbox" value="reading" data-lesson-skill-tag> Reading</label><label><input type="checkbox" value="listening" data-lesson-skill-tag> Listening</label><label><input type="checkbox" value="speaking" data-lesson-skill-tag> Speaking</label><label><input type="checkbox" value="writing" data-lesson-skill-tag> Writing</label></div></fieldset>
+          <fieldset class="unit-program-fields form-field-wide"><legend>Learning targets for this lesson</legend><p>Open a skill, then select an existing target or write a new one. Choose 1–3 key targets; Quick Update will pre-fill them after the lesson.</p><div class="lesson-target-editor" data-lesson-target-editor></div><p class="lesson-target-message" data-lesson-target-message role="status" aria-live="polite"></p></fieldset>
           <fieldset class="unit-program-fields form-field-wide" hidden><legend>Legacy goals by skills</legend><div class="unit-skill-goals"><label>Vocabulary<textarea name="skillGoalVocabulary" rows="2"></textarea></label><label>Grammar<textarea name="skillGoalGrammar" rows="2"></textarea></label><label>Reading<textarea name="skillGoalReading" rows="2"></textarea></label><label>Listening<textarea name="skillGoalListening" rows="2"></textarea></label><label>Speaking<textarea name="skillGoalSpeaking" rows="2"></textarea></label><label>Writing<textarea name="skillGoalWriting" rows="2"></textarea></label></div></fieldset>
           <label class="form-field-wide">Pronunciation <small>Optional</small><textarea name="pronunciation" rows="2"></textarea></label>
           <label class="form-field-wide">Functional language <small>Optional</small><textarea name="functionalLanguage" rows="2"></textarea></label>
@@ -1025,6 +1024,6 @@
     </main>
 
     <p data-page-status role="status" aria-live="polite">Проверка доступа…</p>
-    <script type="module" src="./js/pages/admin-page.js?v=20260827-homework-details"></script>
+    <script type="module" src="./js/pages/admin-page.js?v=20260827-lesson-targets"></script>
   </body>
 </html>
