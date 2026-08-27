@@ -22,7 +22,6 @@ import {
   aggregateObjectiveStatus,
   isObjectiveStatus,
   learningObjectivesForLesson,
-  overallObjectiveStatus,
   progressByObjective,
 } from "../domain/learning-objectives.js";
 import {
@@ -260,15 +259,13 @@ async function saveGroup(event) {
   }
 }
 
-function createStudentItem(student, progressDocuments) {
+function createStudentItem(student) {
   const item = document.createElement("li");
   const marker = document.createElement("span");
   const identity = document.createElement("span");
   const link = document.createElement("button");
   const details = document.createElement("span");
-  const progress = document.createElement("strong");
   const update = document.createElement("button");
-  const overall = overallObjectiveStatus(progressDocuments);
   marker.className = "group-student-avatar";
   marker.setAttribute("aria-hidden", "true");
   marker.textContent = displayValue(student.name).trim().charAt(0).toUpperCase();
@@ -286,16 +283,34 @@ function createStudentItem(student, progressDocuments) {
   link.dataset.groupStudentProfile = student.id;
   link.textContent = displayValue(student.name);
   details.textContent = studentStatus(student);
-  progress.textContent = overall === "not_assessed" ? "—" : OBJECTIVE_STATUS_LABELS[overall];
-  progress.className = "group-student-progress";
-  progress.setAttribute("aria-label", "Overall learning status");
   update.type = "button";
   update.className = "group-student-update";
   update.dataset.groupStudentUpdate = student.id;
   update.textContent = "Quick Update";
   identity.append(link, details);
-  item.append(marker, identity, progress, update);
+  item.append(marker, identity, update);
   return item;
+}
+
+function renderGroupCourseLink(course) {
+  if (!course) {
+    setMessage(elements.detailsCourse, "Unknown course");
+    return;
+  }
+
+  const link = document.createElement("button");
+  link.type = "button";
+  link.className = "group-course-link";
+  link.dataset.groupOpenCourse = course.id;
+  link.dataset.openCourse = course.id;
+  link.setAttribute("aria-label", `Open course ${displayValue(course.name)}`);
+
+  const name = document.createElement("strong");
+  const action = document.createElement("span");
+  name.textContent = displayValue(course.name);
+  action.textContent = "Open course";
+  link.append(name, action);
+  elements.detailsCourse.replaceChildren(link);
 }
 
 async function openDetails(groupId, successMessage = "") {
@@ -324,7 +339,7 @@ async function openDetails(groupId, successMessage = "") {
     ]);
     currentGroupDetails = { group, course, students, progressDocuments, units, lessons };
     setMessage(elements.detailsName, displayValue(group.name));
-    setMessage(elements.detailsCourse, course?.name ?? "Unknown course");
+    renderGroupCourseLink(course);
     setMessage(elements.detailsYear, displayValue(group.academicYear));
     setMessage(elements.detailsActive, displayValue(group.active));
     elements.detailsActive.dataset.status = group.active === false ? "inactive" : "active";
@@ -365,12 +380,7 @@ async function openDetails(groupId, successMessage = "") {
     }));
     elements.detailsCurrentTargets.hidden = currentTargets.length === 0;
     elements.students.replaceChildren(
-      ...students.map((student) =>
-        createStudentItem(
-          student,
-          progressDocuments.filter((progress) => progress.studentId === student.id),
-        ),
-      ),
+      ...students.map((student) => createStudentItem(student)),
     );
     elements.studentsEmpty.hidden = students.length > 0;
     setMessage(elements.detailsState, successMessage);
@@ -1038,6 +1048,7 @@ function handleClick(event) {
   const editButton = target?.closest("[data-edit-group]");
   const openButton = target?.closest("[data-open-group]");
   const studentLink = target?.closest("[data-group-student-profile]");
+  const courseLink = target?.closest("[data-group-open-course]");
   const groupQuickUpdate = target?.closest("[data-group-quick-update]");
   const studentQuickUpdate = target?.closest("[data-group-student-update]");
 
@@ -1048,6 +1059,7 @@ function handleClick(event) {
   } else if (openButton) void openDetails(openButton.dataset.openGroup);
   else if (groupQuickUpdate) void openGroupQuickUpdate();
   else if (studentQuickUpdate) void openGroupQuickUpdate(studentQuickUpdate.dataset.groupStudentUpdate);
+  else if (courseLink) closeDialog(elements.detailsDialog);
   else if (studentLink) {
     closeDialog(elements.detailsDialog);
     onOpenStudent(studentLink.dataset.groupStudentProfile);

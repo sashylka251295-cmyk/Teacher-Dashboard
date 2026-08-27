@@ -266,6 +266,8 @@ A group should connect:
 - a physical `courseJourney` snapshot shared with the reusable dashboard map;
 - common learning-target updates plus per-student overrides.
 
+Group Details presents the physical Course Journey as a distinct, high-contrast workspace and links its assigned course directly to Course Details. The roster intentionally does not show one aggregate learning-status badge per student: Needs practice, Developing and Confident remain attached to specific learning targets, where they are meaningful.
+
 ---
 
 ## 10. Courses
