@@ -30,10 +30,10 @@ import { lessonStopsForUnit } from "../domain/physical-progress.js";
 import {
   cumulativeUnitTargets,
   unitPhysicalProgressFromHistory,
-} from "../domain/progress-display.js";
-import { configureQuickUpdate } from "./quick-update.js";
-import { configureFeedbackWorkflow } from "./feedback-workflow.js";
-import { configureProgressUpdateEditor } from "./progress-update-editor.js";
+} from "../domain/progress-display.js?v=20260827-profile-hotfix";
+import { configureQuickUpdate } from "./quick-update.js?v=20260827-profile-hotfix";
+import { configureFeedbackWorkflow } from "./feedback-workflow.js?v=20260827-profile-hotfix";
+import { configureProgressUpdateEditor } from "./progress-update-editor.js?v=20260827-profile-hotfix";
 import { configureStudentAccess } from "./student-access.js";
 
 let activeRequestId = 0;
@@ -88,6 +88,14 @@ function setProfileState(root, message) {
   state.textContent = message;
   state.hidden = false;
   select(root, "[data-profile-content]").hidden = true;
+}
+
+function configureProfileFeature(label, callback) {
+  try {
+    callback();
+  } catch (error) {
+    console.error(`Unable to initialize ${label}.`, error);
+  }
 }
 
 function createObjectiveItem(objective, progressMap) {
@@ -625,10 +633,13 @@ function renderProfile(root, data, onQuickUpdateSaved) {
   renderObservations(root, teacherNotes, units, course);
   renderAssessmentHistory(root, progressHistory, units, lessons);
   select(root, "[data-legacy-progress-note]").hidden = legacyProgress.length === 0;
-  configureQuickUpdate({ ...data, onSaved: onQuickUpdateSaved });
-  configureProgressUpdateEditor({ ...data, onSaved: onQuickUpdateSaved });
-  configureFeedbackWorkflow({ ...data, onSaved: onQuickUpdateSaved });
-  configureStudentAccess(root, student);
+  configureProfileFeature("Quick Update", () =>
+    configureQuickUpdate({ ...data, onSaved: onQuickUpdateSaved }));
+  configureProfileFeature("Progress Update editor", () =>
+    configureProgressUpdateEditor({ ...data, onSaved: onQuickUpdateSaved }));
+  configureProfileFeature("feedback workflow", () =>
+    configureFeedbackWorkflow({ ...data, onSaved: onQuickUpdateSaved }));
+  configureProfileFeature("student access", () => configureStudentAccess(root, student));
   select(root, "[data-profile-state]").hidden = true;
   select(root, "[data-profile-content]").hidden = false;
 }
@@ -651,7 +662,10 @@ async function loadProfileData(studentId) {
     progressRepository.listByStudent(studentId),
     goalsRepository.listByStudent(studentId),
     teacherNotesRepository.listByStudent(studentId),
-    feedbackDraftsRepository.listByStudent(studentId),
+    feedbackDraftsRepository.listByStudent(studentId).catch((error) => {
+      console.error("Unable to load feedback drafts for the student profile.", error);
+      return [];
+    }),
   ]);
   return { student: effectiveStudent, group, course, units, lessons, objectiveProgress, homeworkAssignments, progressHistory, legacyProgress, goals, teacherNotes, feedbackDrafts };
 }

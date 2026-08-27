@@ -1,10 +1,10 @@
-import { feedbackDraftsRepository } from "../data/repositories/feedback-drafts-repository.js";
+import { feedbackDraftsRepository } from "../data/repositories/feedback-drafts-repository.js?v=20260827-profile-hotfix";
 import { teacherNotesRepository } from "../data/repositories/teacher-notes-repository.js";
 import { FEEDBACK_STATUS_LABELS, LANGUAGE_SKILL_LABELS } from "../domain/constants.js";
 import {
   hasFeedbackContent,
   normalizeFeedbackContent,
-} from "../domain/feedback.js";
+} from "../domain/feedback.js?v=20260827-profile-hotfix";
 import { createFeedbackGenerator } from "../feedback/feedback-generator.js";
 
 const generator = createFeedbackGenerator();
@@ -134,7 +134,9 @@ function renderActiveDraft() {
   elements.form.elements.whatWentWell.value = content.whatWentWell;
   elements.form.elements.whatToPractise.value = content.whatToPractise;
   elements.form.elements.nextStep.value = content.nextStep;
-  elements.form.elements.message.value = content.message;
+  if (elements.form.elements.message) {
+    elements.form.elements.message.value = content.message;
+  }
   [...elements.form.querySelectorAll("textarea")].forEach((textarea) => {
     textarea.readOnly = !isDraft;
   });
@@ -160,7 +162,7 @@ function renderActiveDraft() {
 
 function collectContent() {
   return normalizeFeedbackContent({
-    message: elements.form.elements.message.value,
+    message: elements.form.elements.message?.value ?? "",
     whatWentWell: elements.form.elements.whatWentWell.value,
     whatToPractise: elements.form.elements.whatToPractise.value,
     nextStep: elements.form.elements.nextStep.value,

@@ -1,6 +1,6 @@
-import { reviseLearningUpdate } from "../data/repositories/learning-update-revisions-repository.js";
+import { reviseLearningUpdate } from "../data/repositories/learning-update-revisions-repository.js?v=20260827-profile-hotfix";
 import { addObjectiveToLesson } from "../data/repositories/lesson-objectives-repository.js";
-import { feedbackDraftsRepository } from "../data/repositories/feedback-drafts-repository.js";
+import { feedbackDraftsRepository } from "../data/repositories/feedback-drafts-repository.js?v=20260827-profile-hotfix";
 import {
   LANGUAGE_SKILL_CATEGORIES,
   LANGUAGE_SKILL_LABELS,
@@ -13,7 +13,7 @@ import {
 } from "../domain/learning-objectives.js";
 import { isIndependentProgressEntry } from "../domain/independent-learning.js";
 import { latestLessonCompletion } from "../domain/progress-revisions.js";
-import { hasFeedbackContent, normalizeFeedbackContent } from "../domain/feedback.js";
+import { hasFeedbackContent, normalizeFeedbackContent } from "../domain/feedback.js?v=20260827-profile-hotfix";
 
 let context = null;
 let currentEntry = null;

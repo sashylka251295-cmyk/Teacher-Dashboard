@@ -7,7 +7,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
 import { getFirestoreClient } from "../../core/firebase-client.js";
-import { normalizeFeedbackContent } from "../../domain/feedback.js";
+import { normalizeFeedbackContent } from "../../domain/feedback.js?v=20260827-profile-hotfix";
 import { COLLECTIONS } from "../collection-names.js";
 import { createRepository } from "../firestore-repository.js";
 

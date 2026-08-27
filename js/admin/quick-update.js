@@ -1,7 +1,7 @@
 import { goalsRepository } from "../data/repositories/goals-repository.js";
-import { feedbackDraftsRepository } from "../data/repositories/feedback-drafts-repository.js";
+import { feedbackDraftsRepository } from "../data/repositories/feedback-drafts-repository.js?v=20260827-profile-hotfix";
 import { addObjectiveToLesson } from "../data/repositories/lesson-objectives-repository.js";
-import { saveLearningUpdate } from "../data/repositories/learning-updates-repository.js";
+import { saveLearningUpdate } from "../data/repositories/learning-updates-repository.js?v=20260827-profile-hotfix";
 import { teacherNotesRepository } from "../data/repositories/teacher-notes-repository.js";
 import {
   ACTIVE_GOAL_STATUSES,
@@ -23,7 +23,7 @@ import {
 } from "../domain/physical-progress.js";
 import { INDEPENDENT_PROGRESS_SCOPE } from "../domain/independent-learning.js";
 import { buildObservationTargetFields } from "../domain/observation-links.js";
-import { hasFeedbackContent, normalizeFeedbackContent } from "../domain/feedback.js";
+import { hasFeedbackContent, normalizeFeedbackContent } from "../domain/feedback.js?v=20260827-profile-hotfix";
 import { isGoalStatus, isNonEmptyText } from "../domain/validation.js";
 
 let context = null;
