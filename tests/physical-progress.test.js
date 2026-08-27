@@ -8,6 +8,7 @@ import {
   physicalProgress,
 } from "../js/domain/physical-progress.js";
 import { learningObjectivesForLesson } from "../js/domain/learning-objectives.js";
+import { journeyLessonTitle } from "../js/ui/course-journey-map.js";
 
 const unit = {
   id: "unit-4",
@@ -108,4 +109,10 @@ test("the physical current unit does not depend on mastery documents", () => {
   const units = [unit, { id: "unit-5", number: 5 }];
   assert.equal(currentPhysicalUnit(units, { unitId: "unit-5" }).id, "unit-5");
   assert.equal(currentPhysicalUnit(units, null).id, "unit-4");
+});
+
+test("journey labels keep the lesson title below one separate number", () => {
+  assert.equal(journeyLessonTitle("1. What's in my bag?", 1), "What's in my bag?");
+  assert.equal(journeyLessonTitle("Lesson 2 — Practice", 2), "Practice");
+  assert.equal(journeyLessonTitle("School Life", 1), "School Life");
 });

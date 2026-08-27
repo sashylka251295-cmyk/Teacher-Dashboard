@@ -503,6 +503,8 @@ tbody tr:last-child td {
   position: relative;
   z-index: 1;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-auto-flow: row;
   min-width: 0;
   align-content: start;
   justify-items: center;
@@ -850,8 +852,10 @@ tbody tr:last-child td {
 .course-journey-map[data-journey-theme="adult"] .course-journey-map__track li:nth-child(8n) { margin-top: 10.45rem; }
 
 .course-journey-map[data-journey-theme="adult"] .course-journey-map__track li[data-state="current"] .course-journey-map__marker {
-  color: #fff;
-  background: #3f654d;
+  border-color: #d39a2d;
+  color: #405640;
+  background: #fffaf0;
+  box-shadow: 0 0 0 0.3rem rgb(224 178 72 / 22%), 0 0.3rem 0.7rem rgb(94 73 31 / 14%);
 }
 
 .course-journey-map[data-journey-theme="adult"] .course-journey-map__callout {

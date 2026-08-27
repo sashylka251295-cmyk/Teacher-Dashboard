@@ -9,7 +9,7 @@ import { ENTITY_IMAGE_CONFIG, ENTITY_IMAGE_TYPES } from "../domain/entity-images
 import { overallObjectiveStatus } from "../domain/learning-objectives.js";
 import { initializeAdminCrud } from "./admin-crud.js?v=20260827-lesson-targets";
 import { clearStudentAccess } from "./student-access.js";
-import { loadAdminStudentProfile } from "./student-profile.js?v=20260827-unit-journeys";
+import { loadAdminStudentProfile } from "./student-profile.js?v=20260828-journey-labels";
 
 const DEFAULT_SECTION = "overview";
 const STUDENT_PROFILE_SECTION = "student-profile";

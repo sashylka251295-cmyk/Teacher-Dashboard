@@ -2750,7 +2750,7 @@ body.student-menu-open {
   list-style: none;
 }
 
-.student-objective-unit li {
+.student-objective-unit > section > ul > li {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -2777,7 +2777,7 @@ body.student-menu-open {
 .learning-status-badge[data-status="completed"] { background: #dcebd9; color: #365f3e; }
 
 @media (max-width: 620px) {
-  .student-objective-unit li,
+  .student-objective-unit > section > ul > li,
   .student-objective-unit summary {
     align-items: flex-start;
     flex-direction: column;

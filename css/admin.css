@@ -5009,8 +5009,8 @@ th[data-skill="homework"]::before { background-image: url("../assets/images/skil
   list-style: none;
 }
 
-.unit-objectives-card li,
-.unit-homework-block li {
+.unit-objectives-card > section > ul > li,
+.unit-homework-block > ul > li {
   display: flex;
   justify-content: space-between;
   align-items: center;

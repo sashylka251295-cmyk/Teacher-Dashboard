@@ -8,6 +8,13 @@ function unitLabel(unit) {
   return unit?.number ? `Unit ${unit.number}` : (unit?.title || "Current unit");
 }
 
+export function journeyLessonTitle(title, number) {
+  const value = typeof title === "string" ? title.trim() : "";
+  if (!value) return `Lesson ${number}`;
+  const numberedPrefix = new RegExp(`^(?:lesson\\s+)?${number}\\s*[.:\\-\\u2013\\u2014]\\s*`, "i");
+  return value.replace(numberedPrefix, "").trim() || value;
+}
+
 function createJourneyLandmark(kind, label) {
   const landmark = document.createElement("span");
   landmark.className = `course-journey-map__landmark course-journey-map__landmark--${kind}`;
@@ -88,7 +95,7 @@ export function renderCourseJourneyMap(container, {
     marker.setAttribute("aria-hidden", "true");
     lessonNumber.className = "course-journey-map__lesson-number";
     lessonNumber.textContent = String(stop.number);
-    title.textContent = stop.title;
+    title.textContent = journeyLessonTitle(stop.title, stop.number);
     state.className = "course-journey-map__state";
     state.textContent = stop.state === "completed"
       ? "Completed"
