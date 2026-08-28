@@ -31,3 +31,9 @@ Resource URLs are validated by the shared homework domain helper. PDF files rema
 - Unit Learning Plan shows the first three unit cards initially and offers `Show all units` when more exist.
 - Progress Updates shows the three newest saved records initially and offers `Show all updates` when more exist.
 - Expanded lists can be collapsed again. These controls affect only presentation; every record remains stored in Firestore.
+
+## Student Profile learning workspace
+
+- Feedback and Homework are separate adjacent panels on desktop and stack on narrow screens.
+- Homework is no longer repeated inside every expanded Unit Learning Plan card; its existing edit action remains available in the dedicated Homework panel.
+- Expanded Unit learning objectives use a compact responsive skill-card grid for Vocabulary, Grammar, Reading, Listening, Speaking and Writing.

@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Teacher Dashboard — Student Progress Tracker</title>
-    <link rel="stylesheet" href="./css/styles.css?v=20260828-journey-labels">
-    <link rel="stylesheet" href="./css/admin.css?v=20260828-profile-lists">
+    <link rel="stylesheet" href="./css/styles.css?v=20260828-profile-layout">
+    <link rel="stylesheet" href="./css/admin.css?v=20260828-profile-layout">
   </head>
   <body>
     <main class="teacher-shell" data-protected-content hidden>
@@ -265,6 +265,20 @@
               <div data-progress-matrix></div>
               <p class="legacy-progress-note" data-legacy-progress-note hidden>Legacy percentage records are preserved for migration and are not included in these statuses.</p>
             </section>
+
+            <div class="profile-records-grid">
+              <section class="content-panel profile-records-panel" aria-labelledby="profile-feedback-heading">
+                <div class="panel-heading"><div><p class="eyebrow">Student communication</p><h3 id="profile-feedback-heading">Feedback</h3></div></div>
+                <div class="profile-record-list" data-profile-feedback-list></div>
+                <p class="profile-record-empty" data-profile-feedback-empty hidden>No feedback yet.</p>
+              </section>
+
+              <section class="content-panel profile-records-panel" aria-labelledby="profile-homework-heading">
+                <div class="panel-heading"><div><p class="eyebrow">Learning habits</p><h3 id="profile-homework-heading">Homework</h3></div></div>
+                <div class="profile-record-list" data-profile-homework-list></div>
+                <p class="profile-record-empty" data-profile-homework-empty hidden>No homework assigned yet.</p>
+              </section>
+            </div>
 
             <section class="content-panel assessment-history-panel" aria-labelledby="assessment-history-heading">
               <div class="panel-heading"><div><p class="eyebrow">Lesson progress</p><h3 id="assessment-history-heading">Progress Updates</h3><p>Edit or remove a saved lesson update. Current progress will be recalculated automatically.</p></div></div>
@@ -1071,6 +1085,6 @@
     </main>
 
     <p data-page-status role="status" aria-live="polite">Проверка доступа…</p>
-    <script type="module" src="./js/pages/admin-page.js?v=20260828-profile-lists"></script>
+    <script type="module" src="./js/pages/admin-page.js?v=20260828-profile-layout"></script>
   </body>
 </html>

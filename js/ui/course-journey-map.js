@@ -27,6 +27,67 @@ function createJourneyLandmark(kind, label) {
   return landmark;
 }
 
+function smoothRoutePath(points) {
+  return points.slice(0, -1).reduce((path, point, index) => {
+    const previous = points[index - 1] ?? point;
+    const next = points[index + 1];
+    const afterNext = points[index + 2] ?? next;
+    const controlOne = {
+      x: point.x + (next.x - previous.x) / 6,
+      y: point.y + (next.y - previous.y) / 6,
+    };
+    const controlTwo = {
+      x: next.x - (afterNext.x - point.x) / 6,
+      y: next.y - (afterNext.y - point.y) / 6,
+    };
+    return `${path} C ${controlOne.x.toFixed(1)} ${controlOne.y.toFixed(1)} ${controlTwo.x.toFixed(1)} ${controlTwo.y.toFixed(1)} ${next.x.toFixed(1)} ${next.y.toFixed(1)}`;
+  }, `M ${points[0].x} ${points[0].y}`);
+}
+
+function journeyRoutePath(theme, stopCount) {
+  const child = themeVariant(theme) === "child";
+  const left = child ? 112 : 72;
+  const right = child ? 90 : 72;
+  const stopY = child
+    ? [223, 174, 130, 138, 174, 156, 178, 227]
+    : [229, 208, 232, 228, 209, 240, 243, 230];
+  const count = Math.max(1, stopCount);
+  const trackWidth = 1000 - left - right;
+  const stops = Array.from({ length: count }, (_, index) => ({
+    x: left + ((index + 0.5) * trackWidth) / count,
+    y: stopY[index % stopY.length],
+  }));
+  return smoothRoutePath([
+    { x: child ? 48 : 30, y: child ? 236 : 244 },
+    ...stops,
+    { x: child ? 952 : 970, y: child ? 226 : 242 },
+  ]);
+}
+
+function createJourneyProgressRoute(theme, percent, stopCount) {
+  const namespace = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(namespace, "svg");
+  const underlay = document.createElementNS(namespace, "path");
+  const base = document.createElementNS(namespace, "path");
+  const completed = document.createElementNS(namespace, "path");
+  const path = journeyRoutePath(theme, stopCount);
+  svg.classList.add("course-journey-map__progress-route");
+  svg.setAttribute("viewBox", "0 0 1000 300");
+  svg.setAttribute("preserveAspectRatio", "none");
+  svg.setAttribute("aria-hidden", "true");
+  [underlay, base, completed].forEach((routePath) => {
+    routePath.setAttribute("d", path);
+    routePath.setAttribute("vector-effect", "non-scaling-stroke");
+  });
+  underlay.classList.add("course-journey-map__progress-route-underlay");
+  base.classList.add("course-journey-map__progress-route-base");
+  completed.classList.add("course-journey-map__progress-route-completed");
+  completed.style.strokeDasharray = "1000 1000";
+  completed.style.strokeDashoffset = String(1000 * (1 - Math.max(0, Math.min(100, percent)) / 100));
+  svg.append(underlay, base, completed);
+  return svg;
+}
+
 export function renderCourseJourneyMap(container, {
   unit,
   journey = null,
@@ -111,6 +172,7 @@ export function renderCourseJourneyMap(container, {
   route.className = "course-journey-map__route";
   routeCanvas.className = "course-journey-map__route-canvas";
   routeCanvas.append(
+    createJourneyProgressRoute(theme, progress.percent, progress.stops.length),
     createJourneyLandmark("start", "Start"),
     track,
     createJourneyLandmark("finish", "Finish"),

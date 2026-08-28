@@ -841,3 +841,9 @@ See `docs/independent-learning-updates-spec.md`.
 ## 38. Compact Student Profile lists
 
 Admin Student Profile initially shows three Unit Learning Plan unit cards and the three newest Progress Updates. `Show all units` and `Show all updates` expand the corresponding complete list, and each list can be collapsed again. This is presentation-only: all records remain in Firestore and no pagination or deletion is performed.
+
+---
+
+## 39. Student Profile learning workspace
+
+Admin Student Profile keeps Feedback and Homework in two dedicated adjacent panels rather than mixing homework into each expanded Unit card. Unit learning targets render as a compact responsive grid of language-skill cards. The shared Course Journey renderer adds a live SVG route layer so the green completed segment is derived from physical lesson completion and follows the lesson stops in both admin and student-facing views.

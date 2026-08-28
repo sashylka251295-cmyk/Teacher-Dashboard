@@ -52,6 +52,8 @@ Targets have stable IDs and teacher-readable names. One target may have a primar
 
 ## Shared Course Journey component
 
+The shared renderer draws the completed route as a live SVG progress layer calculated from physical lesson completion. The green segment follows the lesson stops and ends at the completed portion; it is not baked into a static decorative reference image. The same progress logic is used in teacher and student views.
+
 `js/ui/course-journey-map.js` renders the same component in Student Dashboard and Group Details. It receives a unit, journey snapshot, optional admin-readable lesson records and theme.
 
 - `child`: playful trail treatment based on `course.journey.child.png`.
