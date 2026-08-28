@@ -26,7 +26,7 @@ import { isIndependentProgressEntry } from "../domain/independent-learning.js";
 import { normalizeHomeworkResources } from "../domain/homework.js";
 import { applyStudentTheme } from "./student-theme.js";
 import { currentPhysicalUnit, physicalProgress } from "../domain/physical-progress.js";
-import { renderCourseJourneyMap } from "../ui/course-journey-map.js?v=20260828-dynamic-route";
+import { renderCourseJourneyMap } from "../ui/course-journey-map.js?v=20260828-route-decor";
 
 const DEFAULT_SECTION = "dashboard";
 const PAGE_TITLES = Object.freeze({

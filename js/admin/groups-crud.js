@@ -31,7 +31,7 @@ import {
   createJourneySnapshot,
   currentPhysicalUnit,
 } from "../domain/physical-progress.js";
-import { renderCourseJourneyMap } from "../ui/course-journey-map.js?v=20260828-dynamic-route";
+import { renderCourseJourneyMap } from "../ui/course-journey-map.js?v=20260828-route-decor";
 import { normalizeHomeworkResources } from "../domain/homework.js";
 import { isGoalStatus, isNonEmptyText, isStudentStatus } from "../domain/validation.js";
 import {

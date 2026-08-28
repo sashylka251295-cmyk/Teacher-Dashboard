@@ -477,6 +477,48 @@ tbody tr:last-child td {
   background-size: 100% 100%;
 }
 
+.course-journey-map__decor {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.course-journey-map__decor-item {
+  position: absolute;
+  display: block;
+  background-image: url("../assets/images/course-journey-adult-roadmap.png");
+  background-repeat: no-repeat;
+}
+
+.course-journey-map__decor-item--leaves {
+  bottom: 0.3rem;
+  left: 0.1rem;
+  width: 7rem;
+  height: 10rem;
+  background-position: left bottom;
+  background-size: 930% auto;
+}
+
+.course-journey-map__decor-item--books {
+  top: 0;
+  right: 2.8rem;
+  width: 18rem;
+  height: 10.7rem;
+  background-position: right top;
+  background-size: 395% auto;
+}
+
+.course-journey-map__decor-item--finish {
+  right: 0.15rem;
+  bottom: 0.25rem;
+  width: 7.5rem;
+  height: 10.5rem;
+  background-position: right bottom;
+  background-size: 900% auto;
+}
+
 .course-journey-map__progress-route {
   position: absolute;
   z-index: 1;
@@ -879,15 +921,7 @@ tbody tr:last-child td {
 }
 
 .course-journey-map[data-journey-theme="adult"] .course-journey-map__route-canvas::before {
-  background-image: url("../assets/images/course-journey-adult-roadmap.png");
-  -webkit-mask-image: linear-gradient(#000 0 0), linear-gradient(#000 0 0), linear-gradient(#000 0 0);
-  -webkit-mask-position: left bottom, right top, right bottom;
-  -webkit-mask-repeat: no-repeat;
-  -webkit-mask-size: 14% 62%, 36% 58%, 14% 62%;
-  mask-image: linear-gradient(#000 0 0), linear-gradient(#000 0 0), linear-gradient(#000 0 0);
-  mask-position: left bottom, right top, right bottom;
-  mask-repeat: no-repeat;
-  mask-size: 14% 62%, 36% 58%, 14% 62%;
+  background-image: none;
 }
 
 .course-journey-map[data-journey-theme="adult"] .course-journey-map__track {

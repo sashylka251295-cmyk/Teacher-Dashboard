@@ -122,3 +122,7 @@ No new collection or broader rule is required. Admins already own writes to grou
 10. Unit headers show physical percentage, while expanded skill sections accumulate recorded targets without learning percentages.
 11. Manual Complete unit changes only the selected unit snapshot and can be undone without deleting real lesson history.
 12. Saving feedback without publication leaves an admin-only draft; publishing or republishing requires its own teacher action.
+
+## Journey illustration integrity
+
+The adult Course Journey keeps its route data-driven and renders the decorative leaves, books and finish flag as independently cropped layers from the existing transparent roadmap asset. These layers preserve the source illustration's aspect ratio at responsive widths; the background image must not be stretched to the route container. At 100% physical completion, the live route reaches the finish state visually.

@@ -847,3 +847,9 @@ Admin Student Profile initially shows three Unit Learning Plan unit cards and th
 ## 39. Student Profile learning workspace
 
 Admin Student Profile keeps Feedback and Homework in two dedicated adjacent panels rather than mixing homework into each expanded Unit card. Unit learning targets render as a compact responsive grid of language-skill cards. The shared Course Journey renderer adds a live SVG route layer so the green completed segment is derived from physical lesson completion and follows the lesson stops in both admin and student-facing views.
+
+---
+
+## 40. Course Journey decorative layers
+
+The teen/adult Course Journey no longer stretches the complete roadmap PNG to the dimensions of the route canvas. Leaves, books and the finish flag are rendered as separate aspect-ratio-preserving crops of the existing asset, while the route itself remains a live SVG based on physical lesson completion. This prevents decorative books from appearing flattened and keeps 100% completion connected to the finish.

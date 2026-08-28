@@ -77,15 +77,30 @@ function createJourneyProgressRoute(theme, percent, stopCount) {
   svg.setAttribute("aria-hidden", "true");
   [underlay, base, completed].forEach((routePath) => {
     routePath.setAttribute("d", path);
+    routePath.setAttribute("pathLength", "1000");
     routePath.setAttribute("vector-effect", "non-scaling-stroke");
   });
   underlay.classList.add("course-journey-map__progress-route-underlay");
   base.classList.add("course-journey-map__progress-route-base");
   completed.classList.add("course-journey-map__progress-route-completed");
-  completed.style.strokeDasharray = "1000 1000";
-  completed.style.strokeDashoffset = String(1000 * (1 - Math.max(0, Math.min(100, percent)) / 100));
+  const clampedPercent = Math.max(0, Math.min(100, percent));
+  completed.style.strokeDasharray = clampedPercent === 100 ? "none" : "1000 1000";
+  completed.style.strokeDashoffset = String(1000 * (1 - clampedPercent / 100));
   svg.append(underlay, base, completed);
   return svg;
+}
+
+function createJourneyDecor(theme) {
+  const decor = document.createElement("div");
+  decor.className = "course-journey-map__decor";
+  decor.setAttribute("aria-hidden", "true");
+  if (themeVariant(theme) !== "adult") return decor;
+  ["leaves", "books", "finish"].forEach((kind) => {
+    const item = document.createElement("span");
+    item.className = `course-journey-map__decor-item course-journey-map__decor-item--${kind}`;
+    decor.append(item);
+  });
+  return decor;
 }
 
 export function renderCourseJourneyMap(container, {
@@ -172,6 +187,7 @@ export function renderCourseJourneyMap(container, {
   route.className = "course-journey-map__route";
   routeCanvas.className = "course-journey-map__route-canvas";
   routeCanvas.append(
+    createJourneyDecor(theme),
     createJourneyProgressRoute(theme, progress.percent, progress.stops.length),
     createJourneyLandmark("start", "Start"),
     track,
