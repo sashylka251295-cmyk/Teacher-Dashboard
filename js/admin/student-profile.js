@@ -11,6 +11,7 @@ import { studentsRepository } from "../data/repositories/students-repository.js"
 import { unitsRepository } from "../data/repositories/units-repository.js";
 import {
   ACTIVE_GOAL_STATUSES,
+  HOMEWORK_STATUSES,
   HOMEWORK_STATUS_LABELS,
   LANGUAGE_SKILL_CATEGORIES,
   LANGUAGE_SKILL_LABELS,
@@ -24,6 +25,7 @@ import {
   progressByObjective,
   strongestObjectiveCategory,
 } from "../domain/learning-objectives.js";
+import { normalizeHomeworkResources } from "../domain/homework.js";
 import { isIndependentProgressEntry } from "../domain/independent-learning.js";
 import { lessonStopsForUnit } from "../domain/physical-progress.js";
 import {
@@ -34,8 +36,13 @@ import { renderCourseJourneyMap } from "../ui/course-journey-map.js?v=20260828-j
 import { configureQuickUpdate } from "./quick-update.js?v=20260827-homework-details";
 import { configureProgressUpdateEditor } from "./progress-update-editor.js?v=20260827-profile-hotfix";
 import { configureStudentAccess } from "./student-access.js";
+import { closeDialog, showDialog } from "./crud-helpers.js";
 
 let activeRequestId = 0;
+let homeworkEditorAssignments = [];
+let homeworkEditorOnSaved = null;
+let editingHomeworkId = "";
+let homeworkEditorElements = null;
 
 function select(root, selector) {
   return root.querySelector(selector);
@@ -80,6 +87,28 @@ function timestampToDate(timestamp) {
 function formatDate(timestamp) {
   const date = timestampToDate(timestamp);
   return date ? new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(date) : null;
+}
+
+function dateInputValue(timestamp) {
+  const date = timestampToDate(timestamp);
+  if (!date) return "";
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+  ].join("-");
+}
+
+function dateFromInput(value) {
+  if (!value) return null;
+  const [year, month, day] = String(value).split("-").map(Number);
+  const date = new Date(year, month - 1, day, 12);
+  return year && month && day
+    && date.getFullYear() === year
+    && date.getMonth() === month - 1
+    && date.getDate() === day
+    ? date
+    : null;
 }
 
 function setProfileState(root, message) {
@@ -161,12 +190,173 @@ function createHomeworkBlock(assignments) {
   assignments.forEach((assignment) => {
     const item = document.createElement("li");
     const title = document.createElement("span");
+    const edit = document.createElement("button");
     title.textContent = assignment.title || "Homework";
-    item.append(title, statusBadge(assignment.status, HOMEWORK_STATUS_LABELS));
+    edit.type = "button";
+    edit.className = "homework-edit-action";
+    edit.dataset.editHomework = assignment.id;
+    edit.textContent = "Edit";
+    item.append(title, statusBadge(assignment.status, HOMEWORK_STATUS_LABELS), edit);
     list.append(item);
   });
   block.append(list);
   return block;
+}
+
+function createHomeworkResourceRow(resource = {}) {
+  const row = document.createElement("div");
+  const title = document.createElement("input");
+  const url = document.createElement("input");
+  const type = document.createElement("select");
+  const remove = document.createElement("button");
+  row.className = "homework-resource-editor__row";
+  row.dataset.homeworkResourceRow = "";
+  title.type = "text";
+  title.placeholder = "Resource title";
+  title.value = resource.title ?? "";
+  title.dataset.homeworkResourceTitle = "";
+  title.setAttribute("aria-label", "Homework resource title");
+  url.type = "text";
+  url.inputMode = "url";
+  url.placeholder = "https://… or ./assets/materials/homework/file.pdf";
+  url.value = resource.url ?? "";
+  url.dataset.homeworkResourceUrl = "";
+  url.setAttribute("aria-label", "Homework resource URL or PDF path");
+  type.append(
+    Object.assign(document.createElement("option"), { value: "", textContent: "Detect type" }),
+    Object.assign(document.createElement("option"), { value: "pdf", textContent: "PDF" }),
+    Object.assign(document.createElement("option"), { value: "link", textContent: "Website" }),
+  );
+  type.value = resource.type ?? "";
+  type.dataset.homeworkResourceType = "";
+  type.setAttribute("aria-label", "Homework resource type");
+  remove.type = "button";
+  remove.dataset.homeworkResourceRemove = "";
+  remove.textContent = "Remove";
+  row.append(title, url, type, remove);
+  return row;
+}
+
+function syncHomeworkResourceEditor() {
+  const rows = homeworkEditorElements?.resources.querySelectorAll("[data-homework-resource-row]") ?? [];
+  homeworkEditorElements.addResource.disabled = rows.length >= 5;
+  rows.forEach((row) => {
+    row.querySelector("[data-homework-resource-remove]").disabled = rows.length === 1;
+  });
+}
+
+function openHomeworkEditor(assignmentId) {
+  const assignment = homeworkEditorAssignments.find(({ id }) => id === assignmentId);
+  if (!assignment || !homeworkEditorElements) return;
+  editingHomeworkId = assignment.id;
+  homeworkEditorElements.form.reset();
+  homeworkEditorElements.context.textContent = assignment.title || "Homework";
+  homeworkEditorElements.title.value = assignment.title ?? "";
+  homeworkEditorElements.description.value = assignment.description ?? "";
+  homeworkEditorElements.dueDate.value = dateInputValue(assignment.dueDate);
+  homeworkEditorElements.status.value = HOMEWORK_STATUSES.includes(assignment.status)
+    ? assignment.status
+    : "assigned";
+  const resources = Array.isArray(assignment.resources) && assignment.resources.length
+    ? assignment.resources.slice(0, 5)
+    : [{}];
+  homeworkEditorElements.resources.replaceChildren(...resources.map(createHomeworkResourceRow));
+  homeworkEditorElements.message.textContent = "";
+  homeworkEditorElements.save.disabled = false;
+  syncHomeworkResourceEditor();
+  showDialog(homeworkEditorElements.dialog);
+}
+
+async function saveHomework(event) {
+  event.preventDefault();
+  const assignment = homeworkEditorAssignments.find(({ id }) => id === editingHomeworkId);
+  if (!assignment) return;
+  const title = homeworkEditorElements.title.value.trim();
+  const status = homeworkEditorElements.status.value;
+  const dueDate = homeworkEditorElements.dueDate.value
+    ? dateFromInput(homeworkEditorElements.dueDate.value)
+    : null;
+  const enteredResources = [...homeworkEditorElements.resources.querySelectorAll("[data-homework-resource-row]")]
+    .map((row) => ({
+      title: row.querySelector("[data-homework-resource-title]").value,
+      url: row.querySelector("[data-homework-resource-url]").value,
+      type: row.querySelector("[data-homework-resource-type]").value,
+    }))
+    .filter(({ title: resourceTitle, url }) => resourceTitle.trim() || url.trim());
+  const resources = normalizeHomeworkResources(enteredResources);
+  if (!title) {
+    homeworkEditorElements.message.textContent = "Enter a homework title.";
+    return;
+  }
+  if (!HOMEWORK_STATUSES.includes(status)) {
+    homeworkEditorElements.message.textContent = "Select a valid homework status.";
+    return;
+  }
+  if (homeworkEditorElements.dueDate.value && !dueDate) {
+    homeworkEditorElements.message.textContent = "Select a valid due date.";
+    return;
+  }
+  if (resources.length !== enteredResources.length) {
+    homeworkEditorElements.message.textContent = "Every resource needs a valid HTTPS link or homework PDF path.";
+    return;
+  }
+  homeworkEditorElements.save.disabled = true;
+  homeworkEditorElements.message.textContent = "Saving homework…";
+  try {
+    await homeworkAssignmentsRepository.update(assignment.id, {
+      title,
+      description: homeworkEditorElements.description.value.trim(),
+      dueDate,
+      resources,
+      status,
+      updatedAt: new Date(),
+    });
+    closeDialog(homeworkEditorElements.dialog);
+    await homeworkEditorOnSaved?.("Homework updated.");
+  } catch (error) {
+    console.error("Unable to update homework.", error);
+    homeworkEditorElements.message.textContent = "Unable to save homework. Please try again.";
+  } finally {
+    homeworkEditorElements.save.disabled = false;
+  }
+}
+
+function configureHomeworkEditor(root, assignments, onSaved) {
+  homeworkEditorAssignments = assignments;
+  homeworkEditorOnSaved = onSaved;
+  if (homeworkEditorElements) return;
+  const dialog = select(root, "[data-homework-editor-dialog]");
+  const form = select(root, "[data-homework-editor-form]");
+  homeworkEditorElements = {
+    dialog,
+    form,
+    context: select(root, "[data-homework-editor-context]"),
+    title: form.elements.homeworkEditorTitle,
+    description: form.elements.homeworkEditorDescription,
+    dueDate: form.elements.homeworkEditorDueDate,
+    status: form.elements.homeworkEditorStatus,
+    resources: select(root, "[data-homework-editor-resources]"),
+    addResource: select(root, "[data-homework-resource-add]"),
+    message: select(root, "[data-homework-editor-message]"),
+    save: select(root, "[data-homework-editor-save]"),
+    close: select(root, "[data-homework-editor-close]"),
+  };
+  root.addEventListener("click", (event) => {
+    const edit = event.target instanceof Element ? event.target.closest("[data-edit-homework]") : null;
+    if (edit) openHomeworkEditor(edit.dataset.editHomework);
+  });
+  homeworkEditorElements.addResource.addEventListener("click", () => {
+    homeworkEditorElements.resources.append(createHomeworkResourceRow());
+    syncHomeworkResourceEditor();
+  });
+  homeworkEditorElements.resources.addEventListener("click", (event) => {
+    const remove = event.target instanceof Element ? event.target.closest("[data-homework-resource-remove]") : null;
+    if (!remove) return;
+    remove.closest("[data-homework-resource-row]").remove();
+    syncHomeworkResourceEditor();
+  });
+  homeworkEditorElements.close.addEventListener("click", () => closeDialog(dialog));
+  form.addEventListener("submit", saveHomework);
 }
 
 function createUnitObjectives({
@@ -670,6 +860,8 @@ function renderProfile(root, data, onQuickUpdateSaved) {
   renderProfilePart("current goal", () => renderCurrentGoal(root, goals), warnings);
   renderProfilePart("progress updates", () =>
     renderAssessmentHistory(root, progressHistory, units, lessons), warnings);
+  configureProfileFeature("homework editor", () =>
+    configureHomeworkEditor(root, homeworkAssignments, onQuickUpdateSaved));
   select(root, "[data-legacy-progress-note]").hidden = legacyProgress.length === 0;
   configureProfileFeature("Quick Update", () =>
     configureQuickUpdate({ ...data, onSaved: onQuickUpdateSaved }));

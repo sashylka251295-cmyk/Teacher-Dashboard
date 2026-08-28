@@ -7,10 +7,12 @@ import { saveLearningUpdate } from "../data/repositories/learning-updates-reposi
 import { lessonsRepository } from "../data/repositories/lessons-repository.js";
 import { addObjectiveToLesson } from "../data/repositories/lesson-objectives-repository.js";
 import { objectiveProgressRepository } from "../data/repositories/objective-progress-repository.js";
+import { progressHistoryRepository } from "../data/repositories/progress-history-repository.js";
 import { studentsRepository } from "../data/repositories/students-repository.js";
 import { unitsRepository } from "../data/repositories/units-repository.js";
 import {
   ACTIVE_GOAL_STATUSES,
+  FEEDBACK_STATUS_LABELS,
   HOMEWORK_STATUSES,
   HOMEWORK_STATUS_LABELS,
   LANGUAGE_SKILL_CATEGORIES,
@@ -22,6 +24,7 @@ import {
   aggregateObjectiveStatus,
   isObjectiveStatus,
   learningObjectivesForLesson,
+  learningObjectivesForUnit,
   progressByObjective,
 } from "../domain/learning-objectives.js";
 import {
@@ -82,6 +85,26 @@ function dateFromInput(value) {
     && date.getDate() === day
     ? date
     : null;
+}
+
+function timestampToDate(timestamp) {
+  if (!timestamp) return null;
+  const value = typeof timestamp.toDate === "function" ? timestamp.toDate() : timestamp;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function timestampMillis(timestamp) {
+  return timestampToDate(timestamp)?.getTime() ?? 0;
+}
+
+function formatActivityDate(timestamp, includeTime = false) {
+  const date = timestampToDate(timestamp);
+  return date
+    ? new Intl.DateTimeFormat("en", includeTime
+      ? { dateStyle: "medium", timeStyle: "short" }
+      : { dateStyle: "medium" }).format(date)
+    : "Date unavailable";
 }
 
 function studentStatus(student) {
@@ -314,6 +337,209 @@ function renderGroupCourseLink(course) {
   elements.detailsCourse.replaceChildren(link);
 }
 
+function createGroupStudentAction(studentId, label = "Open student") {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.dataset.groupStudentProfile = studentId;
+  button.textContent = label;
+  return button;
+}
+
+function renderGroupProgressHistory(history, students, units, lessons) {
+  const studentNames = new Map(students.map((student) => [student.id, displayValue(student.name)]));
+  const unitNames = new Map(units.map((unit) => [unit.id, unitName(unit)]));
+  const lessonNames = new Map(lessons.map((lesson) => [
+    lesson.id,
+    lesson.title || `Lesson ${lesson.number ?? lesson.order ?? ""}`.trim(),
+  ]));
+  const objectiveNames = new Map(
+    units.flatMap((unit) => learningObjectivesForUnit(unit))
+      .map((objective) => [objective.id, objective.title]),
+  );
+  const grouped = new Map();
+  history.forEach((entry) => {
+    const day = timestampToDate(entry.lessonDate ?? entry.createdAt)?.toISOString().slice(0, 10) ?? entry.id;
+    const key = [entry.unitId, entry.lessonId, day].join("::");
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key).push(entry);
+  });
+  const groups = [...grouped.values()].sort((first, second) =>
+    Math.max(...second.map((entry) => timestampMillis(entry.lessonDate ?? entry.createdAt)))
+    - Math.max(...first.map((entry) => timestampMillis(entry.lessonDate ?? entry.createdAt))));
+  elements.groupProgressHistory.replaceChildren(...groups.map((entries) => {
+    const representative = entries[0];
+    const card = document.createElement("details");
+    const summary = document.createElement("summary");
+    const identity = document.createElement("span");
+    const title = document.createElement("strong");
+    const meta = document.createElement("small");
+    const roster = document.createElement("div");
+    title.textContent = [
+      unitNames.get(representative.unitId) ?? "Course update",
+      lessonNames.get(representative.lessonId),
+    ].filter(Boolean).join(" › ");
+    meta.textContent = `${formatActivityDate(representative.lessonDate ?? representative.createdAt)} · ${entries.length} ${entries.length === 1 ? "student" : "students"}`;
+    identity.append(title, meta);
+    summary.append(identity);
+    roster.className = "group-activity__student-records";
+    entries.sort((first, second) => (studentNames.get(first.studentId) ?? "")
+      .localeCompare(studentNames.get(second.studentId) ?? ""))
+      .forEach((entry) => {
+        const row = document.createElement("article");
+        const heading = document.createElement("div");
+        const name = document.createElement("strong");
+        const completion = document.createElement("span");
+        const list = document.createElement("ul");
+        const changedIds = new Set((entry.changes ?? []).map(({ objectiveId }) => objectiveId));
+        name.textContent = studentNames.get(entry.studentId) ?? "Unknown student";
+        completion.textContent = entry.completeLesson === true
+          ? "Lesson completed"
+          : entry.completeLesson === false ? "Lesson not completed" : "Learning update";
+        completion.dataset.completed = entry.completeLesson === true ? "true" : "false";
+        heading.append(name, completion);
+        (entry.changes ?? []).forEach((change) => {
+          const item = document.createElement("li");
+          item.textContent = `${change.title || objectiveNames.get(change.objectiveId) || "Learning objective"}: ${OBJECTIVE_STATUS_LABELS[change.status] ?? change.status}`;
+          list.append(item);
+        });
+        (entry.workedOnObjectives ?? [])
+          .filter(({ objectiveId, id }) => !changedIds.has(objectiveId ?? id))
+          .forEach((objective) => {
+            const item = document.createElement("li");
+            item.textContent = `${objective.title || objectiveNames.get(objective.objectiveId ?? objective.id) || "Learning objective"}: Worked on`;
+            list.append(item);
+          });
+        if (!list.childElementCount) {
+          const item = document.createElement("li");
+          item.textContent = "Physical lesson progress only";
+          list.append(item);
+        }
+        row.append(heading, list, createGroupStudentAction(entry.studentId));
+        roster.append(row);
+      });
+    card.className = "group-activity-card";
+    card.append(summary, roster);
+    return card;
+  }));
+  elements.groupProgressHistoryEmpty.hidden = groups.length > 0;
+}
+
+function renderGroupFeedbackHistory(feedback, students, units, lessons) {
+  const studentNames = new Map(students.map((student) => [student.id, displayValue(student.name)]));
+  const unitNames = new Map(units.map((unit) => [unit.id, unitName(unit)]));
+  const lessonNames = new Map(lessons.map((lesson) => [lesson.id, lesson.title]));
+  const sorted = [...feedback].sort((first, second) =>
+    timestampMillis(second.updatedAt ?? second.publishedAt ?? second.createdAt)
+    - timestampMillis(first.updatedAt ?? first.publishedAt ?? first.createdAt));
+  elements.groupFeedbackHistory.replaceChildren(...sorted.map((record) => {
+    const card = document.createElement("details");
+    const summary = document.createElement("summary");
+    const identity = document.createElement("span");
+    const name = document.createElement("strong");
+    const meta = document.createElement("small");
+    const status = document.createElement("span");
+    const content = document.createElement("div");
+    name.textContent = studentNames.get(record.studentId) ?? "Unknown student";
+    meta.textContent = [
+      unitNames.get(record.unitId),
+      lessonNames.get(record.lessonId),
+      formatActivityDate(record.updatedAt ?? record.publishedAt ?? record.createdAt),
+    ].filter(Boolean).join(" · ");
+    status.className = "feedback-status-chip";
+    status.dataset.status = record.status ?? "draft";
+    status.textContent = FEEDBACK_STATUS_LABELS[record.status] ?? "Draft";
+    identity.append(name, meta);
+    summary.append(identity, status);
+    content.className = "group-activity__feedback-content";
+    [
+      ["What went well", record.content?.whatWentWell],
+      ["What to practise", record.content?.whatToPractise],
+      ["Next step", record.content?.nextStep],
+      ["Teacher message", record.content?.message],
+    ].filter(([, value]) => typeof value === "string" && value.trim())
+      .forEach(([label, value]) => {
+        const section = document.createElement("section");
+        const heading = document.createElement("strong");
+        const text = document.createElement("p");
+        heading.textContent = label;
+        text.textContent = value;
+        section.append(heading, text);
+        content.append(section);
+      });
+    if (!content.childElementCount) {
+      const empty = document.createElement("p");
+      empty.textContent = "This feedback has no text yet.";
+      content.append(empty);
+    }
+    content.append(createGroupStudentAction(record.studentId, "Open student feedback"));
+    card.className = "group-activity-card";
+    card.append(summary, content);
+    return card;
+  }));
+  elements.groupFeedbackHistoryEmpty.hidden = sorted.length > 0;
+}
+
+function renderGroupHomeworkHistory(assignments, students, units, lessons) {
+  const studentNames = new Map(students.map((student) => [student.id, displayValue(student.name)]));
+  const unitNames = new Map(units.map((unit) => [unit.id, unitName(unit)]));
+  const lessonNames = new Map(lessons.map((lesson) => [lesson.id, lesson.title]));
+  const sorted = [...assignments].sort((first, second) =>
+    timestampMillis(second.lessonDate ?? second.createdAt)
+    - timestampMillis(first.lessonDate ?? first.createdAt));
+  elements.groupHomeworkHistory.replaceChildren(...sorted.map((assignment) => {
+    const card = document.createElement("details");
+    const summary = document.createElement("summary");
+    const identity = document.createElement("span");
+    const title = document.createElement("strong");
+    const meta = document.createElement("small");
+    const status = document.createElement("span");
+    const content = document.createElement("div");
+    title.textContent = assignment.title || "Homework";
+    meta.textContent = [
+      studentNames.get(assignment.studentId) ?? "Unknown student",
+      unitNames.get(assignment.unitId),
+      lessonNames.get(assignment.lessonId),
+      assignment.dueDate ? `Due ${formatActivityDate(assignment.dueDate)}` : "",
+    ].filter(Boolean).join(" · ");
+    status.className = "learning-status-badge";
+    status.dataset.status = assignment.status;
+    status.textContent = HOMEWORK_STATUS_LABELS[assignment.status] ?? assignment.status;
+    identity.append(title, meta);
+    summary.append(identity, status);
+    content.className = "group-activity__homework-content";
+    if (assignment.description) {
+      const description = document.createElement("p");
+      description.textContent = assignment.description;
+      content.append(description);
+    }
+    if (Array.isArray(assignment.resources) && assignment.resources.length) {
+      const resources = document.createElement("ul");
+      assignment.resources.forEach((resource) => {
+        const item = document.createElement("li");
+        const link = document.createElement("a");
+        link.href = resource.url;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.textContent = resource.title || (resource.type === "pdf" ? "PDF file" : "Web resource");
+        item.append(link);
+        resources.append(item);
+      });
+      content.append(resources);
+    }
+    content.append(createGroupStudentAction(assignment.studentId, "Open student homework"));
+    card.className = "group-activity-card";
+    card.append(summary, content);
+    return card;
+  }));
+  elements.groupHomeworkHistoryEmpty.hidden = sorted.length > 0;
+}
+
+function renderGroupActivity(data) {
+  renderGroupProgressHistory(data.progressHistory, data.students, data.units, data.lessons);
+  renderGroupFeedbackHistory(data.feedbackDrafts, data.students, data.units, data.lessons);
+  renderGroupHomeworkHistory(data.homeworkAssignments, data.students, data.units, data.lessons);
+}
+
 async function openDetails(groupId, successMessage = "") {
   currentGroupDetails = null;
   elements.detailsEdit.dataset.editGroup = groupId;
@@ -331,14 +557,37 @@ async function openDetails(groupId, successMessage = "") {
       return;
     }
 
-    const [course, students, progressDocuments, units, lessons] = await Promise.all([
+    const [course, students, progressDocuments, units, lessons, progressHistory, homeworkAssignments, feedbackDrafts] = await Promise.all([
       group.courseId ? coursesRepository.getById(group.courseId) : Promise.resolve(null),
       studentsRepository.listByGroup(groupId),
       objectiveProgressRepository.list(),
       group.courseId ? unitsRepository.listByCourse(group.courseId) : Promise.resolve([]),
       group.courseId ? lessonsRepository.listByCourse(group.courseId) : Promise.resolve([]),
+      progressHistoryRepository.list(),
+      homeworkAssignmentsRepository.list(),
+      feedbackDraftsRepository.list(),
     ]);
-    currentGroupDetails = { group, course, students, progressDocuments, units, lessons };
+    const studentIds = new Set(students.map(({ id }) => id));
+    const groupProgressHistory = progressHistory.filter((entry) =>
+      entry.groupId === group.id
+      || (studentIds.has(entry.studentId)
+        && entry.courseId === group.courseId
+        && (!entry.groupId || entry.groupId === group.id)));
+    const groupHomeworkAssignments = homeworkAssignments.filter((assignment) =>
+      studentIds.has(assignment.studentId) && assignment.courseId === group.courseId);
+    const groupFeedbackDrafts = feedbackDrafts.filter((feedback) =>
+      studentIds.has(feedback.studentId) && feedback.courseId === group.courseId);
+    currentGroupDetails = {
+      group,
+      course,
+      students,
+      progressDocuments,
+      units,
+      lessons,
+      progressHistory: groupProgressHistory,
+      homeworkAssignments: groupHomeworkAssignments,
+      feedbackDrafts: groupFeedbackDrafts,
+    };
     setMessage(elements.detailsName, displayValue(group.name));
     renderGroupCourseLink(course);
     setMessage(elements.detailsYear, displayValue(group.academicYear));
@@ -380,6 +629,7 @@ async function openDetails(groupId, successMessage = "") {
       return chip;
     }));
     elements.detailsCurrentTargets.hidden = currentTargets.length === 0;
+    renderGroupActivity(currentGroupDetails);
     elements.students.replaceChildren(
       ...students.map((student) => createStudentItem(student)),
     );
@@ -809,9 +1059,9 @@ async function openGroupQuickUpdate(studentId = "", selection = null) {
       homeworkAssignmentsRepository.list(),
     ]);
     currentGroupDetails.goals = goals.filter((goal) =>
-      groupUpdateStudents.some((student) => student.id === goal.studentId));
+      currentGroupDetails.students.some((student) => student.id === goal.studentId));
     currentGroupDetails.homeworkAssignments = homeworkAssignments.filter((assignment) =>
-      groupUpdateStudents.some((student) => student.id === assignment.studentId));
+      currentGroupDetails.students.some((student) => student.id === assignment.studentId));
     populateGroupUpdateLessons();
     if (selection?.unitId && units.some(({ id }) => id === selection.unitId)) {
       elements.groupUpdateUnit.value = selection.unitId;
@@ -1145,6 +1395,12 @@ export function initializeGroupsCrud(options) {
     detailsJourney: dashboard?.querySelector("[data-group-course-journey]"),
     detailsCurrentLesson: dashboard?.querySelector("[data-group-current-lesson]"),
     detailsCurrentTargets: dashboard?.querySelector("[data-group-current-targets]"),
+    groupProgressHistory: dashboard?.querySelector("[data-group-progress-history]"),
+    groupProgressHistoryEmpty: dashboard?.querySelector("[data-group-progress-history-empty]"),
+    groupFeedbackHistory: dashboard?.querySelector("[data-group-feedback-history]"),
+    groupFeedbackHistoryEmpty: dashboard?.querySelector("[data-group-feedback-history-empty]"),
+    groupHomeworkHistory: dashboard?.querySelector("[data-group-homework-history]"),
+    groupHomeworkHistoryEmpty: dashboard?.querySelector("[data-group-homework-history-empty]"),
     studentsEmpty: dashboard?.querySelector("[data-group-students-empty]"),
     students: dashboard?.querySelector("[data-group-students]"),
     groupQuickUpdate: dashboard?.querySelector("[data-group-quick-update]"),

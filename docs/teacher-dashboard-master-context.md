@@ -167,6 +167,8 @@ Only publishing a lesson completion changes this percentage. Objective statuses,
 
 `students/{studentId}.unitJourneys.{unitId}` preserves physical snapshots for earlier units while `courseJourney` identifies the current unit. The teacher may explicitly mark an entire historical unit 100% complete without adding mastery statuses. Manual completion is reversible and never deletes real lesson-update history.
 
+Group Details includes a real-data Group Activity workspace for previous progress updates, feedback and homework. Shared updates are grouped by lesson/date while retaining each student's individual result. Existing homework shown in the admin Student Profile has a full Edit action for title, instructions, due date, status and safe PDF/web resources; editing homework does not create or change learning progress. See `docs/group-activity-and-homework-editing-spec.md`.
+
 In both the admin Student Profile and the student-facing My Progress page, each Unit row in Learning Objectives is an expandable control. Opening it shows the shared themed Course Journey map before the Unit's target details, including completed, current and upcoming lesson stops plus the physical completion count and percentage. A Unit with no journey snapshot shows all stops as upcoming rather than inventing a current position. Students use only public Unit lesson stops and their own journey snapshot; teacher-only Lesson documents remain inaccessible.
 
 ### Learning progress

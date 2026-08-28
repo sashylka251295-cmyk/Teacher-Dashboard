@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Teacher Dashboard — Student Progress Tracker</title>
     <link rel="stylesheet" href="./css/styles.css?v=20260828-journey-labels">
-    <link rel="stylesheet" href="./css/admin.css?v=20260828-journey-labels">
+    <link rel="stylesheet" href="./css/admin.css?v=20260828-group-activity">
   </head>
   <body>
     <main class="teacher-shell" data-protected-content hidden>
@@ -497,6 +497,33 @@
             </div>
           </form>
         </dialog>
+
+        <dialog class="homework-editor-dialog" data-homework-editor-dialog aria-labelledby="homework-editor-heading">
+          <form data-homework-editor-form>
+            <header>
+              <p class="eyebrow">Learning habits</p>
+              <h3 id="homework-editor-heading">Edit homework</h3>
+              <p data-homework-editor-context></p>
+            </header>
+            <label for="homework-editor-title">Homework title<input id="homework-editor-title" name="homeworkEditorTitle" type="text" required></label>
+            <label for="homework-editor-description">Instructions<textarea id="homework-editor-description" name="homeworkEditorDescription" rows="4"></textarea></label>
+            <div class="homework-editor-fields">
+              <label for="homework-editor-due-date">Due date <small>(optional)</small><input id="homework-editor-due-date" name="homeworkEditorDueDate" type="date"></label>
+              <label for="homework-editor-status">Status<select id="homework-editor-status" name="homeworkEditorStatus"><option value="assigned">Assigned</option><option value="completed">Completed</option><option value="needs_completion">Needs completion</option></select></label>
+            </div>
+            <fieldset class="homework-resource-editor">
+              <legend>PDF files and web links</legend>
+              <p>Add up to five resources. Use an HTTPS link or a PDF from <code>assets/materials/homework</code>.</p>
+              <div data-homework-editor-resources></div>
+              <button type="button" data-homework-resource-add>+ Add resource</button>
+            </fieldset>
+            <p data-homework-editor-message role="status" aria-live="polite"></p>
+            <footer>
+              <button type="button" data-homework-editor-close>Cancel</button>
+              <button class="button-primary" type="submit" data-homework-editor-save>Save homework</button>
+            </footer>
+          </form>
+        </dialog>
       </section>
 
       <dialog data-student-dialog aria-labelledby="student-form-heading">
@@ -644,6 +671,26 @@
             </div>
             <div data-group-course-journey></div>
             <div class="group-current-targets" data-group-current-targets></div>
+          </section>
+          <section class="group-activity" aria-labelledby="group-activity-heading">
+            <div class="group-activity__heading"><div><p class="eyebrow">Saved records</p><h3 id="group-activity-heading">Group Activity</h3></div><p>Previous updates, feedback and homework for this group.</p></div>
+            <div class="group-activity__grid">
+              <section aria-labelledby="group-progress-history-heading">
+                <h4 id="group-progress-history-heading">Progress updates</h4>
+                <div data-group-progress-history></div>
+                <p class="group-activity__empty" data-group-progress-history-empty hidden>No saved progress updates yet.</p>
+              </section>
+              <section aria-labelledby="group-feedback-history-heading">
+                <h4 id="group-feedback-history-heading">Feedback</h4>
+                <div data-group-feedback-history></div>
+                <p class="group-activity__empty" data-group-feedback-history-empty hidden>No feedback yet.</p>
+              </section>
+              <section aria-labelledby="group-homework-history-heading">
+                <h4 id="group-homework-history-heading">Homework</h4>
+                <div data-group-homework-history></div>
+                <p class="group-activity__empty" data-group-homework-history-empty hidden>No homework assigned yet.</p>
+              </section>
+            </div>
           </section>
           <div class="group-students-heading">
             <div><p class="eyebrow">Group roster</p><h3>Students</h3></div>
@@ -1024,6 +1071,6 @@
     </main>
 
     <p data-page-status role="status" aria-live="polite">Проверка доступа…</p>
-    <script type="module" src="./js/pages/admin-page.js?v=20260828-journey-labels"></script>
+    <script type="module" src="./js/pages/admin-page.js?v=20260828-group-activity"></script>
   </body>
 </html>
