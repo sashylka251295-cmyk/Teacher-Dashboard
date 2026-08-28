@@ -43,6 +43,7 @@ let homeworkEditorAssignments = [];
 let homeworkEditorOnSaved = null;
 let editingHomeworkId = "";
 let homeworkEditorElements = null;
+const PROFILE_LIST_PREVIEW_LIMIT = 3;
 
 function select(root, selector) {
   return root.querySelector(selector);
@@ -580,7 +581,7 @@ function renderLearningObjectives(
     return;
   }
   state.hidden = true;
-  container.append(...units.map((unit) => createUnitObjectives({
+  const unitCards = units.map((unit) => createUnitObjectives({
     unit,
     units,
     objectiveProgress,
@@ -589,9 +590,32 @@ function renderLearningObjectives(
     lessons,
     student,
     onSaved,
-  })));
+  }));
+  container.append(...unitCards);
   if (independentProgress.length) {
     container.append(createIndependentObjectives(independentProgress, homeworkAssignments));
+  }
+  if (unitCards.length > PROFILE_LIST_PREVIEW_LIMIT) {
+    let expanded = false;
+    const toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = "profile-list-toggle";
+    toggle.dataset.unitsVisibilityToggle = "";
+    const syncVisibility = () => {
+      unitCards.forEach((card, index) => {
+        card.hidden = !expanded && index >= PROFILE_LIST_PREVIEW_LIMIT;
+      });
+      toggle.textContent = expanded
+        ? "Show fewer units"
+        : `Show all units (${unitCards.length})`;
+      toggle.setAttribute("aria-expanded", String(expanded));
+    };
+    toggle.addEventListener("click", () => {
+      expanded = !expanded;
+      syncVisibility();
+    });
+    syncVisibility();
+    container.append(toggle);
   }
 }
 
@@ -760,8 +784,10 @@ function renderAssessmentHistory(root, history, units, lessons) {
     (timestampToDate(second.lessonDate)?.getTime() ?? timestampToDate(second.createdAt)?.getTime() ?? 0) -
     (timestampToDate(first.lessonDate)?.getTime() ?? timestampToDate(first.createdAt)?.getTime() ?? 0),
   );
+  select(root, "[data-assessment-history-toggle]")?.remove();
   list.replaceChildren();
   empty.hidden = sorted.length > 0;
+  const renderedItems = [];
   sorted.forEach((entry) => {
     const item = document.createElement("li");
     const top = document.createElement("div");
@@ -819,8 +845,31 @@ function renderAssessmentHistory(root, history, units, lessons) {
       changes.append(physical);
     }
     item.append(top, changes);
-    list.append(item);
+    renderedItems.push(item);
   });
+  list.append(...renderedItems);
+  if (renderedItems.length > PROFILE_LIST_PREVIEW_LIMIT) {
+    let expanded = false;
+    const toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = "profile-list-toggle";
+    toggle.dataset.assessmentHistoryToggle = "";
+    const syncVisibility = () => {
+      renderedItems.forEach((item, index) => {
+        item.hidden = !expanded && index >= PROFILE_LIST_PREVIEW_LIMIT;
+      });
+      toggle.textContent = expanded
+        ? "Show fewer updates"
+        : `Show all updates (${renderedItems.length})`;
+      toggle.setAttribute("aria-expanded", String(expanded));
+    };
+    toggle.addEventListener("click", () => {
+      expanded = !expanded;
+      syncVisibility();
+    });
+    syncVisibility();
+    list.after(toggle);
+  }
 }
 
 function renderProfile(root, data, onQuickUpdateSaved) {

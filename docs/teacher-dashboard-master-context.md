@@ -835,3 +835,9 @@ Student Quick Update supports two scopes:
 Independent updates do not create placeholder curriculum documents and do not affect Course Journey percentages. They are stored in progress history with `scope: "independent"`, can be edited or deleted, and publish only a safe current-target snapshot to the student document. Feedback remains private until the teacher explicitly publishes it.
 
 See `docs/independent-learning-updates-spec.md`.
+
+---
+
+## 38. Compact Student Profile lists
+
+Admin Student Profile initially shows three Unit Learning Plan unit cards and the three newest Progress Updates. `Show all units` and `Show all updates` expand the corresponding complete list, and each list can be collapsed again. This is presentation-only: all records remain in Firestore and no pagination or deletion is performed.

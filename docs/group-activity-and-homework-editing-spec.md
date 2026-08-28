@@ -25,3 +25,9 @@ Every existing homework row inside `Learning Objectives` has an explicit `Edit` 
 The editor updates the existing `homeworkAssignments/{assignmentId}` document. It preserves student, course, Unit, Lesson and scope links and does not create a progress update, change learning-target status or publish feedback.
 
 Resource URLs are validated by the shared homework domain helper. PDF files remain repository assets under `assets/materials/homework`; binary files are not stored in Firestore.
+
+## Compact student profile lists
+
+- Unit Learning Plan shows the first three unit cards initially and offers `Show all units` when more exist.
+- Progress Updates shows the three newest saved records initially and offers `Show all updates` when more exist.
+- Expanded lists can be collapsed again. These controls affect only presentation; every record remains stored in Firestore.

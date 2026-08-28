@@ -5422,6 +5422,23 @@ th[data-skill="homework"]::before { background-image: url("../assets/images/skil
   justify-content: space-between;
 }
 
+.profile-list-toggle {
+  display: flex;
+  width: max-content;
+  min-height: 2.25rem;
+  margin: 0.75rem auto 0;
+  padding: 0.4rem 0.8rem;
+  border-color: #ccd8c3;
+  color: var(--color-green-dark);
+  background: #f2f6ec;
+  font-size: 0.8rem;
+  font-weight: 750;
+}
+
+.profile-list-toggle:hover {
+  background: #e7efe0;
+}
+
 .progress-update-dialog {
   width: min(44rem, calc(100vw - 2rem));
 }
