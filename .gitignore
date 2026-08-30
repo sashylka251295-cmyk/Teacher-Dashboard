@@ -5,6 +5,11 @@ firebase-debug.log
 firestore-debug.log
 ui-debug.log
 
+# Local environment files may contain credentials.
+.env
+.env.*
+!.env.example
+
 # Never commit server-side Firebase credentials.
 *service-account*.json
 serviceAccountKey.json
