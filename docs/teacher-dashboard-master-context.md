@@ -864,4 +864,4 @@ The Student Portal includes a native `AI Practice` page at `student.html#ai-prac
 
 ## 42. Direct feedback editing
 
-Every Feedback card on the admin Student Profile has an `Edit feedback` action, including legacy or standalone feedback that has no `progressHistoryId`. Saving from this compact editor updates the feedback draft and publishes a new student-visible version while preserving any legacy `nextStep` text not shown in the compact form. Progress updates and homework are not changed by this action.
+Every Feedback card on the admin Student Profile has an `Edit feedback` action, including legacy or standalone feedback that has no `progressHistoryId`. Saving from this compact editor updates the feedback draft and publishes a new student-visible version while preserving any legacy `nextStep` text not shown in the compact form. `Delete feedback` atomically removes the private draft and all linked published versions, so it disappears from both teacher and student views. Editing or deleting feedback does not change progress updates, learning status, physical completion or homework.

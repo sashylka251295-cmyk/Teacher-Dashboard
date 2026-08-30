@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Teacher Dashboard — Student Progress Tracker</title>
     <link rel="stylesheet" href="./css/styles.css?v=20260828-route-decor">
-    <link rel="stylesheet" href="./css/admin.css?v=20260831-feedback-editor">
+    <link rel="stylesheet" href="./css/admin.css?v=20260831-feedback-delete">
   </head>
   <body>
     <main class="teacher-shell" data-protected-content hidden>
@@ -535,11 +535,14 @@
             </div>
             <label for="feedback-record-message">Teacher message <small>(optional)</small></label>
             <textarea id="feedback-record-message" name="feedbackRecordMessage" rows="4"></textarea>
-            <p class="feedback-record-editor__note">Saving publishes a new version. The student will see the updated feedback; previous published versions remain in history.</p>
+            <p class="feedback-record-editor__note">Saving publishes a new version. Delete feedback removes it from both the teacher profile and the student portal without changing learning progress.</p>
             <p data-feedback-record-editor-message role="status" aria-live="polite"></p>
             <footer>
-              <button type="button" data-feedback-record-editor-close>Cancel</button>
-              <button class="button-primary" type="submit" data-feedback-record-editor-save>Update feedback</button>
+              <button class="button-danger" type="button" data-feedback-record-editor-delete>Delete feedback</button>
+              <div>
+                <button type="button" data-feedback-record-editor-close>Cancel</button>
+                <button class="button-primary" type="submit" data-feedback-record-editor-save>Update feedback</button>
+              </div>
             </footer>
           </form>
         </dialog>
@@ -1137,6 +1140,6 @@
     </main>
 
     <p data-page-status role="status" aria-live="polite">Проверка доступа…</p>
-    <script type="module" src="./js/pages/admin-page.js?v=20260831-feedback-editor"></script>
+    <script type="module" src="./js/pages/admin-page.js?v=20260831-feedback-delete"></script>
   </body>
 </html>

@@ -1,5 +1,5 @@
 import { coursesRepository } from "../data/repositories/courses-repository.js";
-import { feedbackDraftsRepository } from "../data/repositories/feedback-drafts-repository.js";
+import { feedbackDraftsRepository } from "../data/repositories/feedback-drafts-repository.js?v=20260831-feedback-delete";
 import { goalsRepository } from "../data/repositories/goals-repository.js";
 import { groupsRepository } from "../data/repositories/groups-repository.js";
 import { homeworkAssignmentsRepository } from "../data/repositories/homework-assignments-repository.js";
@@ -283,6 +283,7 @@ function openFeedbackEditor(feedbackId) {
   feedbackEditorElements.teacherMessage.value = content.message;
   feedbackEditorElements.message.textContent = "";
   feedbackEditorElements.save.disabled = false;
+  feedbackEditorElements.remove.disabled = false;
   showDialog(feedbackEditorElements.dialog);
 }
 
@@ -319,6 +320,31 @@ async function saveFeedback(event) {
   }
 }
 
+async function deleteFeedback() {
+  const feedback = feedbackEditorDrafts.find(({ id }) => id === editingFeedbackId);
+  if (!feedback) return;
+  const confirmed = window.confirm(
+    "Delete this feedback? It will disappear from the student portal. Learning progress and lesson updates will not be changed.",
+  );
+  if (!confirmed) return;
+
+  feedbackEditorElements.save.disabled = true;
+  feedbackEditorElements.remove.disabled = true;
+  feedbackEditorElements.message.textContent = "Deleting feedback…";
+  try {
+    await feedbackDraftsRepository.removeWithPublishedVersions(feedback.id);
+    closeDialog(feedbackEditorElements.dialog);
+    editingFeedbackId = "";
+    await feedbackEditorOnSaved?.("Feedback deleted from the teacher and student profiles.");
+  } catch (error) {
+    console.error("Unable to delete student feedback.", error);
+    feedbackEditorElements.message.textContent = "Unable to delete feedback. Please try again.";
+  } finally {
+    feedbackEditorElements.save.disabled = false;
+    feedbackEditorElements.remove.disabled = false;
+  }
+}
+
 function configureFeedbackEditor(root, feedbackDrafts, onSaved) {
   feedbackEditorDrafts = feedbackDrafts;
   feedbackEditorOnSaved = onSaved;
@@ -335,6 +361,7 @@ function configureFeedbackEditor(root, feedbackDrafts, onSaved) {
     teacherMessage: form.elements.feedbackRecordMessage,
     message: select(root, "[data-feedback-record-editor-message]"),
     save: select(root, "[data-feedback-record-editor-save]"),
+    remove: select(root, "[data-feedback-record-editor-delete]"),
     close: select(root, "[data-feedback-record-editor-close]"),
   };
   if (Object.values(feedbackEditorElements).some((element) => !element)) {
@@ -349,6 +376,7 @@ function configureFeedbackEditor(root, feedbackDrafts, onSaved) {
     editingFeedbackId = "";
     closeDialog(dialog);
   });
+  feedbackEditorElements.remove.addEventListener("click", deleteFeedback);
   form.addEventListener("submit", saveFeedback);
 }
 

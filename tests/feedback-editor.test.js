@@ -16,3 +16,16 @@ test("feedback editor publishes an updated student-visible version", async () =>
   assert.match(source, /feedbackDraftsRepository\.saveDraft\(feedback\.id, content\)/);
   assert.match(source, /feedbackDraftsRepository\.publish\(feedback\.id, content\)/);
 });
+
+test("feedback deletion removes the draft and its student-visible versions", async () => {
+  const html = await readFile(new URL("../admin.html", import.meta.url), "utf8");
+  const profile = await readFile(new URL("../js/admin/student-profile.js", import.meta.url), "utf8");
+  const repository = await readFile(new URL("../js/data/repositories/feedback-drafts-repository.js", import.meta.url), "utf8");
+  const rules = await readFile(new URL("../firestore.rules", import.meta.url), "utf8");
+  assert.match(html, /data-feedback-record-editor-delete>Delete feedback/);
+  assert.match(profile, /removeWithPublishedVersions\(feedback\.id\)/);
+  assert.match(repository, /where\("feedbackId", "==", id\)/);
+  assert.match(repository, /versionsSnapshot\.docs\.forEach\(\(version\) => batch\.delete\(version\.ref\)\)/);
+  assert.match(repository, /batch\.delete\(doc\(firestore, COLLECTIONS\.FEEDBACK_DRAFTS, id\)\)/);
+  assert.match(rules, /match \/feedbackVersions\/\{versionId\}[\s\S]*?allow create, delete: if isAdmin\(\);/);
+});

@@ -1,9 +1,12 @@
 import {
   collection,
   doc,
+  getDocs,
+  query,
   runTransaction,
   serverTimestamp,
   where,
+  writeBatch,
 } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
 import { getFirestoreClient } from "../../core/firebase-client.js";
@@ -91,6 +94,21 @@ export const feedbackDraftsRepository = Object.freeze({
   },
   archive(id) {
     return repository.update(id, { status: "archived", updatedAt: serverTimestamp() });
+  },
+  async removeWithPublishedVersions(id) {
+    const firestore = getFirestoreClient();
+    const versionsSnapshot = await getDocs(query(
+      collection(firestore, COLLECTIONS.FEEDBACK_VERSIONS),
+      where("feedbackId", "==", id),
+    ));
+    if (versionsSnapshot.size > 499) {
+      throw new Error("This feedback has too many published versions to delete safely.");
+    }
+    const batch = writeBatch(firestore);
+    versionsSnapshot.docs.forEach((version) => batch.delete(version.ref));
+    batch.delete(doc(firestore, COLLECTIONS.FEEDBACK_DRAFTS, id));
+    await batch.commit();
+    return { deletedVersions: versionsSnapshot.size };
   },
   async publish(id, content) {
     const firestore = getFirestoreClient();

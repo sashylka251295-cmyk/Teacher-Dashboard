@@ -5867,7 +5867,13 @@ th[data-skill="homework"]::before { background-image: url("../assets/images/skil
 .feedback-record-editor-dialog footer {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
+  gap: 0.55rem;
+}
+
+.feedback-record-editor-dialog footer > div {
+  display: flex;
+  align-items: center;
   gap: 0.55rem;
 }
 
@@ -5918,6 +5924,11 @@ th[data-skill="homework"]::before { background-image: url("../assets/images/skil
   }
 
   .feedback-record-editor-dialog footer {
+    align-items: stretch;
+    flex-direction: column-reverse;
+  }
+
+  .feedback-record-editor-dialog footer > div {
     align-items: stretch;
     flex-direction: column-reverse;
   }
