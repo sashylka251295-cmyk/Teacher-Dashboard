@@ -24,6 +24,8 @@ import { INDEPENDENT_PROGRESS_SCOPE } from "../domain/independent-learning.js";
 import { normalizeHomeworkResources } from "../domain/homework.js";
 import { hasFeedbackContent, normalizeFeedbackContent } from "../domain/feedback.js?v=20260827-profile-hotfix";
 import { isGoalStatus, isNonEmptyText } from "../domain/validation.js";
+import { readingSoundForObjective } from "../domain/reading-sounds.js";
+import { createReadingSoundChip } from "../ui/reading-map.js";
 
 let context = null;
 let elements = null;
@@ -106,6 +108,7 @@ function populateLessons() {
 function createObjectiveRow(objective, progressMap) {
   const row = document.createElement("label");
   const checkbox = document.createElement("input");
+  const identity = document.createElement("span");
   const title = document.createElement("span");
   const current = document.createElement("small");
   const select = document.createElement("select");
@@ -121,7 +124,11 @@ function createObjectiveRow(objective, progressMap) {
   select.value = "";
   select.disabled = true;
   select.dataset.objectiveStatus = objective.id;
-  row.append(checkbox, title, current, select);
+  const soundChip = createReadingSoundChip(readingSoundForObjective(currentUnit(), objective.id));
+  identity.className = "quick-objective-row__identity";
+  if (soundChip) identity.append(soundChip);
+  identity.append(title);
+  row.append(checkbox, identity, current, select);
   return row;
 }
 

@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Learning — Student Progress Tracker</title>
-    <link rel="stylesheet" href="./css/styles.css?v=20260828-route-decor">
-    <link rel="stylesheet" href="./css/student.css?v=20260828-journey-labels">
+    <link rel="stylesheet" href="./css/styles.css?v=20260830-ai-practice">
+    <link rel="stylesheet" href="./css/student.css?v=20260830-ai-practice">
   </head>
   <body data-student-theme="neutral">
     <svg class="student-icon-sprite" aria-hidden="true">
@@ -24,6 +24,7 @@
       <symbol id="student-icon-chevron" viewBox="0 0 24 24"><path d="m7 9 5 5 5-5"/></symbol>
       <symbol id="student-icon-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
       <symbol id="student-icon-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+      <symbol id="student-icon-sparkles" viewBox="0 0 24 24"><path d="m12 3 1.2 3.8L17 8l-3.8 1.2L12 13l-1.2-3.8L7 8l3.8-1.2L12 3ZM18.5 13l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8.8-2.2ZM5.5 13l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7.7-1.8Z"/></symbol>
     </svg>
 
     <main class="student-shell" data-protected-content data-theme="neutral" hidden>
@@ -64,6 +65,8 @@
 
         <nav class="student-nav" aria-label="Student navigation">
           <a href="#progress" data-student-link="progress"><svg aria-hidden="true"><use href="#student-icon-progress"/></svg><span>My Progress</span></a>
+          <a href="#reading" data-student-link="reading" data-student-reading-link hidden><svg aria-hidden="true"><use href="#student-icon-book"/></svg><span>My Reading</span></a>
+          <a href="#ai-practice" data-student-link="ai-practice"><svg aria-hidden="true"><use href="#student-icon-sparkles"/></svg><span>AI Practice</span></a>
           <a href="#my-goals" data-student-unavailable aria-disabled="true"><svg aria-hidden="true"><use href="#student-icon-target"/></svg><span>My Goals</span></a>
           <a href="#feedback" data-student-unavailable aria-disabled="true"><svg aria-hidden="true"><use href="#student-icon-message"/></svg><span>Feedback</span></a>
           <a href="#homework" data-student-link="homework"><svg aria-hidden="true"><use href="#student-icon-clipboard"/></svg><span>Homework</span></a>
@@ -183,6 +186,22 @@
           </section>
         </section>
 
+        <section class="student-page student-ai-practice-page" id="ai-practice" data-student-section="ai-practice" hidden>
+          <div class="student-page-heading ai-practice-heading">
+            <div><p class="student-eyebrow">Personalized practice</p><h2>AI Practice</h2><p>Choose a word or phrase and create a practice task for your level.</p></div>
+            <a class="ai-practice-open" href="https://bot-1788103967-7444-sasha25.bothost.tech" target="_blank" rel="noopener noreferrer">Open AI Practice <span aria-hidden="true">↗</span></a>
+          </div>
+
+          <div class="ai-practice-embed">
+            <iframe
+              src="https://bot-1788103967-7444-sasha25.bothost.tech"
+              title="Word Practice AI"
+              loading="lazy"
+              referrerpolicy="no-referrer"
+            ></iframe>
+          </div>
+        </section>
+
         <section class="student-page student-homework-page" id="homework" data-student-section="homework" hidden>
           <div class="student-page-heading">
             <div><p class="student-eyebrow">Learning habits</p><h2>Homework</h2><p>Open an assignment to see the complete instructions and learning resources.</p></div>
@@ -191,6 +210,19 @@
           <div class="student-empty student-empty--large" data-homework-assignment-empty hidden>
             <strong>No homework has been assigned yet.</strong>
             <span>Your next assignment will appear here.</span>
+          </div>
+        </section>
+
+        <section class="student-page student-reading-page" id="reading" data-student-section="reading" hidden>
+          <div class="student-page-heading student-reading-heading">
+            <div><p class="student-eyebrow">Reading &amp; Sounds</p><h2>My Reading Map</h2><p>See the sounds and letter patterns you are learning. Every card is one real reading target.</p></div>
+            <div class="reading-map-legend" aria-label="Reading status legend"><span data-status="confident">Confident</span><span data-status="developing">Developing</span><span data-status="needs_practice">Needs practice</span><span data-status="not_started">Not started</span></div>
+          </div>
+          <div class="student-reading-summary" data-student-reading-summary></div>
+          <div class="reading-map-units reading-map-units--student" data-student-reading-map></div>
+          <div class="student-empty student-empty--large" data-student-reading-empty hidden>
+            <strong>Your reading map is ready to grow.</strong>
+            <span>Sound cards will appear when your teacher adds them to this course.</span>
           </div>
         </section>
 
@@ -209,6 +241,6 @@
     </main>
 
     <p data-page-status role="status" aria-live="polite">Checking access…</p>
-    <script type="module" src="./js/pages/student-page.js?v=20260828-route-decor"></script>
+    <script type="module" src="./js/pages/student-page.js?v=20260830-ai-practice"></script>
   </body>
 </html>

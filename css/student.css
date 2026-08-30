@@ -24,6 +24,29 @@ body[data-student-theme] {
     var(--student-bg);
 }
 
+/* Student Reading Map */
+.student-reading-page { min-width: 0; }
+.student-reading-heading { align-items: flex-start; }
+.student-reading-summary { margin-top: -0.25rem; }
+.reading-map-units--student { padding-bottom: 1rem; }
+
+.student-shell[data-theme="child"] .student-reading-page {
+  position: relative;
+}
+
+.student-shell[data-theme="child"] .student-reading-page::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: 0;
+  right: 0;
+  width: 10rem;
+  height: 10rem;
+  opacity: 0.2;
+  background: url("../assets/references/teacher-dashboard/child-botanical-corner-top-right.png") top right / contain no-repeat;
+  pointer-events: none;
+}
+
 body[data-student-theme="child"] {
   --student-bg: #f5f8eb;
   --student-sidebar: #e2eedb;
@@ -3163,5 +3186,92 @@ body.student-menu-open {
 @media (min-width: 78.0625rem) {
   .student-home-grid {
     grid-template-columns: minmax(18rem, 1.28fr) minmax(14rem, 0.84fr) minmax(18rem, 1.15fr);
+  }
+}
+
+/* Embedded Word Practice AI */
+.student-ai-practice-page {
+  min-width: 0;
+}
+
+.ai-practice-heading {
+  align-items: flex-end;
+  margin-bottom: 0.8rem;
+}
+
+.ai-practice-heading > div {
+  max-width: 48rem;
+}
+
+.ai-practice-open {
+  display: inline-flex;
+  min-height: var(--app-control-height);
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.48rem 0.8rem;
+  border: 1px solid var(--student-border);
+  border-radius: var(--radius-button);
+  color: var(--student-primary-dark);
+  background: var(--student-panel);
+  font-size: 0.86rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.ai-practice-open:hover {
+  border-color: var(--student-primary);
+  background: var(--student-primary-soft);
+}
+
+.ai-practice-embed {
+  width: 100%;
+  height: clamp(38rem, calc(100dvh - 11rem), 52rem);
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--student-border);
+  border-radius: var(--student-radius);
+  background: var(--student-panel);
+  box-shadow: var(--student-shadow);
+}
+
+.ai-practice-embed iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #fffdf8;
+}
+
+.student-shell[data-theme="child"] .ai-practice-embed {
+  border-color: #d7e4c8;
+  box-shadow: 0 0.7rem 2rem rgb(67 95 56 / 9%);
+}
+
+@media (max-width: 56rem) {
+  .ai-practice-heading {
+    align-items: flex-start;
+  }
+
+  .ai-practice-embed {
+    height: max(42rem, calc(100dvh - 10rem));
+    border-radius: 1rem;
+  }
+}
+
+@media (max-width: 40rem) {
+  .ai-practice-heading {
+    gap: 0.75rem;
+  }
+
+  .ai-practice-open {
+    align-self: flex-start;
+  }
+
+  .ai-practice-embed {
+    width: calc(100% + 1rem);
+    height: max(44rem, calc(100dvh - 8rem));
+    margin-left: -0.5rem;
+    border-radius: 0.85rem;
   }
 }

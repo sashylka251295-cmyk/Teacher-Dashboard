@@ -853,3 +853,9 @@ Admin Student Profile keeps Feedback and Homework in two dedicated adjacent pane
 ## 40. Course Journey decorative layers
 
 The teen/adult Course Journey no longer stretches the complete roadmap PNG to the dimensions of the route canvas. Leaves, books and the finish flag are rendered as separate aspect-ratio-preserving crops of the existing asset, while the route itself remains a live SVG based on physical lesson completion. This prevents decorative books from appearing flattened and keeps 100% completion connected to the finish.
+
+---
+
+## 41. Student Word Practice AI
+
+The Student Portal includes a native `AI Practice` page at `student.html#ai-practice`. For deadline-safe integration it embeds the separately deployed Word Practice AI application in a responsive iframe and provides a new-tab fallback link. Teacher Dashboard does not make cross-origin practice API requests, store AI request history or contain provider credentials. No Firestore rule or schema change is required. See `docs/word-practice-ai-spec.md`.

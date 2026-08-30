@@ -19,6 +19,7 @@ export async function loadLocalImageGallery() {
       students: normalizeEntries(manifest.students),
       courses: normalizeEntries(manifest.courses),
       units: normalizeEntries(manifest.units),
+      readingSounds: normalizeEntries(manifest.readingSounds),
     }))
     .catch((error) => {
       galleryPromise = null;

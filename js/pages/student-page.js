@@ -3,7 +3,7 @@ import { signOutCurrentUser } from "../auth/auth-service.js";
 import { revealProtectedContent, setText } from "../core/dom.js";
 import { PAGE_PATHS, navigateTo } from "../core/navigation.js";
 import { USER_ROLES } from "../domain/constants.js";
-import { initializeStudentView } from "../student/student-view.js?v=20260828-route-decor";
+import { initializeStudentView } from "../student/student-view.js?v=20260830-ai-practice";
 
 try {
   const session = await requireRole(USER_ROLES.STUDENT);

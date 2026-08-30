@@ -34,6 +34,8 @@ import {
 import { renderCourseJourneyMap } from "../ui/course-journey-map.js?v=20260828-route-decor";
 import { normalizeHomeworkResources } from "../domain/homework.js";
 import { isGoalStatus, isNonEmptyText, isStudentStatus } from "../domain/validation.js";
+import { readingSoundForObjective } from "../domain/reading-sounds.js";
+import { createReadingSoundChip } from "../ui/reading-map.js";
 import {
   closeDialog,
   displayValue,
@@ -690,6 +692,10 @@ function createCommonObjectiveRow(objective) {
   checkbox.dataset.groupCommonObjective = objective.id;
   title.textContent = objective.title;
   category.textContent = LANGUAGE_SKILL_LABELS[objective.category] ?? objective.category;
+  const soundChip = createReadingSoundChip(
+    readingSoundForObjective(currentGroupUpdateUnit(), objective.id),
+  );
+  if (soundChip) identity.append(soundChip);
   identity.append(title, category);
   status.append(createOption("", "Set status (optional)"));
   OBJECTIVE_STATUSES.forEach((value) => status.append(

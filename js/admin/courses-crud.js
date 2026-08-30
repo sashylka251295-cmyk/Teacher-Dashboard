@@ -2,6 +2,7 @@ import { coursesRepository } from "../data/repositories/courses-repository.js";
 import { OWN_IT_A2_PROGRAM } from "../data/course-programs/own-it-a2-course.js";
 import { WIDER_WORLD_1_UNIT_4_LESSON_PLAN } from "../data/course-programs/wider-world-1-unit-4-lessons.js";
 import { courseProgramPrivateRepository } from "../data/repositories/course-program-private-repository.js";
+import { loadLocalImageGallery } from "../data/local-image-gallery.js";
 import { lessonsRepository } from "../data/repositories/lessons-repository.js?v=20260827-lesson-targets";
 import { unitsRepository } from "../data/repositories/units-repository.js";
 import {
@@ -36,7 +37,14 @@ import {
   normalizeUnitObjectives,
 } from "../domain/learning-objectives.js";
 import { lessonStopsForUnit } from "../domain/physical-progress.js";
+import {
+  mergeReadingSoundObjectives,
+  normalizeReadingSounds,
+  readingSoundForObjective,
+  readingSoundObjectiveTitle,
+} from "../domain/reading-sounds.js";
 import { isNonEmptyText, isPositiveInteger } from "../domain/validation.js";
+import { createReadingSoundChip, renderReadingMap } from "../ui/reading-map.js";
 import {
   CourseCreationError,
   courseIdForName,
@@ -61,6 +69,9 @@ let unitCourseId = null;
 let unitObjectives = [];
 let unitVocabulary = [];
 let unitResources = [];
+let unitReadingSounds = [];
+let readingSoundGallery = [];
+let unitReadingEnabled = false;
 let lessonVocabulary = [];
 let lessonActivities = [];
 let lessonResources = [];
@@ -139,6 +150,7 @@ async function openCourseForm(courseId = null) {
     textField(elements.courseForm, "generalGoal", course.generalGoal);
     textField(elements.courseForm, "teacherNotes", privateData?.teacherNotes);
     field(elements.courseForm, "active").checked = course.active !== false;
+    field(elements.courseForm, "readingMapEnabled").checked = course.readingMapEnabled === true;
     courseImageField.reset(course);
     elements.courseDelete.disabled = false;
     elements.courseSave.disabled = false;
@@ -195,6 +207,7 @@ async function saveCourse(event) {
     description: field(elements.courseForm, "description").value.trim(),
     generalGoal: field(elements.courseForm, "generalGoal").value.trim(),
     active: field(elements.courseForm, "active").checked,
+    readingMapEnabled: field(elements.courseForm, "readingMapEnabled").checked,
   };
   const teacherNotes = field(elements.courseForm, "teacherNotes").value.trim();
   const courseId = editingCourseId ?? courseIdForName(name);
@@ -537,6 +550,144 @@ function handleObjectiveEditorClick(event) {
   }
 }
 
+function createReadingSoundCard(sound, index) {
+  const card = document.createElement("article");
+  const preview = document.createElement("figure");
+  const previewText = document.createElement("span");
+  const fields = document.createElement("div");
+  const imageSelect = document.createElement("select");
+  const remove = document.createElement("button");
+  const fieldConfig = [
+    ["sound", "Sound or letter pattern", "For example, sh"],
+    ["exampleWord", "Main example word", "For example, ship"],
+    ["exampleWords", "More examples", "shop, fish, brush"],
+    ["learningTarget", "Reading learning target", "Generated automatically if left blank"],
+  ];
+  card.className = "reading-sound-editor-card";
+  card.dataset.readingSoundId = sound.id;
+  preview.className = "reading-sound-editor-card__preview";
+  if (sound.imageUrl) {
+    const image = document.createElement("img");
+    image.src = sound.imageUrl;
+    image.alt = "";
+    image.addEventListener("error", () => {
+      image.remove();
+      previewText.hidden = false;
+    }, { once: true });
+    preview.append(image);
+    previewText.hidden = true;
+  }
+  previewText.textContent = sound.sound || "Aa";
+  preview.append(previewText);
+  fields.className = "reading-sound-editor-card__fields";
+  fieldConfig.forEach(([name, labelText, placeholder]) => {
+    const label = document.createElement("label");
+    const labelCopy = document.createElement("span");
+    const input = document.createElement("input");
+    labelCopy.textContent = labelText;
+    input.type = "text";
+    input.placeholder = placeholder;
+    input.value = name === "exampleWords"
+      ? (sound.exampleWords ?? []).join(", ")
+      : sound[name] ?? "";
+    input.dataset.readingSoundField = name;
+    label.append(labelCopy, input);
+    fields.append(label);
+  });
+  const imageLabel = document.createElement("label");
+  const imageLabelCopy = document.createElement("span");
+  imageLabelCopy.textContent = "Illustration";
+  const blank = document.createElement("option");
+  blank.value = "";
+  blank.textContent = "Letter card — no image";
+  imageSelect.append(blank, ...readingSoundGallery.map((asset) => {
+    const option = document.createElement("option");
+    option.value = asset.path;
+    option.textContent = asset.label;
+    return option;
+  }));
+  if (sound.imagePath && !readingSoundGallery.some(({ path }) => path === sound.imagePath)) {
+    const current = document.createElement("option");
+    current.value = sound.imagePath;
+    current.textContent = "Current gallery image";
+    imageSelect.append(current);
+  }
+  imageSelect.value = sound.imagePath || "";
+  imageSelect.dataset.readingSoundImage = "";
+  imageLabel.append(imageLabelCopy, imageSelect);
+  fields.append(imageLabel);
+  remove.type = "button";
+  remove.className = "reading-sound-editor-card__remove";
+  remove.dataset.removeReadingSound = sound.id;
+  remove.textContent = "Remove";
+  remove.setAttribute("aria-label", `Remove sound ${sound.sound || index + 1}`);
+  card.append(preview, fields, remove);
+  return card;
+}
+
+function renderReadingSoundsEditor() {
+  elements.readingSoundsFieldset.hidden = !unitReadingEnabled;
+  elements.readingSoundsEditor.replaceChildren(
+    ...unitReadingSounds.map(createReadingSoundCard),
+  );
+  elements.readingSoundsEmpty.hidden = unitReadingSounds.length > 0;
+}
+
+function syncReadingSoundsEditor() {
+  unitReadingSounds = [...elements.readingSoundsEditor.querySelectorAll("[data-reading-sound-id]")]
+    .map((card, index) => {
+      const value = (name) => card.querySelector(`[data-reading-sound-field="${name}"]`)?.value.trim() ?? "";
+      const imagePath = card.querySelector("[data-reading-sound-image]")?.value ?? "";
+      const current = unitReadingSounds.find(({ id }) => id === card.dataset.readingSoundId);
+      return {
+        id: card.dataset.readingSoundId,
+        objectiveId: current?.objectiveId || createObjectiveId(),
+        sound: value("sound"),
+        exampleWord: value("exampleWord"),
+        exampleWords: value("exampleWords").split(",").map((word) => word.trim()).filter(Boolean),
+        learningTarget: value("learningTarget"),
+        imagePath,
+        imageUrl: imagePath,
+        order: index + 1,
+      };
+    });
+}
+
+function handleReadingSoundsClick(event) {
+  const target = event.target instanceof Element ? event.target : null;
+  const add = target?.closest("[data-add-reading-sound]");
+  const remove = target?.closest("[data-remove-reading-sound]");
+  if (!add && !remove) return;
+  syncReadingSoundsEditor();
+  if (add) {
+    const id = globalThis.crypto?.randomUUID?.()
+      ?? `reading-sound-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    unitReadingSounds.push({
+      id,
+      objectiveId: createObjectiveId(),
+      sound: "",
+      exampleWord: "",
+      exampleWords: [],
+      learningTarget: "",
+      imagePath: "",
+      imageUrl: "",
+      order: unitReadingSounds.length + 1,
+    });
+    renderReadingSoundsEditor();
+    elements.readingSoundsEditor.querySelector(`[data-reading-sound-id="${id}"] input`)?.focus();
+  } else if (remove) {
+    unitReadingSounds = unitReadingSounds.filter(({ id }) => id !== remove.dataset.removeReadingSound);
+    renderReadingSoundsEditor();
+  }
+}
+
+function handleReadingSoundImageChange(event) {
+  if (!(event.target instanceof HTMLSelectElement)
+    || !event.target.matches("[data-reading-sound-image]")) return;
+  syncReadingSoundsEditor();
+  renderReadingSoundsEditor();
+}
+
 function createVocabularyEditorRow(item, scope) {
   const row = document.createElement("div");
   const text = document.createElement("input");
@@ -800,6 +951,7 @@ async function openCourseDetails(courseId, successMessage = "") {
     setMessage(elements.courseDetailsTeacherNotes, privateData?.teacherNotes || "No private notes added yet.");
     setMessage(elements.courseDetailsActive, course.active === false ? "Inactive" : "Active");
     elements.courseDetailsActive.dataset.status = course.active === false ? "inactive" : "active";
+    elements.courseDetailsReading.hidden = course.readingMapEnabled !== true;
     elements.courseDetailsUnitCount.textContent = String(units.length);
     elements.courseDetailsUnitLabel.textContent = units.length === 1 ? "unit" : "units";
     const fallback = ENTITY_IMAGE_CONFIG[ENTITY_IMAGE_TYPES.COURSE].fallbackUrl;
@@ -832,9 +984,13 @@ async function openUnitForm(courseId, unitId = null, focusSection = "") {
   unitObjectives = [];
   unitVocabulary = [];
   unitResources = [];
+  unitReadingSounds = [];
+  readingSoundGallery = [];
+  unitReadingEnabled = false;
   renderObjectiveEditor();
   renderVocabularyEditor();
   renderResourcesEditor();
+  renderReadingSoundsEditor();
   field(elements.unitForm, "active").checked = true;
   field(elements.unitForm, "status").value = "planned";
   elements.unitFormTitle.textContent = unitId ? "Edit Unit" : "Add Unit";
@@ -845,7 +1001,7 @@ async function openUnitForm(courseId, unitId = null, focusSection = "") {
   showDialog(elements.unitDialog);
 
   try {
-    const [course, units, unit, privateData] = await Promise.all([
+    const [course, units, unit, privateData, gallery] = await Promise.all([
       coursesRepository.getById(courseId),
       unitsRepository.listByCourse(courseId),
       unitId ? unitsRepository.getById(unitId) : Promise.resolve(null),
@@ -856,6 +1012,7 @@ async function openUnitForm(courseId, unitId = null, focusSection = "") {
           null,
         )
         : Promise.resolve(null),
+      optionalProgramData(loadLocalImageGallery(), "reading sound gallery", { readingSounds: [] }),
     ]);
     if (!course) {
       setMessage(elements.unitFormMessage, "Course not found.");
@@ -865,6 +1022,8 @@ async function openUnitForm(courseId, unitId = null, focusSection = "") {
       setMessage(elements.unitFormMessage, "Unit not found.");
       return;
     }
+    unitReadingEnabled = course.readingMapEnabled === true;
+    readingSoundGallery = Array.isArray(gallery?.readingSounds) ? gallery.readingSounds : [];
 
     setMessage(elements.unitCourseName, displayValue(course.name));
     if (unit) {
@@ -901,6 +1060,7 @@ async function openUnitForm(courseId, unitId = null, focusSection = "") {
       ["pronunciation", "functionalLanguage", "recycling", "commonMistakes", "assessmentEvidence"]
         .forEach((name) => textField(elements.unitForm, name, more[name]));
       unitObjectives = normalizeUnitObjectives(unit.objectives);
+      unitReadingSounds = normalizeReadingSounds(unit.readingSounds);
       unitImageField.reset(unit);
     } else {
       const nextOrder = units.reduce(
@@ -915,6 +1075,7 @@ async function openUnitForm(courseId, unitId = null, focusSection = "") {
     renderObjectiveEditor();
     renderVocabularyEditor();
     renderResourcesEditor();
+    renderReadingSoundsEditor();
 
     if (focusSection === "vocabulary") {
       requestAnimationFrame(() => {
@@ -938,6 +1099,7 @@ async function saveUnit(event) {
   const order = Number(field(elements.unitForm, "order").value);
   const estimatedLessons = Number(field(elements.unitForm, "estimatedLessons").value);
   syncObjectiveTitles();
+  syncReadingSoundsEditor();
   syncProgramLists();
 
   if (!isPositiveInteger(number)) {
@@ -960,6 +1122,16 @@ async function saveUnit(event) {
     setMessage(elements.unitFormMessage, "Course is required.");
     return;
   }
+  if (unitReadingSounds.some((sound) => !isNonEmptyText(sound.sound))) {
+    setMessage(elements.unitFormMessage, "Every Reading sound needs a sound or letter pattern.");
+    return;
+  }
+  unitReadingSounds = normalizeReadingSounds(unitReadingSounds.map((sound) => ({
+    ...sound,
+    learningTarget: sound.learningTarget
+      || readingSoundObjectiveTitle(sound.sound, sound.exampleWord),
+  })));
+  unitObjectives = mergeReadingSoundObjectives(unitObjectives, unitReadingSounds);
   if (unitObjectives.some((objective) => !isNonEmptyText(objective.title))) {
     setMessage(elements.unitFormMessage, "Every learning objective needs a description.");
     return;
@@ -1008,12 +1180,14 @@ async function saveUnit(event) {
       url: resource.url.trim(),
       note: resource.note.trim(),
     })),
+    readingSounds: unitReadingSounds,
     objectives: unitObjectives.map((objective, index) => ({
       id: objective.id,
       category: objective.category,
       categories: objective.categories,
       title: objective.title.trim(),
       order: index + 1,
+      ...(objective.readingSoundId ? { readingSoundId: objective.readingSoundId } : {}),
     })),
   };
   const unitId = editingUnitId ?? unitsRepository.createId();
@@ -1331,6 +1505,23 @@ function renderMoreDetails(privateData) {
   elements.unitDetailsMore.closest("details").hidden = entries.length === 0;
 }
 
+function renderUnitReadingSounds(unit, course) {
+  const sounds = normalizeReadingSounds(unit?.readingSounds);
+  const visible = course?.readingMapEnabled === true && sounds.length > 0;
+  elements.unitDetailsReadingSection.hidden = !visible;
+  elements.unitDetailsReadingNav.hidden = !visible;
+  if (!visible) {
+    elements.unitDetailsReadingSounds.replaceChildren();
+    return;
+  }
+  renderReadingMap(elements.unitDetailsReadingSounds, {
+    units: [{ ...unit, readingSounds: sounds }],
+    progressDocuments: [],
+    theme: "adult",
+    groupByUnit: false,
+  });
+}
+
 async function openUnitDetails(courseId, unitId, successMessage = "") {
   elements.unitDetailsState.hidden = false;
   elements.unitDetailsContent.hidden = true;
@@ -1374,6 +1565,7 @@ async function openUnitDetails(courseId, unitId, successMessage = "") {
       elements.unitDetailsCover.src = fallback;
     };
     renderUnitSkillGoals(unit);
+    renderUnitReadingSounds(unit, course);
     renderUnitVocabulary(unit);
     renderLessonList(unit, lessons);
     appendEmptyAwareText(elements.unitDetailsOutcomeTitle, unit.finalOutcome?.title, "No final outcome added yet.");
@@ -1426,13 +1618,18 @@ function renderLessonTargetsEditor(openSkill = "") {
         const label = document.createElement("label");
         const checkbox = document.createElement("input");
         const title = document.createElement("span");
+        const soundChip = createReadingSoundChip(
+          readingSoundForObjective(currentUnitDetails, objective.id),
+        );
         checkbox.type = "checkbox";
         checkbox.value = objective.id;
         checkbox.checked = lessonSelectedTargetIds.has(objective.id);
         checkbox.disabled = !checkbox.checked && selectedCount >= 3;
         checkbox.dataset.lessonTarget = objective.id;
         title.textContent = objective.title;
-        label.append(checkbox, title);
+        label.append(checkbox);
+        if (soundChip) label.append(soundChip);
+        label.append(title);
         return label;
       }));
     } else {
@@ -1995,6 +2192,7 @@ export function initializeCoursesCrud(options) {
     courseDetailsGeneralGoal: dashboard?.querySelector("[data-course-details-general-goal]"),
     courseDetailsTeacherNotes: dashboard?.querySelector("[data-course-details-teacher-notes]"),
     courseDetailsActive: dashboard?.querySelector("[data-course-details-active]"),
+    courseDetailsReading: dashboard?.querySelector("[data-course-details-reading]"),
     courseDetailsCover: dashboard?.querySelector("[data-course-details-cover]"),
     courseDetailsUnitCount: dashboard?.querySelector("[data-course-details-unit-count]"),
     courseDetailsUnitLabel: dashboard?.querySelector("[data-course-details-unit-label]"),
@@ -2015,6 +2213,9 @@ export function initializeCoursesCrud(options) {
     unitObjectives: dashboard?.querySelector("[data-unit-objectives]"),
     unitVocabularyEditor: dashboard?.querySelector("[data-unit-vocabulary-editor]"),
     unitResourcesEditor: dashboard?.querySelector("[data-unit-resources-editor]"),
+    readingSoundsFieldset: dashboard?.querySelector("[data-reading-sounds-fieldset]"),
+    readingSoundsEditor: dashboard?.querySelector("[data-reading-sounds-editor]"),
+    readingSoundsEmpty: dashboard?.querySelector("[data-reading-sounds-empty]"),
     unitDetailsDialog: dashboard?.querySelector("[data-unit-details-dialog]"),
     unitDetailsClose: dashboard?.querySelector("[data-unit-details-close]"),
     unitDetailsBack: dashboard?.querySelector("[data-unit-details-back]"),
@@ -2032,6 +2233,9 @@ export function initializeCoursesCrud(options) {
     unitDetailsMainGoal: dashboard?.querySelector("[data-unit-details-main-goal]"),
     unitDetailsSkillGoals: dashboard?.querySelector("[data-unit-details-skill-goals]"),
     unitDetailsSuccessCriteria: dashboard?.querySelector("[data-unit-details-success-criteria]"),
+    unitDetailsReadingSection: dashboard?.querySelector("[data-unit-details-reading-section]"),
+    unitDetailsReadingSounds: dashboard?.querySelector("[data-unit-details-reading-sounds]"),
+    unitDetailsReadingNav: dashboard?.querySelector("[data-unit-reading-nav]"),
     unitDetailsVocabulary: dashboard?.querySelector("[data-unit-details-vocabulary]"),
     unitDetailsVocabularyEmpty: dashboard?.querySelector("[data-unit-details-vocabulary-empty]"),
     unitVocabularySummary: dashboard?.querySelector("[data-unit-vocabulary-summary]"),
@@ -2121,6 +2325,8 @@ export function initializeCoursesCrud(options) {
     void removeUnit(editingUnitId, unitCourseId, elements.unitDelete, elements.unitFormMessage);
   });
   elements.unitObjectives.addEventListener("click", handleObjectiveEditorClick);
+  elements.unitForm.addEventListener("click", handleReadingSoundsClick);
+  elements.readingSoundsEditor.addEventListener("change", handleReadingSoundImageChange);
   elements.lessonTargetEditor.addEventListener("click", (event) => {
     const target = event.target instanceof Element ? event.target.closest("[data-add-lesson-target]") : null;
     if (target) addLessonTarget(target.dataset.addLessonTarget);

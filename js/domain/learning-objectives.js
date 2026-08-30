@@ -34,16 +34,22 @@ export function normalizeUnitObjectives(objectives) {
         typeof objective.title === "string" &&
         objective.title.trim(),
     )
-    .map((objective, index) => ({
-      id: objective.id.trim(),
-      category: objective.category,
-      categories: [...new Set([
-        objective.category,
-        ...(Array.isArray(objective.categories) ? objective.categories : []),
-      ].filter(isLanguageSkillCategory))],
-      title: objective.title.trim(),
-      order: Number.isFinite(Number(objective.order)) ? Number(objective.order) : index + 1,
-    }))
+    .map((objective, index) => {
+      const normalized = {
+        id: objective.id.trim(),
+        category: objective.category,
+        categories: [...new Set([
+          objective.category,
+          ...(Array.isArray(objective.categories) ? objective.categories : []),
+        ].filter(isLanguageSkillCategory))],
+        title: objective.title.trim(),
+        order: Number.isFinite(Number(objective.order)) ? Number(objective.order) : index + 1,
+      };
+      if (typeof objective.readingSoundId === "string" && objective.readingSoundId.trim()) {
+        normalized.readingSoundId = objective.readingSoundId.trim();
+      }
+      return normalized;
+    })
     .sort((first, second) => first.order - second.order);
 }
 

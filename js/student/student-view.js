@@ -27,11 +27,17 @@ import { normalizeHomeworkResources } from "../domain/homework.js";
 import { applyStudentTheme } from "./student-theme.js";
 import { currentPhysicalUnit, physicalProgress } from "../domain/physical-progress.js";
 import { renderCourseJourneyMap } from "../ui/course-journey-map.js?v=20260828-route-decor";
+import {
+  renderReadingMap,
+  renderReadingMapSummary,
+} from "../ui/reading-map.js";
 
 const DEFAULT_SECTION = "dashboard";
 const PAGE_TITLES = Object.freeze({
   dashboard: "Dashboard",
   progress: "My Progress",
+  reading: "My Reading",
+  "ai-practice": "AI Practice",
   homework: "Homework",
   achievements: "Achievements",
 });
@@ -746,6 +752,27 @@ function renderProgressMatrix(root, units, progressDocuments, homeworkAssignment
   empty.hidden = true;
 }
 
+function renderStudentReadingMap(root, course, units, progressDocuments, theme) {
+  const enabled = course?.readingMapEnabled === true;
+  const link = select(root, "[data-student-reading-link]");
+  const container = select(root, "[data-student-reading-map]");
+  const summary = select(root, "[data-student-reading-summary]");
+  const empty = select(root, "[data-student-reading-empty]");
+  link.hidden = !enabled;
+  if (!enabled) {
+    container.replaceChildren();
+    summary.replaceChildren();
+    empty.hidden = true;
+    return;
+  }
+  const map = renderReadingMap(container, { units, progressDocuments, theme });
+  renderReadingMapSummary(summary, map);
+  const hasSounds = map.length > 0;
+  container.hidden = !hasSounds;
+  summary.hidden = !hasSounds;
+  empty.hidden = hasSounds;
+}
+
 function renderStudent(root, data) {
   const { student, course, units, objectiveProgress, homeworkAssignments, goals, achievements, feedbackVersions } = data;
   const name = displayValue(student.name, "Student");
@@ -810,6 +837,7 @@ function renderStudent(root, data) {
   renderHomeworkPage(root, homeworkAssignments, units);
   renderUnits(root, units, homeworkAssignments, student);
   renderProgressMatrix(root, units, objectiveProgress, homeworkAssignments, student, theme);
+  renderStudentReadingMap(root, course, units, objectiveProgress, theme);
   renderAchievements(root, achievements);
   renderFeedback(root, feedbackVersions);
 }

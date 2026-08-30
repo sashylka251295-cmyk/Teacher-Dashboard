@@ -14,6 +14,8 @@ import {
 import { isIndependentProgressEntry } from "../domain/independent-learning.js";
 import { latestLessonCompletion } from "../domain/progress-revisions.js";
 import { hasFeedbackContent, normalizeFeedbackContent } from "../domain/feedback.js?v=20260827-profile-hotfix";
+import { readingSoundForObjective } from "../domain/reading-sounds.js";
+import { createReadingSoundChip } from "../ui/reading-map.js";
 
 let context = null;
 let currentEntry = null;
@@ -123,6 +125,8 @@ function createObjectiveRow(objective, entryChange, workedOnIds) {
   checkbox.dataset.progressObjectiveEnabled = objective.id;
   title.textContent = objective.title;
   category.textContent = LANGUAGE_SKILL_LABELS[objective.category] ?? "Learning target";
+  const soundChip = createReadingSoundChip(readingSoundForObjective(selectedUnit(), objective.id));
+  if (soundChip) copy.append(soundChip);
   copy.append(title, category);
   select.append(createOption("", "No status — worked on only"));
   OBJECTIVE_STATUSES.forEach((status) => select.append(

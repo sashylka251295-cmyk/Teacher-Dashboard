@@ -18,6 +18,7 @@ export async function createCourseRecord({
   description = "",
   generalGoal = "",
   active = true,
+  readingMapEnabled = false,
   coverImagePath = "",
   coverImageUrl = "",
 }) {
@@ -48,6 +49,7 @@ export async function createCourseRecord({
     description: typeof description === "string" ? description.trim() : "",
     generalGoal: typeof generalGoal === "string" ? generalGoal.trim() : "",
     active: active !== false,
+    readingMapEnabled: readingMapEnabled === true,
     coverImagePath: typeof coverImagePath === "string" ? coverImagePath : "",
     coverImageUrl: typeof coverImageUrl === "string" ? coverImageUrl : "",
   };

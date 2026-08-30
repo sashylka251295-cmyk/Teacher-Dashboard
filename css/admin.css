@@ -8,6 +8,73 @@
   min-height: 100vh;
 }
 
+/* Reading & Sounds course editor */
+.course-reading-toggle {
+  grid-column: 1 / -1;
+  display: flex !important;
+  align-items: flex-start;
+  gap: 0.7rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid #d9d1bf;
+  border-radius: 0.85rem;
+  background: #f4f6ed;
+}
+
+.course-reading-toggle > span { display: grid; gap: 0.15rem; }
+.course-reading-toggle small { color: #6f7b72; font-weight: 500; }
+
+.reading-sounds-editor { border-color: #ccd8bd; background: #fbfcf7; }
+.reading-sounds-editor__intro { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.reading-sounds-editor__intro p { margin: 0.2rem 0 0; color: #718078; }
+.reading-sounds-editor__list { display: grid; gap: 0.75rem; margin-top: 0.8rem; }
+.reading-sounds-editor__empty { margin: 0.75rem 0 0; color: #748078; }
+
+.reading-sound-editor-card {
+  display: grid;
+  grid-template-columns: 6rem minmax(0, 1fr) auto;
+  gap: 0.8rem;
+  align-items: start;
+  padding: 0.8rem;
+  border: 1px solid #dfd6c4;
+  border-radius: 0.9rem;
+  background: #fffdf9;
+}
+
+.reading-sound-editor-card__preview {
+  position: relative;
+  width: 6rem;
+  aspect-ratio: 1;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid #d8cfbb;
+  border-radius: 0.8rem;
+  background: linear-gradient(145deg, #f8f1dd, #e6eee0);
+}
+
+.reading-sound-editor-card__preview img { width: 100%; height: 100%; object-fit: cover; }
+.reading-sound-editor-card__preview span { position: absolute; inset: 0; display: grid; place-items: center; color: #345b40; font-family: var(--font-heading); font-size: 2rem; font-weight: 800; }
+.reading-sound-editor-card__fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.65rem; }
+.reading-sound-editor-card__fields label { display: grid; gap: 0.25rem; }
+.reading-sound-editor-card__fields label > span { color: #58695c; font-size: 0.72rem; font-weight: 750; }
+.reading-sound-editor-card__remove { color: #a94b3d; background: #fbefeb; }
+.unit-reading-sounds { padding: 0.9rem; border: 1px solid #ddd3bf; border-radius: 1rem; background: #faf8f1; }
+.reading-map-grid--teacher .reading-sound-card__status { display: none; }
+.reading-map-private-note { align-self: flex-start; padding: 0.28rem 0.55rem; border-radius: 999px; color: #5a6a5d; background: #eef2e8; font-size: 0.7rem; }
+
+.quick-objective-row__identity { display: flex; min-width: 0; align-items: center; gap: 0.45rem; }
+.quick-objective-row__identity > span:last-child { overflow-wrap: anywhere; }
+.quick-objective-row .reading-sound-chip { flex: none; justify-self: start; }
+.group-common-objective-row .reading-sound-chip,
+.progress-update-objective .reading-sound-chip { margin-right: 0.35rem; vertical-align: middle; }
+
+@media (max-width: 760px) {
+  .reading-sounds-editor__intro { align-items: stretch; flex-direction: column; }
+  .reading-sound-editor-card { grid-template-columns: 4.5rem minmax(0, 1fr); }
+  .reading-sound-editor-card__preview { width: 4.5rem; }
+  .reading-sound-editor-card__fields { grid-template-columns: 1fr; }
+  .reading-sound-editor-card__remove { grid-column: 1 / -1; }
+}
+
 .teacher-header {
   grid-area: header;
   display: flex;

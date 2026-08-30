@@ -266,6 +266,12 @@
               <p class="legacy-progress-note" data-legacy-progress-note hidden>Legacy percentage records are preserved for migration and are not included in these statuses.</p>
             </section>
 
+            <section class="content-panel profile-reading-map" data-profile-reading-map-section aria-labelledby="profile-reading-map-heading" hidden>
+              <div class="panel-heading"><div><p class="eyebrow">Reading progress</p><h3 id="profile-reading-map-heading">Reading Map</h3><p>Sounds and letter patterns from this student's course.</p></div><span class="reading-map-private-note">Uses learning target statuses</span></div>
+              <div class="reading-map-summary" data-profile-reading-map-summary></div>
+              <div class="reading-map-units" data-profile-reading-map></div>
+            </section>
+
             <div class="profile-records-grid">
               <section class="content-panel profile-records-panel" aria-labelledby="profile-feedback-heading">
                 <div class="panel-heading"><div><p class="eyebrow">Student communication</p><h3 id="profile-feedback-heading">Feedback</h3></div></div>
@@ -809,6 +815,11 @@
             Active
           </label>
 
+          <label class="course-reading-toggle" for="course-reading-map-enabled">
+            <input id="course-reading-map-enabled" name="readingMapEnabled" type="checkbox">
+            <span><strong>Enable Reading &amp; Sounds</strong><small>Add a visual phonics map only for courses that need it.</small></span>
+          </label>
+
           <label class="form-field-wide" for="course-description">Description</label>
           <textarea class="form-field-wide" id="course-description" name="description" rows="3"></textarea>
 
@@ -852,7 +863,7 @@
               <p class="eyebrow">Course details</p>
               <h2 id="course-details-heading" data-course-details-name>Course details</h2>
               <p class="course-details-edition" data-course-details-edition></p>
-              <div class="course-details-badges"><span data-course-details-level></span><span data-course-details-age></span><span data-course-details-starting-point></span><span data-course-details-frequency hidden></span><span data-course-details-active></span></div>
+              <div class="course-details-badges"><span data-course-details-level></span><span data-course-details-age></span><span data-course-details-starting-point></span><span data-course-details-frequency hidden></span><span data-course-details-reading hidden>Reading &amp; Sounds</span><span data-course-details-active></span></div>
               <p class="course-details-count"><span aria-hidden="true">▣</span> <strong data-course-details-unit-count>0</strong> <span data-course-details-unit-label>units</span></p>
             </div>
             <button type="button" data-course-details-edit>✎ Edit Course</button>
@@ -969,6 +980,16 @@
             </div>
           </section>
 
+          <fieldset class="unit-program-fields form-field-wide reading-sounds-editor" data-reading-sounds-fieldset hidden>
+            <legend>Reading &amp; Sounds</legend>
+            <div class="reading-sounds-editor__intro">
+              <div><strong>Build this Unit's phonics map</strong><p>Each sound creates a real Reading learning target that can be assessed in Quick Update.</p></div>
+              <button type="button" data-add-reading-sound>+ Add sound</button>
+            </div>
+            <div class="reading-sounds-editor__list" data-reading-sounds-editor></div>
+            <p class="reading-sounds-editor__empty" data-reading-sounds-empty>No sounds yet. Add only the sounds taught in this Unit.</p>
+          </fieldset>
+
           <fieldset class="unit-objectives-editor">
             <legend>Learning objectives</legend>
             <p>Add only the objectives taught in this unit. Writing appears only in units where you add Writing objectives.</p>
@@ -998,6 +1019,7 @@
           <nav class="unit-section-navigation" aria-label="Unit sections">
             <button type="button" data-unit-section-target="unit-overview">Overview</button>
             <button type="button" data-unit-section-target="unit-lessons">Lessons</button>
+            <button type="button" data-unit-section-target="unit-reading-sounds" data-unit-reading-nav hidden>Reading &amp; Sounds</button>
             <button type="button" data-unit-section-target="unit-resources">Resources</button>
           </nav>
           <section class="unit-overview" id="unit-overview">
@@ -1008,6 +1030,10 @@
             </div>
             <h4 class="unit-overview__skills-heading">Goals by skills</h4>
             <div class="unit-skill-goal-grid" data-unit-details-skill-goals></div>
+          </section>
+          <section class="unit-reading-sounds" id="unit-reading-sounds" data-unit-details-reading-section hidden>
+            <div class="section-heading-inline"><div><p class="eyebrow">Reading &amp; Sounds</p><h3>Phonics map</h3><p>Visual sound cards linked to Reading learning targets.</p></div></div>
+            <div class="reading-map-grid reading-map-grid--teacher" data-unit-details-reading-sounds></div>
           </section>
           <section class="unit-lessons-section" id="unit-lessons"><div class="section-heading-inline"><div><p class="eyebrow">Programme</p><h3>Lessons</h3></div><button type="button" data-add-lesson>+ Add Lesson</button></div><p data-unit-details-lessons-empty>No lessons planned yet.</p><div class="unit-lesson-list" data-unit-details-lesson-list></div></section>
           <section class="unit-vocabulary-section" id="unit-vocabulary" hidden>

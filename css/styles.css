@@ -953,6 +953,239 @@ tbody tr:last-child td {
   background: #637988;
 }
 
+/* Reading & Sounds — shared teacher/student map */
+.reading-map-units {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.reading-map-unit {
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid #dfd5c0;
+  border-radius: 1rem;
+  background:
+    radial-gradient(circle at 96% 5%, rgb(207 220 189 / 34%) 0 2.8rem, transparent 2.9rem),
+    #fffdf8;
+  box-shadow: 0 0.35rem 1rem rgb(60 75 50 / 6%);
+}
+
+.reading-map-unit > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.reading-map-unit > header h3 {
+  margin: 0;
+  color: var(--color-green-dark);
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+}
+
+.reading-map-unit > header span {
+  flex: none;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  color: #58705a;
+  background: #edf2e7;
+  font-size: 0.73rem;
+  font-weight: 750;
+}
+
+.reading-map-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 12.5rem), 1fr));
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.reading-sound-card {
+  --reading-status: #9ba49a;
+  position: relative;
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  gap: 0.65rem 0.8rem;
+  min-width: 0;
+  padding: 0.7rem;
+  overflow: hidden;
+  border: 1px solid #e2d8c5;
+  border-top: 0.22rem solid var(--reading-status);
+  border-radius: 0.9rem;
+  background: rgb(255 254 250 / 95%);
+  box-shadow: 0 0.18rem 0.55rem rgb(60 75 50 / 5%);
+}
+
+.reading-sound-card[data-status="confident"] { --reading-status: #648b65; }
+.reading-sound-card[data-status="developing"] { --reading-status: #9aaf7d; }
+.reading-sound-card[data-status="needs_practice"] { --reading-status: #c89b45; }
+.reading-sound-card[data-status="not_started"] { --reading-status: #b9b9ac; }
+
+.reading-sound-card__visual {
+  position: relative;
+  grid-row: 1 / span 2;
+  width: 4.5rem;
+  height: 4.5rem;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid #ded3bc;
+  border-radius: 0.8rem;
+  background: linear-gradient(145deg, #f7f1df, #e8efe1);
+}
+
+.reading-sound-card__visual img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.reading-sound-card__grapheme {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #36553f;
+  font-family: var(--font-heading);
+  font-size: 1.65rem;
+  font-weight: 800;
+}
+
+.reading-sound-card__copy {
+  display: grid;
+  align-content: start;
+  min-width: 0;
+}
+
+.reading-sound-card__copy > strong {
+  color: #244032;
+  font-family: var(--font-heading);
+  font-size: 1.2rem;
+  line-height: 1.05;
+}
+
+.reading-sound-card__copy p,
+.reading-sound-card__copy small {
+  margin: 0.12rem 0 0;
+  overflow-wrap: anywhere;
+}
+
+.reading-sound-card__copy p {
+  color: #405449;
+  font-weight: 750;
+}
+
+.reading-sound-card__copy small {
+  color: #758078;
+  font-size: 0.7rem;
+}
+
+.reading-sound-card__target {
+  display: -webkit-box;
+  margin-top: 0.35rem !important;
+  overflow: hidden;
+  line-height: 1.3;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.reading-sound-card__status {
+  grid-column: 2;
+  justify-self: start;
+  padding: 0.22rem 0.48rem;
+  border-radius: 999px;
+  color: #4c5b50;
+  background: #eff0eb;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.reading-sound-card__status[data-status="confident"] { color: #315f3d; background: #dfedda; }
+.reading-sound-card__status[data-status="developing"] { color: #4e633c; background: #e8efdc; }
+.reading-sound-card__status[data-status="needs_practice"] { color: #795918; background: #f8e9c5; }
+
+.reading-map-summary,
+.student-reading-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-bottom: 0.9rem;
+}
+
+.reading-map-summary > span,
+.student-reading-summary > span {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid #ded6c6;
+  border-radius: 0.7rem;
+  background: #fffdf8;
+}
+
+.reading-map-summary strong,
+.student-reading-summary strong { color: #31583c; font-size: 1rem; }
+.reading-map-summary small,
+.student-reading-summary small { color: #707b72; font-size: 0.72rem; }
+
+.reading-sound-chip {
+  display: inline-flex;
+  min-width: 2.1rem;
+  height: 2.1rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  padding: 0.18rem 0.38rem;
+  overflow: hidden;
+  border: 1px solid #d9cfb9;
+  border-radius: 0.55rem;
+  color: #31583c;
+  background: #f5f1e5;
+  line-height: 1;
+}
+
+.reading-sound-chip img { width: 1.5rem; height: 1.5rem; border-radius: 0.35rem; object-fit: cover; }
+.reading-sound-chip strong { font-family: var(--font-heading); font-size: 0.88rem; }
+
+.reading-map-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.4rem;
+}
+
+.reading-map-legend span {
+  padding: 0.3rem 0.52rem;
+  border-radius: 999px;
+  color: #58655b;
+  background: #eceee8;
+  font-size: 0.7rem;
+  font-weight: 750;
+}
+
+.reading-map-legend span[data-status="confident"] { background: #dfedda; }
+.reading-map-legend span[data-status="developing"] { background: #e8efdc; }
+.reading-map-legend span[data-status="needs_practice"] { background: #f8e9c5; }
+
+[data-reading-theme="child"] .reading-map-unit {
+  background:
+    radial-gradient(circle at 97% 5%, rgb(218 231 170 / 42%) 0 3.2rem, transparent 3.3rem),
+    linear-gradient(150deg, #fffdf5, #fbf7e9);
+}
+
+[data-reading-theme="child"] .reading-sound-card:nth-child(3n + 2) {
+  transform: rotate(0.35deg);
+}
+
+@media (max-width: 700px) {
+  .reading-map-unit { padding: 0.75rem; }
+  .reading-map-grid { grid-template-columns: 1fr; }
+  .reading-map-legend { justify-content: flex-start; }
+}
+
 .course-journey-map[data-journey-theme="adult"] .course-journey-map__callout::after {
   border-top-color: #637988;
 }

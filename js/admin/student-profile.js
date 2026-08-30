@@ -34,6 +34,10 @@ import {
   unitPhysicalProgressFromHistory,
 } from "../domain/progress-display.js?v=20260827-profile-hotfix";
 import { renderCourseJourneyMap } from "../ui/course-journey-map.js?v=20260828-route-decor";
+import {
+  renderReadingMap,
+  renderReadingMapSummary,
+} from "../ui/reading-map.js";
 import { configureQuickUpdate } from "./quick-update.js?v=20260827-homework-details";
 import { configureProgressUpdateEditor } from "./progress-update-editor.js?v=20260827-profile-hotfix";
 import { configureStudentAccess } from "./student-access.js";
@@ -735,6 +739,26 @@ function renderSummary(root, units, objectiveProgress) {
   setText(root, "[data-profile-strongest-area]", strongest ? `${LANGUAGE_SKILL_LABELS[strongest.category]} — ${OBJECTIVE_STATUS_LABELS[strongest.status]}` : "—");
 }
 
+function renderProfileReadingMap(root, course, units, objectiveProgress, student) {
+  const section = select(root, "[data-profile-reading-map-section]");
+  const container = select(root, "[data-profile-reading-map]");
+  const summary = select(root, "[data-profile-reading-map-summary]");
+  if (course?.readingMapEnabled !== true) {
+    section.hidden = true;
+    container.replaceChildren();
+    summary.replaceChildren();
+    return;
+  }
+  const map = renderReadingMap(container, {
+    units,
+    progressDocuments: objectiveProgress,
+    theme: student?.visualTheme === "child" ? "child" : "adult",
+  });
+  section.hidden = map.length === 0;
+  if (map.length) renderReadingMapSummary(summary, map);
+  else summary.replaceChildren();
+}
+
 function renderCurrentGoal(root, goals) {
   const currentGoal = goals.find((goal) => ACTIVE_GOAL_STATUSES.includes(goal.status));
   const empty = select(root, "[data-current-goal-empty]");
@@ -1001,6 +1025,13 @@ function renderProfile(root, data, onQuickUpdateSaved) {
     onQuickUpdateSaved,
   ), warnings);
   renderProfilePart("learning summary", () => renderSummary(root, units, objectiveProgress), warnings);
+  renderProfilePart("reading map", () => renderProfileReadingMap(
+    root,
+    course,
+    units,
+    objectiveProgress,
+    student,
+  ), warnings);
   renderProfilePart("current goal", () => renderCurrentGoal(root, goals), warnings);
   renderProfilePart("feedback records", () => renderProfileFeedback(root, feedbackDrafts, units, lessons), warnings);
   renderProfilePart("homework records", () => renderProfileHomework(root, homeworkAssignments, units), warnings);
