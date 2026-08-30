@@ -27,6 +27,11 @@ import {
   strongestObjectiveCategory,
 } from "../domain/learning-objectives.js";
 import { normalizeHomeworkResources } from "../domain/homework.js";
+import {
+  hasFeedbackContent,
+  mergeFeedbackContent,
+  normalizeFeedbackContent,
+} from "../domain/feedback.js?v=20260831-feedback-editor";
 import { isIndependentProgressEntry } from "../domain/independent-learning.js";
 import { lessonStopsForUnit } from "../domain/physical-progress.js";
 import {
@@ -48,6 +53,10 @@ let homeworkEditorAssignments = [];
 let homeworkEditorOnSaved = null;
 let editingHomeworkId = "";
 let homeworkEditorElements = null;
+let feedbackEditorDrafts = [];
+let feedbackEditorOnSaved = null;
+let editingFeedbackId = "";
+let feedbackEditorElements = null;
 const PROFILE_LIST_PREVIEW_LIMIT = 3;
 
 function select(root, selector) {
@@ -243,13 +252,13 @@ function renderProfileFeedback(root, feedbackDrafts, units, lessons) {
     card.append(heading);
     if (meta.textContent) card.append(meta);
     card.append(excerpt);
-    if (feedback.progressHistoryId) {
-      const edit = document.createElement("button");
-      edit.type = "button";
-      edit.dataset.editProgressUpdate = feedback.progressHistoryId;
-      edit.textContent = "Edit feedback";
-      card.append(edit);
-    }
+    const actions = document.createElement("footer");
+    const edit = document.createElement("button");
+    edit.type = "button";
+    edit.dataset.editFeedback = feedback.id;
+    edit.textContent = "Edit feedback";
+    actions.append(edit);
+    card.append(actions);
     return card;
   });
   container.replaceChildren(...cards);
@@ -258,6 +267,89 @@ function renderProfileFeedback(root, feedbackDrafts, units, lessons) {
     allLabel: "Show all feedback",
     fewerLabel: "Show less feedback",
   });
+}
+
+function openFeedbackEditor(feedbackId) {
+  const feedback = feedbackEditorDrafts.find(({ id }) => id === feedbackId);
+  if (!feedback || !feedbackEditorElements) return;
+  const content = normalizeFeedbackContent(feedback.content);
+  editingFeedbackId = feedback.id;
+  feedbackEditorElements.form.reset();
+  feedbackEditorElements.context.textContent = feedback.status === "published"
+    ? `Published feedback · version ${feedback.latestVersionNumber || 1}`
+    : "Draft feedback · not visible to the student yet";
+  feedbackEditorElements.wentWell.value = content.whatWentWell;
+  feedbackEditorElements.nextFocus.value = content.whatToPractise;
+  feedbackEditorElements.teacherMessage.value = content.message;
+  feedbackEditorElements.message.textContent = "";
+  feedbackEditorElements.save.disabled = false;
+  showDialog(feedbackEditorElements.dialog);
+}
+
+async function saveFeedback(event) {
+  event.preventDefault();
+  const feedback = feedbackEditorDrafts.find(({ id }) => id === editingFeedbackId);
+  if (!feedback) return;
+  const content = mergeFeedbackContent(feedback.content, {
+    whatWentWell: feedbackEditorElements.wentWell.value,
+    whatToPractise: feedbackEditorElements.nextFocus.value,
+    message: feedbackEditorElements.teacherMessage.value,
+  });
+  if (!hasFeedbackContent(content)) {
+    feedbackEditorElements.message.textContent = "Add at least one feedback section.";
+    return;
+  }
+
+  feedbackEditorElements.save.disabled = true;
+  feedbackEditorElements.message.textContent = "Updating student feedback…";
+  try {
+    await feedbackDraftsRepository.saveDraft(feedback.id, content);
+    const result = await feedbackDraftsRepository.publish(feedback.id, content);
+    feedback.content = content;
+    feedback.status = "published";
+    feedback.latestVersionNumber = result.versionNumber;
+    closeDialog(feedbackEditorElements.dialog);
+    editingFeedbackId = "";
+    await feedbackEditorOnSaved?.("Feedback updated and published to the student.");
+  } catch (error) {
+    console.error("Unable to update student feedback.", error);
+    feedbackEditorElements.message.textContent = "Unable to update feedback. Please try again.";
+  } finally {
+    feedbackEditorElements.save.disabled = false;
+  }
+}
+
+function configureFeedbackEditor(root, feedbackDrafts, onSaved) {
+  feedbackEditorDrafts = feedbackDrafts;
+  feedbackEditorOnSaved = onSaved;
+  if (feedbackEditorElements) return;
+  const dialog = select(root, "[data-feedback-record-editor-dialog]");
+  const form = select(root, "[data-feedback-record-editor-form]");
+  if (!dialog || !form) throw new Error("Feedback editor markup is unavailable.");
+  feedbackEditorElements = {
+    dialog,
+    form,
+    context: select(root, "[data-feedback-record-editor-context]"),
+    wentWell: form.elements.feedbackRecordWentWell,
+    nextFocus: form.elements.feedbackRecordNextFocus,
+    teacherMessage: form.elements.feedbackRecordMessage,
+    message: select(root, "[data-feedback-record-editor-message]"),
+    save: select(root, "[data-feedback-record-editor-save]"),
+    close: select(root, "[data-feedback-record-editor-close]"),
+  };
+  if (Object.values(feedbackEditorElements).some((element) => !element)) {
+    feedbackEditorElements = null;
+    throw new Error("Feedback editor controls are unavailable.");
+  }
+  root.addEventListener("click", (event) => {
+    const edit = event.target instanceof Element ? event.target.closest("[data-edit-feedback]") : null;
+    if (edit) openFeedbackEditor(edit.dataset.editFeedback);
+  });
+  feedbackEditorElements.close.addEventListener("click", () => {
+    editingFeedbackId = "";
+    closeDialog(dialog);
+  });
+  form.addEventListener("submit", saveFeedback);
 }
 
 function renderProfileHomework(root, assignments, units) {
@@ -1039,6 +1131,8 @@ function renderProfile(root, data, onQuickUpdateSaved) {
     renderAssessmentHistory(root, progressHistory, units, lessons), warnings);
   configureProfileFeature("homework editor", () =>
     configureHomeworkEditor(root, homeworkAssignments, onQuickUpdateSaved));
+  configureProfileFeature("feedback editor", () =>
+    configureFeedbackEditor(root, feedbackDrafts, onQuickUpdateSaved));
   select(root, "[data-legacy-progress-note]").hidden = legacyProgress.length === 0;
   configureProfileFeature("Quick Update", () =>
     configureQuickUpdate({ ...data, onSaved: onQuickUpdateSaved }));

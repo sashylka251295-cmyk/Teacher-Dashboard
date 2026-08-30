@@ -35,3 +35,13 @@ export function hasFeedbackContent(content) {
   const normalized = normalizeFeedbackContent(content);
   return FEEDBACK_SECTIONS.some((section) => normalized[section].length > 0);
 }
+
+export function mergeFeedbackContent(currentContent, updates) {
+  const current = normalizeFeedbackContent(currentContent);
+  return normalizeFeedbackContent(Object.fromEntries(
+    FEEDBACK_SECTIONS.map((section) => [
+      section,
+      typeof updates?.[section] === "string" ? updates[section] : current[section],
+    ]),
+  ));
+}

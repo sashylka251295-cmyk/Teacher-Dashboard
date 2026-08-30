@@ -1,6 +1,6 @@
 import { requireRole } from "../auth/route-guards.js";
 import { signOutCurrentUser } from "../auth/auth-service.js";
-import { initializeAdminDashboard } from "../admin/admin-dashboard.js?v=20260828-route-decor";
+import { initializeAdminDashboard } from "../admin/admin-dashboard.js?v=20260831-feedback-editor";
 import { revealProtectedContent, setText } from "../core/dom.js";
 import { PAGE_PATHS, navigateTo } from "../core/navigation.js";
 import { USER_ROLES } from "../domain/constants.js";

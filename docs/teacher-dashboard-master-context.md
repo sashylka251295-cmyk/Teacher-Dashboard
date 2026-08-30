@@ -859,3 +859,9 @@ The teen/adult Course Journey no longer stretches the complete roadmap PNG to th
 ## 41. Student Word Practice AI
 
 The Student Portal includes a native `AI Practice` page at `student.html#ai-practice`. For deadline-safe integration it embeds the separately deployed Word Practice AI application in a responsive iframe and provides a new-tab fallback link. Teacher Dashboard does not make cross-origin practice API requests, store AI request history or contain provider credentials. No Firestore rule or schema change is required. See `docs/word-practice-ai-spec.md`.
+
+---
+
+## 42. Direct feedback editing
+
+Every Feedback card on the admin Student Profile has an `Edit feedback` action, including legacy or standalone feedback that has no `progressHistoryId`. Saving from this compact editor updates the feedback draft and publishes a new student-visible version while preserving any legacy `nextStep` text not shown in the compact form. Progress updates and homework are not changed by this action.

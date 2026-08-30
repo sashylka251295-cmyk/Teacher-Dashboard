@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   hasFeedbackContent,
   isFeedbackContentComplete,
+  mergeFeedbackContent,
   normalizeFeedbackContent,
 } from "../js/domain/feedback.js";
 import { TemplateFeedbackGenerator } from "../js/feedback/feedback-generator.js";
@@ -21,6 +22,24 @@ test("a lightweight lesson feedback can contain any student-facing section", () 
   assert.equal(hasFeedbackContent({ message: "Great effort today" }), true);
   assert.equal(hasFeedbackContent({ whatToPractise: "Question forms" }), true);
   assert.equal(hasFeedbackContent({}), false);
+});
+
+test("editing visible feedback preserves legacy sections that are not in the compact editor", () => {
+  assert.deepEqual(mergeFeedbackContent({
+    message: "Original message",
+    whatWentWell: "Clear speaking",
+    whatToPractise: "Longer answers",
+    nextStep: "Try the next dialogue",
+  }, {
+    message: "Updated message",
+    whatWentWell: "Confident speaking",
+    whatToPractise: "",
+  }), {
+    message: "Updated message",
+    whatWentWell: "Confident speaking",
+    whatToPractise: "",
+    nextStep: "Try the next dialogue",
+  });
 });
 
 test("template generator does not copy private observation text", async () => {

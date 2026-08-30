@@ -5825,6 +5825,58 @@ th[data-skill="homework"]::before { background-image: url("../assets/images/skil
   font-size: 0.8rem;
 }
 
+.feedback-record-editor-dialog {
+  width: min(42rem, calc(100vw - 2rem));
+}
+
+.feedback-record-editor-dialog > form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.8rem;
+  padding: clamp(1rem, 2vw, 1.5rem);
+}
+
+.feedback-record-editor-dialog header > * {
+  margin: 0;
+}
+
+.feedback-record-editor-dialog header > p:last-child,
+.feedback-record-editor__note,
+[data-feedback-record-editor-message] {
+  color: var(--muted, #6e786f);
+  font-size: 0.8rem;
+}
+
+.feedback-record-editor-dialog > form > label {
+  display: grid;
+  gap: 0.35rem;
+  font-weight: 700;
+}
+
+.feedback-record-editor-dialog textarea {
+  width: 100%;
+  resize: vertical;
+}
+
+.feedback-record-editor__note,
+[data-feedback-record-editor-message] {
+  min-height: 1.2rem;
+  margin: 0;
+}
+
+.feedback-record-editor-dialog footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.55rem;
+}
+
+.feedback-record-editor-dialog footer button {
+  min-height: 2.35rem;
+  padding: 0.42rem 0.72rem;
+  font-size: 0.88rem;
+}
+
 @media (max-width: 700px) {
   .unit-objective-row,
   .quick-objective-row,
@@ -5863,6 +5915,15 @@ th[data-skill="homework"]::before { background-image: url("../assets/images/skil
 
   .quick-feedback-grid {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .feedback-record-editor-dialog footer {
+    align-items: stretch;
+    flex-direction: column-reverse;
+  }
+
+  .feedback-record-editor-dialog footer button {
+    width: 100%;
   }
 
   .objective-skill-picker > div {
