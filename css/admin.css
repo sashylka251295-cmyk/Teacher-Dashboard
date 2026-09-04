@@ -1946,9 +1946,53 @@ dialog:not(:has(> form)) > button {
   background-color: rgb(231 239 226 / 22%);
 }
 
+.calendar-time-slot {
+  position: absolute;
+  z-index: 0;
+  left: 0;
+  width: 100%;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  color: transparent;
+  background: transparent;
+  box-shadow: none;
+  cursor: cell;
+  transform: none;
+}
+
+.calendar-time-slot::after {
+  position: absolute;
+  inset: 0.12rem 0.18rem;
+  display: grid;
+  place-content: center;
+  border: 1px dashed transparent;
+  border-radius: 0.35rem;
+  color: transparent;
+  content: "+";
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.calendar-time-slot:hover,
+.calendar-time-slot:focus-visible {
+  color: var(--color-green-dark);
+  background: rgb(124 153 107 / 8%);
+  outline: none;
+  transform: none;
+}
+
+.calendar-time-slot:hover::after,
+.calendar-time-slot:focus-visible::after {
+  border-color: rgb(78 116 78 / 32%);
+  color: var(--color-green-dark);
+  background: rgb(255 253 248 / 72%);
+}
+
 .calendar-event-card {
   position: absolute;
-  z-index: 1;
+  z-index: 2;
   left: 0.18rem;
   right: 0.18rem;
   display: flex;

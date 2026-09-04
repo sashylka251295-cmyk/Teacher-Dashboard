@@ -46,6 +46,17 @@ test("Week navigation and all required calendar views are wired", async () => {
   assert.match(source, /view === "month"/);
 });
 
+test("Week and Today time slots open Add lesson with their date and time pre-filled", async () => {
+  const source = await readFile(new URL("../js/admin/calendar.js", import.meta.url), "utf8");
+  const styles = await readFile(new URL("../css/admin.css", import.meta.url), "utf8");
+  assert.match(source, /const CALENDAR_SLOT_MINUTES = 30/);
+  assert.match(source, /calendar-time-slot/);
+  assert.match(source, /openEditor\(null, "create", \{ startAt \}\)/);
+  assert.match(source, /lessonDate\.value = toDateInput\(preset\.startAt\)/);
+  assert.match(source, /startTime\.value = toTimeInput\(preset\.startAt\)/);
+  assert.match(styles, /\.calendar-time-slot:hover/);
+});
+
 test("Week starts on Monday and includes the full 09:00–20:00 working range", () => {
   assert.equal(startOfCalendarWeek(new Date(2026, 8, 3)).getTime(), monday.getTime());
   assert.equal(CALENDAR_DAY_START_HOUR, 9);

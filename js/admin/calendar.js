@@ -25,6 +25,7 @@ const MONTH_FORMAT = new Intl.DateTimeFormat("en", { month: "short" });
 const DAY_HEADING_FORMAT = new Intl.DateTimeFormat("en", { weekday: "short" });
 const LONG_DATE_FORMAT = new Intl.DateTimeFormat("en", { dateStyle: "medium" });
 const TIME_FORMAT = new Intl.DateTimeFormat("en", { hour: "2-digit", minute: "2-digit", hour12: false });
+const CALENDAR_SLOT_MINUTES = 30;
 
 let elements = null;
 let initialized = false;
@@ -287,7 +288,7 @@ function selectExistingParticipant(event) {
   }
 }
 
-function openEditor(occurrence = null, mode = "edit") {
+function openEditor(occurrence = null, mode = "edit", preset = null) {
   editingOccurrence = occurrence;
   editingEvent = occurrence ? events.find(({ id }) => id === occurrence.id) ?? occurrence : null;
   editorMode = occurrence ? mode : "create";
@@ -298,6 +299,11 @@ function openEditor(occurrence = null, mode = "edit") {
   elements.editorSave.textContent = editorMode === "create"
     ? "Add lesson"
     : editorMode === "reschedule" ? "Save new time" : "Save changes";
+
+  if (!editingEvent && preset?.startAt) {
+    elements.form.elements.lessonDate.value = toDateInput(preset.startAt);
+    elements.form.elements.startTime.value = toTimeInput(preset.startAt);
+  }
 
   if (editingEvent) {
     const source = editorMode === "reschedule" ? occurrence : editingEvent;
@@ -329,6 +335,7 @@ function openEditor(occurrence = null, mode = "edit") {
   }
   elements.form.dataset.mode = editorMode;
   showDialog(elements.editorDialog);
+  if (editorMode === "create") elements.participantSearch.focus();
 }
 
 function collectEditorEvent() {
@@ -464,6 +471,22 @@ function eventCard(occurrence) {
   return card;
 }
 
+function timeSlot(day, minutesFromStart, totalMinutes) {
+  const button = document.createElement("button");
+  const startAt = new Date(day);
+  const hour = CALENDAR_DAY_START_HOUR + Math.floor(minutesFromStart / 60);
+  const minute = minutesFromStart % 60;
+  startAt.setHours(hour, minute, 0, 0);
+  button.type = "button";
+  button.className = "calendar-time-slot";
+  button.style.top = `${(minutesFromStart / totalMinutes) * 100}%`;
+  button.style.height = `${(CALENDAR_SLOT_MINUTES / totalMinutes) * 100}%`;
+  button.title = `Add lesson at ${toTimeInput(startAt)}`;
+  button.setAttribute("aria-label", `Add lesson on ${LONG_DATE_FORMAT.format(startAt)} at ${toTimeInput(startAt)}`);
+  button.addEventListener("click", () => openEditor(null, "create", { startAt }));
+  return button;
+}
+
 function renderSchedule(range, occurrences) {
   const grid = document.createElement("div");
   const spacer = document.createElement("span");
@@ -496,9 +519,12 @@ function renderSchedule(range, occurrences) {
     const dayEvents = occurrences.filter((event) => calendarDateKey(event.startAt) === dayKey);
     column.className = "calendar-day-column";
     column.dataset.today = dayKey === calendarDateKey(new Date()) ? "true" : "false";
+    const totalMinutes = (CALENDAR_DAY_END_HOUR - CALENDAR_DAY_START_HOUR) * 60;
+    for (let minutes = 0; minutes < totalMinutes; minutes += CALENDAR_SLOT_MINUTES) {
+      column.append(timeSlot(day, minutes, totalMinutes));
+    }
     dayEvents.forEach((event) => {
       const startMinutes = (event.startAt.getHours() - CALENDAR_DAY_START_HOUR) * 60 + event.startAt.getMinutes();
-      const totalMinutes = (CALENDAR_DAY_END_HOUR - CALENDAR_DAY_START_HOUR) * 60;
       const card = eventCard(event);
       card.style.top = `${Math.max(0, Math.min(100, (startMinutes / totalMinutes) * 100))}%`;
       card.style.height = `${Math.max(4.5, Math.min(100, (event.durationMinutes / totalMinutes) * 100))}%`;
