@@ -22,6 +22,7 @@ import {
 import { createCalendarColorPicker } from "../ui/calendar-color-picker.js";
 
 const MONTH_FORMAT = new Intl.DateTimeFormat("en", { month: "short" });
+const MONTH_YEAR_FORMAT = new Intl.DateTimeFormat("en", { month: "long", year: "numeric" });
 const DAY_HEADING_FORMAT = new Intl.DateTimeFormat("en", { weekday: "short" });
 const LONG_DATE_FORMAT = new Intl.DateTimeFormat("en", { dateStyle: "medium" });
 const TIME_FORMAT = new Intl.DateTimeFormat("en", { hour: "2-digit", minute: "2-digit", hour12: false });
@@ -35,6 +36,7 @@ let colorPicker = null;
 let view = "week";
 let filter = "all";
 let anchorDate = new Date();
+let miniMonthDate = new Date(anchorDate.getFullYear(), anchorDate.getMonth(), 1);
 let students = [];
 let groups = [];
 let courses = [];
@@ -406,7 +408,6 @@ async function saveEditor(event) {
     } else if (editingEvent) await calendarEventsRepository.updateEvent(editingEvent.id, payload);
     closeDialog(elements.editorDialog);
     await refreshCalendar();
-    setState(editorMode === "create" ? "Lesson added." : "Lesson updated.");
   } catch (error) {
     console.error("Unable to save the calendar lesson.", error);
     setEditorMessage(error instanceof Error ? error.message : "Unable to save the lesson. Please try again.");
@@ -447,9 +448,7 @@ function formatRange(range) {
 function eventCard(occurrence) {
   const card = document.createElement("button");
   const name = document.createElement("strong");
-  const context = document.createElement("small");
   const time = document.createElement("small");
-  const status = document.createElement("span");
   const end = calendarEndTime(occurrence);
   card.type = "button";
   card.className = "calendar-event-card";
@@ -457,15 +456,12 @@ function eventCard(occurrence) {
   card.dataset.calendarOccurrence = occurrence.occurrenceKey;
   card.dataset.status = occurrence.status;
   card.style.setProperty("--event-color", occurrence.calendarColor || "#8fa77d");
-  name.textContent = occurrence.displayName || occurrence.manualTitle || "Lesson";
-  context.textContent = [
-    courseName(occurrence.courseId) || (occurrence.participantType === "manual" ? "Manual event" : "No course"),
-    lessonName(occurrence.lessonId) || unitName(occurrence.unitId),
-  ].filter(Boolean).join(" · ");
+  const linkedParticipant = occurrence.participantType === "student"
+    ? students.find(({ id }) => id === occurrence.studentId)
+    : groups.find(({ id }) => id === occurrence.groupId);
+  name.textContent = linkedParticipant?.name || occurrence.displayName || occurrence.manualTitle || "Lesson";
   time.textContent = `${TIME_FORMAT.format(occurrence.startAt)} – ${end ? TIME_FORMAT.format(end) : "—"}`;
-  status.textContent = CALENDAR_STATUS_LABELS[occurrence.status] ?? "Planned";
-  status.className = "calendar-status-chip";
-  card.append(name, context, time, status);
+  card.append(name, time);
   card.addEventListener("click", () => openDetails(occurrence));
   return card;
 }
@@ -577,14 +573,65 @@ function renderMonth(range, occurrences) {
   return calendar;
 }
 
+function renderMiniMonth() {
+  const monthStart = new Date(miniMonthDate.getFullYear(), miniMonthDate.getMonth(), 1);
+  const gridStart = startOfCalendarWeek(monthStart);
+  const header = document.createElement("header");
+  const previous = document.createElement("button");
+  const title = document.createElement("strong");
+  const next = document.createElement("button");
+  const grid = document.createElement("div");
+  previous.type = "button";
+  previous.textContent = "‹";
+  previous.setAttribute("aria-label", "Previous month");
+  title.textContent = MONTH_YEAR_FORMAT.format(monthStart);
+  next.type = "button";
+  next.textContent = "›";
+  next.setAttribute("aria-label", "Next month");
+  previous.addEventListener("click", () => {
+    miniMonthDate = new Date(monthStart.getFullYear(), monthStart.getMonth() - 1, 1);
+    renderMiniMonth();
+  });
+  next.addEventListener("click", () => {
+    miniMonthDate = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 1);
+    renderMiniMonth();
+  });
+  header.append(previous, title, next);
+  grid.className = "calendar-mini-month__grid";
+  ["M", "T", "W", "T", "F", "S", "S"].forEach((label) => {
+    const weekday = document.createElement("span");
+    weekday.textContent = label;
+    weekday.setAttribute("aria-hidden", "true");
+    grid.append(weekday);
+  });
+  Array.from({ length: 42 }, (_, index) => addCalendarDays(gridStart, index)).forEach((day) => {
+    const button = document.createElement("button");
+    const key = calendarDateKey(day);
+    button.type = "button";
+    button.textContent = String(day.getDate());
+    button.dataset.outsideMonth = String(day.getMonth() !== monthStart.getMonth());
+    button.dataset.today = String(key === calendarDateKey(new Date()));
+    button.dataset.selected = String(key === calendarDateKey(anchorDate));
+    button.setAttribute("aria-label", LONG_DATE_FORMAT.format(day));
+    button.addEventListener("click", () => {
+      anchorDate = new Date(day);
+      miniMonthDate = new Date(day.getFullYear(), day.getMonth(), 1);
+      renderCalendar();
+    });
+    grid.append(button);
+  });
+  elements.miniMonth.replaceChildren(header, grid);
+}
+
 function renderCalendar() {
   const range = rangeForView();
   const occurrences = visibleOccurrences(range);
   elements.range.textContent = formatRange(range);
+  renderMiniMonth();
   elements.stage.replaceChildren(view === "month"
     ? renderMonth(range, occurrences)
     : renderSchedule(range, occurrences));
-  elements.stage.hidden = false;
+  elements.workspace.hidden = false;
   elements.viewButtons.forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.calendarView === view)));
   elements.filterButtons.forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.calendarFilter === filter)));
 }
@@ -594,7 +641,7 @@ async function loadCalendarData(force = false) {
   if (loading && !force) return loading;
   setState("Loading calendar…");
   elements.add.disabled = true;
-  elements.stage.hidden = true;
+  elements.workspace.hidden = true;
   loading = Promise.all([
     studentsRepository.list(),
     groupsRepository.list(),
@@ -683,7 +730,7 @@ function launchProgressUpdate(occurrence) {
     window.dispatchEvent(new CustomEvent("teacher:student-progress-request", { detail }));
   } else if (occurrence.participantType === "group") {
     window.dispatchEvent(new CustomEvent("teacher:group-progress-request", { detail }));
-  } else setState("Manual lesson completed. It is not linked to a student progress profile.");
+  }
 }
 
 async function completeLesson() {
@@ -711,7 +758,7 @@ async function cancelLesson() {
     await updateOccurrenceStatus("cancelled");
     closeDialog(elements.detailsDialog);
     await refreshCalendar();
-    setState("Lesson cancelled. It remains visible in the calendar.");
+    setState("");
   } catch (error) {
     console.error("Unable to cancel the calendar lesson.", error);
     elements.detailsMessage.textContent = "Unable to cancel the lesson. Please try again.";
@@ -723,6 +770,7 @@ function changePeriod(direction) {
   if (view === "today") anchorDate = addCalendarDays(anchorDate, direction);
   else if (view === "week") anchorDate = addCalendarDays(anchorDate, direction * 7);
   else anchorDate = new Date(anchorDate.getFullYear(), anchorDate.getMonth() + direction, 1);
+  miniMonthDate = new Date(anchorDate.getFullYear(), anchorDate.getMonth(), 1);
   renderCalendar();
 }
 
@@ -733,7 +781,9 @@ function initialize() {
   if (!root || !editorDialog || !detailsDialog) return false;
   elements = {
     root,
+    workspace: root.querySelector("[data-calendar-workspace]"),
     stage: root.querySelector("[data-calendar-stage]"),
+    miniMonth: root.querySelector("[data-calendar-mini-month]"),
     state: root.querySelector("[data-calendar-state]"),
     range: root.querySelector("[data-calendar-range]"),
     viewButtons: [...root.querySelectorAll("[data-calendar-view]")],

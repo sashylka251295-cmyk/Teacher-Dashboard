@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Teacher Dashboard — Student Progress Tracker</title>
     <link rel="stylesheet" href="./css/styles.css?v=20260828-route-decor">
-    <link rel="stylesheet" href="./css/admin.css?v=20260904-calendar-simple-form">
+    <link rel="stylesheet" href="./css/admin.css?v=20260904-calendar-mini-month">
   </head>
   <body>
     <main class="teacher-shell" data-protected-content hidden>
@@ -130,7 +130,10 @@
           </div>
         </div>
         <p class="calendar-page__state" data-calendar-state role="status" aria-live="polite">Loading calendar…</p>
-        <div class="calendar-stage" data-calendar-stage hidden></div>
+        <div class="calendar-workspace" data-calendar-workspace hidden>
+          <aside class="calendar-mini-month" data-calendar-mini-month aria-label="Choose a date"></aside>
+          <div class="calendar-stage" data-calendar-stage></div>
+        </div>
       </section>
 
       <section class="admin-page entity-page" id="groups" data-feature="groups" data-admin-section="groups" hidden>
@@ -1265,6 +1268,6 @@
     </main>
 
     <p data-page-status role="status" aria-live="polite">Проверка доступа…</p>
-    <script type="module" src="./js/pages/admin-page.js?v=20260904-calendar-simple-form-fix"></script>
+    <script type="module" src="./js/pages/admin-page.js?v=20260904-calendar-mini-month"></script>
   </body>
 </html>

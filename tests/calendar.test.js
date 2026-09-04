@@ -80,10 +80,29 @@ test("Calendar cache version is propagated through the complete admin module cha
   const html = await readFile(new URL("../admin.html", import.meta.url), "utf8");
   const page = await readFile(new URL("../js/pages/admin-page.js", import.meta.url), "utf8");
   const dashboard = await readFile(new URL("../js/admin/admin-dashboard.js", import.meta.url), "utf8");
-  const version = "20260904-calendar-simple-form-fix";
+  const version = "20260904-calendar-mini-month";
   assert.match(html, new RegExp(`admin-page\\.js\\?v=${version}`));
   assert.match(page, new RegExp(`admin-dashboard\\.js\\?v=${version}`));
   assert.match(dashboard, new RegExp(`calendar\\.js\\?v=${version}`));
+});
+
+test("Calendar returns directly to its grid after save and shows participant names on events", async () => {
+  const source = await readFile(new URL("../js/admin/calendar.js", import.meta.url), "utf8");
+  assert.doesNotMatch(source, /setState\(editorMode === "create" \? "Lesson added\."/);
+  assert.match(source, /linkedParticipant\?\.name \|\| occurrence\.displayName/);
+  assert.match(source, /card\.append\(name, time\)/);
+  assert.doesNotMatch(source, /status\.textContent = CALENDAR_STATUS_LABELS/);
+});
+
+test("Desktop calendar includes a navigable mini month date picker", async () => {
+  const html = await readFile(new URL("../admin.html", import.meta.url), "utf8");
+  const source = await readFile(new URL("../js/admin/calendar.js", import.meta.url), "utf8");
+  const styles = await readFile(new URL("../css/admin.css", import.meta.url), "utf8");
+  assert.match(html, /data-calendar-mini-month/);
+  assert.match(source, /function renderMiniMonth\(\)/);
+  assert.match(source, /Previous month/);
+  assert.match(source, /Next month/);
+  assert.match(styles, /grid-template-columns: 12\.5rem minmax\(0, 1fr\)/);
 });
 
 test("Week starts on Monday and includes the full 09:00–20:00 working range", () => {
