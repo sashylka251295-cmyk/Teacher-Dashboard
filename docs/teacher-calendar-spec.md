@@ -4,6 +4,8 @@ The Calendar is a teacher-only scheduling module. It does not create a second pr
 
 Week and Today include a compact month picker on the left. Its arrows browse months independently; choosing a date moves the main calendar to that date. Scheduled cards prioritise the student or group name and time. Successful create/edit actions return directly to the calendar without adding a layout-shifting confirmation row.
 
+Student Portal never reads the private `calendarEvents` collection. Calendar writes maintain one sanitised `studentScheduleEntries` projection per recipient. Individual events project to the selected student; group events project to every current student whose `groupId` matches. The projection contains scheduling fields only and drives the existing **Next Lesson** dashboard card. Cancelling or rescheduling the teacher event updates the same projections.
+
 ## Firestore model
 
 Collection: `calendarEvents`

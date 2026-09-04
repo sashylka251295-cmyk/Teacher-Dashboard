@@ -5,6 +5,7 @@ import { goalsRepository } from "../data/repositories/goals-repository.js";
 import { homeworkAssignmentsRepository } from "../data/repositories/homework-assignments-repository.js";
 import { objectiveProgressRepository } from "../data/repositories/objective-progress-repository.js";
 import { studentsRepository } from "../data/repositories/students-repository.js";
+import { studentScheduleEntriesRepository } from "../data/repositories/student-schedule-entries-repository.js?v=20260904-student-schedule";
 import { unitsRepository } from "../data/repositories/units-repository.js";
 import {
   ACTIVE_GOAL_STATUSES,
@@ -24,6 +25,7 @@ import {
 } from "../domain/learning-objectives.js";
 import { isIndependentProgressEntry } from "../domain/independent-learning.js";
 import { normalizeHomeworkResources } from "../domain/homework.js";
+import { calendarDate, calendarEndTime, nextCalendarOccurrence } from "../domain/calendar.js?v=20260904-student-schedule";
 import { applyStudentTheme } from "./student-theme.js";
 import { currentPhysicalUnit, physicalProgress } from "../domain/physical-progress.js";
 import { renderCourseJourneyMap } from "../ui/course-journey-map.js?v=20260828-route-decor";
@@ -282,7 +284,30 @@ function renderDashboardJourney(root, unit, journey, theme) {
   return renderCourseJourneyMap(container, { unit, journey, theme });
 }
 
-function renderNextLesson(root, progress) {
+function renderNextLesson(root, progress, scheduledLesson, course) {
+  if (scheduledLesson) {
+    const start = calendarDate(scheduledLesson.startAt);
+    const end = calendarEndTime(scheduledLesson);
+    const date = new Intl.DateTimeFormat("en", {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+    }).format(start);
+    const time = new Intl.DateTimeFormat("en", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+    const courseLabel = displayValue(course?.name, "English lesson");
+    const lessonType = scheduledLesson.participantType === "group" ? "Group lesson" : "Individual lesson";
+    setText(root, "[data-dashboard-next-lesson]", date);
+    setText(
+      root,
+      "[data-dashboard-next-lesson-meta]",
+      `${time.format(start)}–${time.format(end)} · ${courseLabel} · ${lessonType}`,
+    );
+    return;
+  }
   const current = progress?.stops.find(({ state }) => state === "current");
   setText(root, "[data-dashboard-next-lesson]", current?.title ?? (progress?.total ? "Unit completed" : "No lesson scheduled"));
   setText(
@@ -774,7 +799,7 @@ function renderStudentReadingMap(root, course, units, progressDocuments, theme) 
 }
 
 function renderStudent(root, data) {
-  const { student, course, units, objectiveProgress, homeworkAssignments, goals, achievements, feedbackVersions } = data;
+  const { student, course, units, objectiveProgress, homeworkAssignments, goals, achievements, feedbackVersions, scheduleEntries } = data;
   const name = displayValue(student.name, "Student");
   const courseName = displayValue(course?.name, "Independent learning");
   const independentProgress = objectiveProgress.filter(isIndependentProgressEntry);
@@ -825,7 +850,7 @@ function renderStudent(root, data) {
   renderSkills(root, "[data-progress-skills]", "[data-progress-skills-empty]", averages);
   renderDashboardLearning(root, currentUnit, objectiveProgress, student.courseJourney, student.independentLearning);
   const physical = renderDashboardJourney(root, currentUnit, student.courseJourney, theme);
-  renderNextLesson(root, physical);
+  renderNextLesson(root, physical, nextCalendarOccurrence(scheduleEntries), course);
   if (currentUnit && physical?.total) {
     setText(
       root,
@@ -850,7 +875,7 @@ async function loadStudentData(studentId) {
   // private group record merely to resolve its course.
   const courseId = typeof student.courseId === "string" ? student.courseId.trim() : "";
 
-  const [course, units, objectiveProgress, homeworkAssignments, goals, achievements, feedbackVersions] = await Promise.all([
+  const [course, units, objectiveProgress, homeworkAssignments, goals, achievements, feedbackVersions, scheduleEntries] = await Promise.all([
     courseId ? coursesRepository.getById(courseId) : Promise.resolve(null),
     courseId ? unitsRepository.listByCourse(courseId) : Promise.resolve([]),
     objectiveProgressRepository.listByStudent(studentId),
@@ -858,8 +883,9 @@ async function loadStudentData(studentId) {
     goalsRepository.listVisibleByStudent(studentId),
     achievementsRepository.listByStudent(studentId),
     feedbackVersionsRepository.listPublishedByStudent(studentId),
+    studentScheduleEntriesRepository.listByStudent(studentId),
   ]);
-  return { student, course, units, objectiveProgress, homeworkAssignments, goals, achievements, feedbackVersions };
+  return { student, course, units, objectiveProgress, homeworkAssignments, goals, achievements, feedbackVersions, scheduleEntries };
 }
 
 function activateSection(root, sectionName) {

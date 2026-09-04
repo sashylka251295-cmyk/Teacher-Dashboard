@@ -238,3 +238,50 @@ export function calendarEndTime(event) {
   const start = calendarDate(event?.startAt);
   return start ? new Date(start.getTime() + (Number(event.durationMinutes) || 0) * 60000) : null;
 }
+
+function safeOccurrenceOverrides(overrides = {}) {
+  if (!overrides || typeof overrides !== "object") return {};
+  return Object.fromEntries(Object.entries(overrides).map(([key, override]) => {
+    const safe = {};
+    const startAt = calendarDate(override?.startAt);
+    const durationMinutes = Number(override?.durationMinutes);
+    if (startAt) safe.startAt = startAt;
+    if (Number.isInteger(durationMinutes) && durationMinutes >= 15 && durationMinutes <= 480) {
+      safe.durationMinutes = durationMinutes;
+    }
+    if (CALENDAR_EVENT_STATUSES.includes(override?.status)) safe.status = override.status;
+    return [key, safe];
+  }));
+}
+
+export function buildStudentScheduleEntry(event, calendarEventId, studentId) {
+  const startAt = calendarDate(event?.startAt);
+  const durationMinutes = Number(event?.durationMinutes);
+  if (!calendarEventId || !studentId || !startAt || !Number.isInteger(durationMinutes)) {
+    throw new Error("A student schedule entry needs an event, student, date and duration.");
+  }
+  return {
+    calendarEventId: String(calendarEventId),
+    studentId: String(studentId),
+    startAt,
+    durationMinutes,
+    participantType: event.participantType === "group" ? "group" : "student",
+    courseId: String(event.courseId || ""),
+    status: CALENDAR_EVENT_STATUSES.includes(event.status) ? event.status : "planned",
+    recurrence: normalizeCalendarRecurrence(event.recurrence),
+    occurrenceOverrides: safeOccurrenceOverrides(event.occurrenceOverrides),
+  };
+}
+
+export function nextCalendarOccurrence(events, now = new Date(), horizonDays = 730) {
+  const current = calendarDate(now);
+  if (!current) return null;
+  const rangeStart = new Date(current);
+  rangeStart.setHours(0, 0, 0, 0);
+  const rangeEnd = addCalendarDays(current, horizonDays);
+  return calendarOccurrences(events, rangeStart, rangeEnd).find((event) => {
+    if (!["planned", "rescheduled"].includes(event.status)) return false;
+    const end = calendarEndTime(event);
+    return end && end > current;
+  }) ?? null;
+}

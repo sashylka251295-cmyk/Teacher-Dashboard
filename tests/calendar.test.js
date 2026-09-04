@@ -6,9 +6,11 @@ import {
   CALENDAR_DAY_END_HOUR,
   CALENDAR_DAY_START_HOUR,
   buildCalendarEvent,
+  buildStudentScheduleEntry,
   calendarColorForEntity,
   calendarColorUsage,
   calendarOccurrences,
+  nextCalendarOccurrence,
   startOfCalendarWeek,
 } from "../js/domain/calendar.js";
 
@@ -80,7 +82,7 @@ test("Calendar cache version is propagated through the complete admin module cha
   const html = await readFile(new URL("../admin.html", import.meta.url), "utf8");
   const page = await readFile(new URL("../js/pages/admin-page.js", import.meta.url), "utf8");
   const dashboard = await readFile(new URL("../js/admin/admin-dashboard.js", import.meta.url), "utf8");
-  const version = "20260904-calendar-mini-month";
+  const version = "20260904-student-schedule";
   assert.match(html, new RegExp(`admin-page\\.js\\?v=${version}`));
   assert.match(page, new RegExp(`admin-dashboard\\.js\\?v=${version}`));
   assert.match(dashboard, new RegExp(`calendar\\.js\\?v=${version}`));
@@ -186,6 +188,61 @@ test("Completed and cancelled lessons remain visible in occurrence history", () 
   assert.deepEqual(occurrences.map(({ status }) => status), ["completed", "cancelled"]);
 });
 
+test("Student schedule projection excludes private calendar fields", () => {
+  const event = sampleEvent({
+    notes: "Private teacher note",
+    displayName: "Vera",
+    groupId: "private-group-id",
+  });
+  const entry = buildStudentScheduleEntry(event, "event-1", "student-1");
+  assert.deepEqual(Object.keys(entry).sort(), [
+    "calendarEventId",
+    "courseId",
+    "durationMinutes",
+    "occurrenceOverrides",
+    "participantType",
+    "recurrence",
+    "startAt",
+    "status",
+    "studentId",
+  ]);
+  assert.equal(entry.notes, undefined);
+  assert.equal(entry.displayName, undefined);
+  assert.equal(entry.groupId, undefined);
+});
+
+test("Next student lesson skips completed and cancelled occurrences", () => {
+  const now = new Date(2026, 8, 1, 12, 0);
+  const completed = { id: "done", ...buildStudentScheduleEntry(
+    sampleEvent({ startAt: new Date(2026, 8, 1, 13, 0), status: "completed" }),
+    "done",
+    "student-1",
+  ) };
+  const cancelled = { id: "cancelled", ...buildStudentScheduleEntry(
+    sampleEvent({ startAt: new Date(2026, 8, 1, 14, 0), status: "cancelled" }),
+    "cancelled",
+    "student-1",
+  ) };
+  const planned = { id: "planned", ...buildStudentScheduleEntry(
+    sampleEvent({ startAt: new Date(2026, 8, 1, 15, 0) }),
+    "planned",
+    "student-1",
+  ) };
+  assert.equal(nextCalendarOccurrence([completed, cancelled, planned], now)?.calendarEventId, "planned");
+});
+
+test("Individual and group calendar events synchronize safe student schedules", async () => {
+  const calendar = await readFile(new URL("../js/admin/calendar.js", import.meta.url), "utf8");
+  const repository = await readFile(new URL("../js/data/repositories/calendar-events-repository.js", import.meta.url), "utf8");
+  const studentView = await readFile(new URL("../js/student/student-view.js", import.meta.url), "utf8");
+  assert.match(calendar, /student\.groupId === event\.groupId/);
+  assert.match(calendar, /createEvent\(payload, scheduleOptions\(payload\)\)/);
+  assert.match(repository, /buildStudentScheduleEntry/);
+  assert.match(repository, /writeBatch/);
+  assert.match(studentView, /studentScheduleEntriesRepository\.listByStudent\(studentId\)/);
+  assert.match(studentView, /nextCalendarOccurrence\(scheduleEntries\)/);
+});
+
 test("Complete lesson links to the existing student and group Progress Update flows", async () => {
   const calendar = await readFile(new URL("../js/admin/calendar.js", import.meta.url), "utf8");
   const dashboard = await readFile(new URL("../js/admin/admin-dashboard.js", import.meta.url), "utf8");
@@ -210,4 +267,6 @@ test("Student and group colors persist through their existing edit forms", async
 test("Calendar events use a narrow teacher-only Firestore rule", async () => {
   const rules = await readFile(new URL("../firestore.rules", import.meta.url), "utf8");
   assert.match(rules, /match \/calendarEvents\/\{eventId\}[\s\S]*?allow read, create, update, delete: if isAdmin\(\);/);
+  assert.match(rules, /match \/studentScheduleEntries\/\{entryId\}[\s\S]*?allow read: if isAdmin\(\) \|\| isOwnStudent\(resource\.data\.studentId\);/);
+  assert.match(rules, /request\.resource\.data\.keys\(\)\.hasOnly/);
 });

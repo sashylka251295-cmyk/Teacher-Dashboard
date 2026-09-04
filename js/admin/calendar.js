@@ -1,4 +1,4 @@
-import { calendarEventsRepository } from "../data/repositories/calendar-events-repository.js";
+import { calendarEventsRepository } from "../data/repositories/calendar-events-repository.js?v=20260904-student-schedule";
 import { coursesRepository } from "../data/repositories/courses-repository.js";
 import { groupsRepository } from "../data/repositories/groups-repository.js";
 import { lessonsRepository } from "../data/repositories/lessons-repository.js";
@@ -377,6 +377,25 @@ function collectEditorEvent() {
   return payload;
 }
 
+function scheduleStudentIds(event) {
+  if (event.participantType === "student") return event.studentId ? [event.studentId] : [];
+  if (event.participantType === "group") {
+    return students.filter((student) => student.groupId === event.groupId).map((student) => student.id);
+  }
+  return [];
+}
+
+function scheduleOptions(event) {
+  return { scheduleEvent: event, studentIds: scheduleStudentIds(event) };
+}
+
+async function updateEventWithStudentSchedules(eventId, patch, source = editingEvent) {
+  const scheduleEvent = { ...source, ...patch };
+  await calendarEventsRepository.updateEvent(eventId, patch, scheduleOptions(scheduleEvent));
+  editingEvent = scheduleEvent;
+  return scheduleEvent;
+}
+
 async function saveEditor(event) {
   event.preventDefault();
   elements.editorSave.disabled = true;
@@ -387,9 +406,9 @@ async function saveEditor(event) {
     if (participant) {
       payload.calendarColor = await ensureParticipantColor(participant);
     }
-    if (editorMode === "create") await calendarEventsRepository.createEvent(payload);
+    if (editorMode === "create") await calendarEventsRepository.createEvent(payload, scheduleOptions(payload));
     else if (editorMode === "reschedule" && editingEvent && editingOccurrence?.isRecurring) {
-      await calendarEventsRepository.updateEvent(editingEvent.id, {
+      await updateEventWithStudentSchedules(editingEvent.id, {
         occurrenceOverrides: {
           ...(editingEvent.occurrenceOverrides ?? {}),
           [editingOccurrence.occurrenceKey]: {
@@ -400,12 +419,12 @@ async function saveEditor(event) {
         },
       });
     } else if (editorMode === "reschedule" && editingEvent) {
-      await calendarEventsRepository.updateEvent(editingEvent.id, {
+      await updateEventWithStudentSchedules(editingEvent.id, {
         startAt: payload.startAt,
         durationMinutes: payload.durationMinutes,
         status: "rescheduled",
       });
-    } else if (editingEvent) await calendarEventsRepository.updateEvent(editingEvent.id, payload);
+    } else if (editingEvent) await updateEventWithStudentSchedules(editingEvent.id, payload);
     closeDialog(elements.editorDialog);
     await refreshCalendar();
   } catch (error) {
@@ -651,6 +670,10 @@ async function loadCalendarData(force = false) {
     calendarEventsRepository.list(),
   ]).then((data) => {
     [students, groups, courses, units, lessons, events] = data;
+    void Promise.all(events
+      .filter((event) => ["planned", "rescheduled"].includes(event.status))
+      .map((event) => calendarEventsRepository.reconcileStudentSchedules(event, scheduleStudentIds(event))))
+      .catch((error) => console.error("Unable to reconcile student schedules.", error));
     loaded = true;
     elements.add.disabled = false;
     setState("");
@@ -705,7 +728,7 @@ function openDetails(occurrence) {
 async function updateOccurrenceStatus(status) {
   if (!editingEvent || !editingOccurrence) return;
   if (editingOccurrence.isRecurring) {
-    await calendarEventsRepository.updateEvent(editingEvent.id, {
+    await updateEventWithStudentSchedules(editingEvent.id, {
       occurrenceOverrides: {
         ...(editingEvent.occurrenceOverrides ?? {}),
         [editingOccurrence.occurrenceKey]: {
@@ -714,7 +737,7 @@ async function updateOccurrenceStatus(status) {
         },
       },
     });
-  } else await calendarEventsRepository.updateEvent(editingEvent.id, { status });
+  } else await updateEventWithStudentSchedules(editingEvent.id, { status });
 }
 
 function launchProgressUpdate(occurrence) {
