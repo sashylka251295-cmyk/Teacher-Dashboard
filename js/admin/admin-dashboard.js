@@ -7,12 +7,15 @@ import { unitsRepository } from "../data/repositories/units-repository.js";
 import { OBJECTIVE_STATUS_LABELS } from "../domain/constants.js";
 import { ENTITY_IMAGE_CONFIG, ENTITY_IMAGE_TYPES } from "../domain/entity-images.js";
 import { overallObjectiveStatus } from "../domain/learning-objectives.js";
-import { initializeAdminCrud } from "./admin-crud.js?v=20260828-route-decor";
+import { initializeCalendar, invalidateCalendar, showCalendar } from "./calendar.js?v=20260904-calendar";
+import { initializeAdminCrud } from "./admin-crud.js?v=20260904-calendar";
 import { clearStudentAccess } from "./student-access.js";
-import { loadAdminStudentProfile } from "./student-profile.js?v=20260831-feedback-delete";
+import { loadAdminStudentProfile } from "./student-profile.js?v=20260904-calendar";
 
 const DEFAULT_SECTION = "overview";
 const STUDENT_PROFILE_SECTION = "student-profile";
+const CALENDAR_SECTION = "calendar";
+let pendingStudentProgress = null;
 
 const SECTION_CONFIG = Object.freeze({
   groups: {
@@ -540,6 +543,7 @@ async function refreshAfterEntityChange(entityName) {
   };
   const dependency = dependencies[entityName];
   if (!dependency) return;
+  invalidateCalendar();
 
   dependency.collections.forEach((collectionName) => collectionLoads.delete(collectionName));
   dependency.sections.forEach((sectionName) => {
@@ -595,7 +599,14 @@ function activateRoute(route) {
   });
 
   if (activeSection === STUDENT_PROFILE_SECTION && route.studentId) {
-    void loadAdminStudentProfile(route.studentId);
+    const selection = pendingStudentProgress?.studentId === route.studentId
+      ? pendingStudentProgress
+      : null;
+    pendingStudentProgress = null;
+    void loadAdminStudentProfile(route.studentId, "", selection);
+  } else if (activeSection === CALENDAR_SECTION) {
+    clearStudentAccess();
+    void showCalendar();
   } else if (activeSection === DEFAULT_SECTION) {
     clearStudentAccess();
     void loadOverview();
@@ -671,6 +682,14 @@ export function initializeAdminDashboard() {
     onOpenStudent(studentId) {
       navigateWithinAdmin(`#student/${encodeURIComponent(studentId)}`);
     },
+  });
+
+  initializeCalendar();
+  window.addEventListener("teacher:student-progress-request", (event) => {
+    const detail = event.detail && typeof event.detail === "object" ? event.detail : {};
+    if (!detail.studentId) return;
+    pendingStudentProgress = detail;
+    navigateWithinAdmin(`#student/${encodeURIComponent(detail.studentId)}`);
   });
 
   window.addEventListener("popstate", () => activateRoute(routeFromHash()));

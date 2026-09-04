@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Teacher Dashboard — Student Progress Tracker</title>
     <link rel="stylesheet" href="./css/styles.css?v=20260828-route-decor">
-    <link rel="stylesheet" href="./css/admin.css?v=20260831-feedback-delete">
+    <link rel="stylesheet" href="./css/admin.css?v=20260904-calendar">
   </head>
   <body>
     <main class="teacher-shell" data-protected-content hidden>
@@ -33,6 +33,7 @@
         </a>
         <div class="teacher-nav">
           <a href="#groups" data-admin-link="groups"><span aria-hidden="true"><img src="./assets/images/icon-groups.png.png" alt=""></span>Groups</a>
+          <a href="#calendar" data-admin-link="calendar"><span aria-hidden="true" class="teacher-nav__calendar-icon"><svg viewBox="0 0 24 24" focusable="false"><path d="M7 3v3m10-3v3M4.5 9h15M6 5h12a2 2 0 0 1 2 2v12H4V7a2 2 0 0 1 2-2Zm2 7h3v3H8v-3Z"/></svg></span>Calendar</a>
           <a href="#students" data-admin-link="students"><span aria-hidden="true"><img src="./assets/images/icon-students.png.png" alt=""></span>Students</a>
           <a href="#courses" data-admin-link="courses"><span aria-hidden="true"><img src="./assets/images/icon-courses.png.png" alt=""></span>Courses</a>
         </div>
@@ -104,6 +105,32 @@
           </div>
           <img src="./assets/images/teacher-workspace-illustration.png" alt="" aria-hidden="true">
         </div>
+      </section>
+
+      <section class="admin-page calendar-page" id="calendar" data-feature="calendar" data-admin-section="calendar" hidden>
+        <header class="calendar-page__heading">
+          <div><p class="eyebrow">Lesson schedule</p><h2>Calendar</h2><p>Manage lessons, schedule changes and upcoming classes.</p></div>
+          <div class="calendar-view-controls" aria-label="Calendar view">
+            <button type="button" data-calendar-view="today">Today</button>
+            <button type="button" data-calendar-view="week" aria-pressed="true">Week</button>
+            <button type="button" data-calendar-view="month">Month</button>
+          </div>
+          <button class="button-primary" type="button" data-calendar-add disabled>+ Add lesson</button>
+        </header>
+        <div class="calendar-toolbar">
+          <div class="calendar-period-navigation">
+            <button type="button" data-calendar-previous aria-label="Previous period">←</button>
+            <strong data-calendar-range>Current week</strong>
+            <button type="button" data-calendar-next aria-label="Next period">→</button>
+          </div>
+          <div class="calendar-filter-controls" aria-label="Lesson type filter">
+            <button type="button" data-calendar-filter="all" aria-pressed="true">All</button>
+            <button type="button" data-calendar-filter="student">Individual</button>
+            <button type="button" data-calendar-filter="group">Groups</button>
+          </div>
+        </div>
+        <p class="calendar-page__state" data-calendar-state role="status" aria-live="polite">Loading calendar…</p>
+        <div class="calendar-stage" data-calendar-stage hidden></div>
       </section>
 
       <section class="admin-page entity-page" id="groups" data-feature="groups" data-admin-section="groups" hidden>
@@ -626,10 +653,20 @@
                 </div>
               </fieldset>
 
-              <div class="editor-form__field-row">
-                <label for="student-status"><span>Status</span><select id="student-status" name="status" required><option value="active">Active</option><option value="paused">Paused</option><option value="archived">Archived</option></select></label>
-                <label for="student-color"><span>Student color</span><input id="student-color" name="color" type="color" value="#4f46e5" required></label>
-              </div>
+              <label for="student-status"><span>Status</span><select id="student-status" name="status" required><option value="active">Active</option><option value="paused">Paused</option><option value="archived">Archived</option></select></label>
+
+              <fieldset class="calendar-color-field" data-student-calendar-color>
+                <legend>Calendar color</legend>
+                <p>The same calm color will identify this student across scheduled lessons.</p>
+                <input id="student-color" name="color" type="hidden" value="#8fa77d" data-calendar-color-value>
+                <div class="calendar-color-swatches" data-calendar-color-swatches></div>
+                <p class="calendar-color-availability" data-calendar-color-availability></p>
+                <div class="calendar-color-warning" data-warning="false">
+                  <p data-calendar-color-message role="status" aria-live="polite"></p>
+                  <button type="button" data-calendar-color-choose-another hidden>Choose another</button>
+                  <button type="button" data-calendar-color-use-anyway hidden>Use anyway</button>
+                </div>
+              </fieldset>
 
               <label for="student-visual-theme">Student interface</label>
               <select id="student-visual-theme" name="visualTheme" data-student-visual-theme required>
@@ -673,6 +710,19 @@
 
               <label class="toggle-field" for="group-active"><input id="group-active" name="active" type="checkbox"><span>Active group</span></label>
 
+              <fieldset class="calendar-color-field" data-group-calendar-color>
+                <legend>Calendar color</legend>
+                <p>The same color will identify this group across scheduled lessons.</p>
+                <input name="color" type="hidden" value="#8fa77d" data-calendar-color-value>
+                <div class="calendar-color-swatches" data-calendar-color-swatches></div>
+                <p class="calendar-color-availability" data-calendar-color-availability></p>
+                <div class="calendar-color-warning" data-warning="false">
+                  <p data-calendar-color-message role="status" aria-live="polite"></p>
+                  <button type="button" data-calendar-color-choose-another hidden>Choose another</button>
+                  <button type="button" data-calendar-color-use-anyway hidden>Use anyway</button>
+                </div>
+              </fieldset>
+
               <section class="group-member-editor" data-group-member-editor>
                 <div><p class="eyebrow">Group members</p><h3>Students</h3></div>
                 <p>Select existing students. Selecting a student from another group will move them to this group.</p>
@@ -693,6 +743,83 @@
           <p data-group-form-message role="status" aria-live="polite"></p>
           <footer class="editor-form__actions"><button type="button" data-group-dialog-close>Cancel</button><button type="button" data-group-delete hidden>Delete Group</button><button type="submit" data-group-save>Save Group</button></footer>
         </form>
+      </dialog>
+
+      <dialog class="calendar-editor-dialog" data-calendar-editor-dialog aria-labelledby="calendar-editor-heading">
+        <form data-calendar-editor-form>
+          <header>
+            <div><p class="eyebrow">Lesson schedule</p><h2 id="calendar-editor-heading" data-calendar-editor-title>Add lesson</h2></div>
+            <button type="button" data-calendar-editor-close aria-label="Close add lesson panel">×</button>
+          </header>
+
+          <fieldset class="calendar-audience-choice">
+            <legend>Who is this lesson for?</legend>
+            <label><input type="radio" name="audienceMode" value="existing" checked>Existing student / group</label>
+            <label><input type="radio" name="audienceMode" value="manual">Manual</label>
+          </fieldset>
+
+          <section data-calendar-existing-fields>
+            <label for="calendar-participant-search">Student or group</label>
+            <input id="calendar-participant-search" type="search" placeholder="Search student or group…" data-calendar-participant-search>
+            <div class="calendar-participant-list" data-calendar-participant-list role="listbox" aria-label="Choose student or group"></div>
+            <select name="participant" data-calendar-participant hidden aria-hidden="true"></select>
+          </section>
+
+          <label data-calendar-manual-field hidden>Event / student name<input name="manualTitle" type="text" placeholder="Trial lesson — Anna"></label>
+
+          <fieldset class="calendar-color-field calendar-color-field--event" data-calendar-event-color>
+            <legend>Calendar color</legend>
+            <p data-calendar-color-context>Choose a color for this manual event.</p>
+            <input name="calendarColor" type="hidden" value="#8fa77d" data-calendar-color-value>
+            <div class="calendar-color-swatches" data-calendar-color-swatches></div>
+            <p class="calendar-color-availability" data-calendar-color-availability></p>
+            <div class="calendar-color-warning" data-warning="false">
+              <p data-calendar-color-message role="status" aria-live="polite"></p>
+              <button type="button" data-calendar-color-choose-another hidden>Choose another</button>
+              <button type="button" data-calendar-color-use-anyway hidden>Use anyway</button>
+            </div>
+          </fieldset>
+
+          <div class="calendar-form-row calendar-form-row--time">
+            <label>Date<input name="lessonDate" type="date" required></label>
+            <label>Start time<input name="startTime" type="time" required></label>
+            <label>Duration<select name="duration"><option value="30">30 min</option><option value="45">45 min</option><option value="60" selected>60 min</option><option value="90">90 min</option><option value="custom">Custom</option></select></label>
+          </div>
+          <label data-calendar-custom-duration hidden>Custom duration (minutes)<input name="customDuration" type="number" min="15" max="480" step="5" value="60"></label>
+
+          <div class="calendar-course-fields" data-calendar-course-fields>
+            <label>Course<select name="courseId" data-calendar-course></select></label>
+            <label>Unit <small>(optional)</small><select name="unitId" data-calendar-unit></select></label>
+            <label>Lesson <small>(optional)</small><select name="lessonId" data-calendar-lesson></select></label>
+          </div>
+
+          <fieldset class="calendar-repeat-field">
+            <legend>Repeat</legend>
+            <select name="repeat"><option value="none">Doesn’t repeat</option><option value="weekly">Every week</option><option value="biweekly">Every 2 weeks</option><option value="custom">Custom</option></select>
+            <div class="calendar-repeat-options" data-calendar-repeat-options hidden>
+              <label data-calendar-custom-repeat hidden>Repeat every (weeks)<input name="repeatInterval" type="number" min="1" max="12" value="3"></label>
+              <label>End date <small>(optional)</small><input name="repeatUntil" type="date"></label>
+            </div>
+          </fieldset>
+
+          <label>Notes <small>(optional)</small><textarea name="notes" rows="3" placeholder="Add any notes for this lesson…"></textarea></label>
+          <p data-calendar-editor-message role="status" aria-live="polite"></p>
+          <footer><button type="button" data-calendar-editor-cancel>Cancel</button><button class="button-primary" type="submit" data-calendar-editor-save>Add lesson</button></footer>
+        </form>
+      </dialog>
+
+      <dialog class="calendar-details-dialog" data-calendar-details-dialog aria-labelledby="calendar-details-heading">
+        <button type="button" data-calendar-details-close aria-label="Close lesson details">×</button>
+        <header><p class="eyebrow">Lesson details</p><h2 id="calendar-details-heading" data-calendar-details-title>Lesson</h2><span data-calendar-details-status></span></header>
+        <dl data-calendar-details-list></dl>
+        <p class="calendar-details-dialog__notes" data-calendar-details-notes hidden></p>
+        <p data-calendar-details-message role="status" aria-live="polite"></p>
+        <footer>
+          <button class="button-primary" type="button" data-calendar-complete>Complete lesson</button>
+          <button type="button" data-calendar-edit>Edit</button>
+          <button type="button" data-calendar-reschedule>Reschedule</button>
+          <button type="button" data-calendar-cancel>Cancel lesson</button>
+        </footer>
       </dialog>
 
       <dialog data-group-details-dialog aria-labelledby="group-details-heading">
@@ -1140,6 +1267,6 @@
     </main>
 
     <p data-page-status role="status" aria-live="polite">Проверка доступа…</p>
-    <script type="module" src="./js/pages/admin-page.js?v=20260831-feedback-delete"></script>
+    <script type="module" src="./js/pages/admin-page.js?v=20260904-calendar"></script>
   </body>
 </html>

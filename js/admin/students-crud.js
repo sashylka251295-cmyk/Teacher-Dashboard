@@ -15,6 +15,8 @@ import {
   isStudentVisualTheme,
   isValidHexColor,
 } from "../domain/validation.js";
+import { calendarColorForEntity } from "../domain/calendar.js";
+import { createCalendarColorPicker } from "../ui/calendar-color-picker.js";
 import {
   closeDialog,
   field,
@@ -32,6 +34,7 @@ let editingStudentId = null;
 let availableGroups = [];
 let availableCourses = [];
 let studentImageField = null;
+let calendarColorPicker = null;
 
 function studentStatus(student) {
   if (isStudentStatus(student.status)) return student.status;
@@ -125,7 +128,7 @@ async function openForm(studentId = null, initialValues = {}) {
   elements.courseCreatorToggle.disabled = false;
   elements.courseHint.hidden = true;
   studentImageField.reset();
-  field(elements.form, "color").value = "#4f46e5";
+  calendarColorPicker.setValue("#8fa77d");
   field(elements.form, "status").value = "active";
   elements.visualTheme.value = DEFAULT_STUDENT_VISUAL_THEME;
   setCourseCreatorOpen(false);
@@ -136,13 +139,15 @@ async function openForm(studentId = null, initialValues = {}) {
   showDialog(elements.dialog);
 
   try {
-    const [groups, courses, student] = await Promise.all([
+    const [groups, courses, students, student] = await Promise.all([
       groupsRepository.list(),
       coursesRepository.list(),
+      studentsRepository.list(),
       studentId ? studentsRepository.getById(studentId) : Promise.resolve(null),
     ]);
     availableGroups = groups;
     availableCourses = courses;
+    calendarColorPicker.setUsage(students, groups, { studentId });
     populateDocumentSelect(elements.group, groups, "Individual — no group");
     populateDocumentSelect(elements.course, courses, "Independent — no course");
 
@@ -156,9 +161,7 @@ async function openForm(studentId = null, initialValues = {}) {
       elements.group.value = student.groupId ?? "";
       const selectedGroup = groups.find((group) => group.id === student.groupId);
       elements.course.value = selectedGroup?.courseId ?? student.courseId ?? "";
-      field(elements.form, "color").value = isValidHexColor(student.color)
-        ? student.color
-        : "#4f46e5";
+      calendarColorPicker.setValue(calendarColorForEntity(student));
       field(elements.form, "status").value = studentStatus(student);
       elements.visualTheme.value = isStudentVisualTheme(student.visualTheme)
         ? (student.visualTheme === "neutral" ? "adult" : student.visualTheme)
@@ -170,6 +173,9 @@ async function openForm(studentId = null, initialValues = {}) {
         elements.group.value = selectedGroup.id;
         elements.course.value = selectedGroup.courseId ?? "";
       }
+      calendarColorPicker.setValue(calendarColorPicker.firstAvailable());
+    } else {
+      calendarColorPicker.setValue(calendarColorPicker.firstAvailable());
     }
 
     syncCourseToGroup();
@@ -327,6 +333,7 @@ export function initializeStudentsCrud(options) {
     newCourseActive: dashboard?.querySelector("[data-student-new-course-active]"),
     createCourse: dashboard?.querySelector("[data-student-course-create]"),
     cancelCourseCreation: dashboard?.querySelector("[data-student-course-create-cancel]"),
+    calendarColor: dashboard?.querySelector("[data-student-calendar-color]"),
   };
 
   if (Object.values(elements).some((element) => !element)) {
@@ -338,6 +345,11 @@ export function initializeStudentsCrud(options) {
     dashboard.querySelector("[data-student-image-field]"),
     ENTITY_IMAGE_TYPES.STUDENT,
   );
+  calendarColorPicker = createCalendarColorPicker(elements.calendarColor);
+  if (!calendarColorPicker) {
+    console.error("Student calendar color picker markup is incomplete.");
+    return;
+  }
 
   dashboard.addEventListener("click", handleClick);
   elements.group.addEventListener("change", syncCourseToGroup);

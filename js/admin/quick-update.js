@@ -256,10 +256,10 @@ function updateGoalFields() {
   }
 }
 
-function openDialog() {
+function openDialog(selection = {}) {
   if (!context) return;
   elements.studentName.textContent = context.student.name ?? "—";
-  elements.lessonDate.value = todayInputValue();
+  elements.lessonDate.value = selection.lessonDate || todayInputValue();
   elements.feedbackWentWell.value = "";
   elements.feedbackNextFocus.value = "";
   elements.feedbackMessage.value = "";
@@ -273,6 +273,17 @@ function openDialog() {
   elements.mode.querySelector('option[value="course"]').disabled = !courseModeAvailable;
   elements.mode.value = courseModeAvailable ? "course" : INDEPENDENT_PROGRESS_SCOPE;
   renderUpdateMode();
+  if (!isIndependentMode() && selection.unitId
+    && [...elements.unit.options].some((option) => option.value === selection.unitId)) {
+    elements.unit.value = selection.unitId;
+    renderUnitFields();
+  }
+  if (!isIndependentMode() && selection.lessonId
+    && [...elements.lesson.options].some((option) => option.value === selection.lessonId)) {
+    elements.lesson.value = selection.lessonId;
+    renderObjectives();
+  }
+  elements.completeLesson.checked = false;
   populateGoalEditor();
   if (typeof elements.dialog.showModal === "function") elements.dialog.showModal();
   else elements.dialog.setAttribute("open", "");
@@ -611,4 +622,10 @@ function initialize() {
 export function configureQuickUpdate(nextContext) {
   if (!initialized) initialized = initialize();
   if (initialized) context = nextContext;
+}
+
+export function openQuickUpdate(selection = {}) {
+  if (!initialized || !context) return false;
+  openDialog(selection);
+  return true;
 }

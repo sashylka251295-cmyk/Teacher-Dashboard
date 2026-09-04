@@ -33,9 +33,11 @@ import {
 } from "../domain/physical-progress.js";
 import { renderCourseJourneyMap } from "../ui/course-journey-map.js?v=20260828-route-decor";
 import { normalizeHomeworkResources } from "../domain/homework.js";
-import { isGoalStatus, isNonEmptyText, isStudentStatus } from "../domain/validation.js";
+import { isGoalStatus, isNonEmptyText, isStudentStatus, isValidHexColor } from "../domain/validation.js";
 import { readingSoundForObjective } from "../domain/reading-sounds.js";
 import { createReadingSoundChip } from "../ui/reading-map.js";
+import { createCalendarColorPicker } from "../ui/calendar-color-picker.js";
+import { calendarColorForEntity } from "../domain/calendar.js";
 import {
   closeDialog,
   displayValue,
@@ -56,6 +58,7 @@ let availableStudents = [];
 let currentGroupDetails = null;
 let groupUpdateStudents = [];
 let pendingLessonUpdate = null;
+let groupCalendarColorPicker = null;
 
 function createOption(value, label) {
   const option = document.createElement("option");
@@ -161,6 +164,7 @@ async function openForm(groupId = null) {
   editingGroupId = groupId;
   elements.form.reset();
   field(elements.form, "active").checked = true;
+  groupCalendarColorPicker.setValue("#8fa77d");
   elements.title.textContent = groupId ? "Edit Group" : "Add Group";
   elements.groupDelete.hidden = !groupId;
   elements.groupDelete.disabled = Boolean(groupId);
@@ -179,6 +183,7 @@ async function openForm(groupId = null) {
     availableCourses = courses;
     availableStudents = students;
     availableGroups = groups;
+    groupCalendarColorPicker.setUsage(students, groups, { groupId });
     populateDocumentSelect(elements.course, courses, "Select course");
 
     if (groupId && !group) {
@@ -191,7 +196,10 @@ async function openForm(groupId = null) {
       elements.course.value = group.courseId ?? "";
       field(elements.form, "academicYear").value = group.academicYear ?? "";
       field(elements.form, "active").checked = group.active !== false;
+      groupCalendarColorPicker.setValue(calendarColorForEntity(group));
       elements.groupDelete.disabled = false;
+    } else {
+      groupCalendarColorPicker.setValue(groupCalendarColorPicker.firstAvailable());
     }
 
     renderGroupMembers();
@@ -242,12 +250,17 @@ async function saveGroup(event) {
     setMessage(elements.message, "Select a course.");
     return;
   }
+  if (!isValidHexColor(field(elements.form, "color").value)) {
+    setMessage(elements.message, "Select a valid calendar color.");
+    return;
+  }
 
   const payload = {
     name,
     courseId,
     academicYear: field(elements.form, "academicYear").value.trim(),
     active: field(elements.form, "active").checked,
+    color: field(elements.form, "color").value,
   };
   elements.save.disabled = true;
   setMessage(elements.message, "Saving…");
@@ -641,7 +654,8 @@ async function openDetails(groupId, successMessage = "") {
     elements.detailsContent.hidden = false;
     elements.detailsEdit.disabled = false;
     elements.groupQuickUpdate.disabled = students.length === 0;
-    if (pendingLessonUpdate?.courseId === group.courseId && students.length > 0) {
+    if ((pendingLessonUpdate?.groupId === group.id
+      || pendingLessonUpdate?.courseId === group.courseId) && students.length > 0) {
       const selection = pendingLessonUpdate;
       pendingLessonUpdate = null;
       await openGroupQuickUpdate("", selection);
@@ -1033,13 +1047,14 @@ async function openGroupQuickUpdate(studentId = "", selection = null) {
   elements.groupUpdateDescription.textContent = studentId
     ? `Course: ${displayValue(currentGroupDetails.course?.name)}. Use common lesson settings or customise this student.`
     : `Course: ${displayValue(currentGroupDetails.course?.name)}. Apply common settings to ${groupUpdateStudents.length} students, then customise exceptions.`;
-  elements.groupUpdateDate.value = todayInputValue();
+  elements.groupUpdateDate.value = selection?.lessonDate || todayInputValue();
   elements.groupUpdateUnit.replaceChildren(
     ...units.map((unit) => createOption(unit.id, unitName(unit))),
   );
   elements.groupUpdateUnit.disabled = units.length === 0;
   const journeyUnit = currentPhysicalUnit(units, currentGroupDetails.group.courseJourney);
   if (journeyUnit) elements.groupUpdateUnit.value = journeyUnit.id;
+  elements.groupUpdateCompleteLesson.checked = false;
   elements.groupUpdateHomeworkAssigned.value = "no";
   elements.groupUpdateHomeworkTitle.value = "";
   elements.groupUpdateHomeworkDescription.value = "";
@@ -1351,7 +1366,7 @@ async function handleLessonProgressRequest(event) {
   const detail = event.detail && typeof event.detail === "object" ? event.detail : {};
   if (!detail.courseId || !detail.unitId || !detail.lessonId) return;
   pendingLessonUpdate = detail;
-  window.location.hash = "#groups";
+  document.querySelector('[data-admin-link="groups"]')?.click();
   try {
     const groups = (await groupsRepository.list()).filter((group) => group.courseId === detail.courseId);
     if (groups.length === 1) {
@@ -1368,6 +1383,20 @@ async function handleLessonProgressRequest(event) {
   } catch (error) {
     console.error("Unable to prepare lesson progress update.", error);
     setSectionMessage("groups", "Unable to load groups for this lesson.", "error");
+  }
+}
+
+async function handleCalendarGroupProgressRequest(event) {
+  const detail = event.detail && typeof event.detail === "object" ? event.detail : {};
+  if (!detail.groupId) return;
+  pendingLessonUpdate = detail;
+  document.querySelector('[data-admin-link="groups"]')?.click();
+  try {
+    await openDetails(detail.groupId);
+  } catch (error) {
+    console.error("Unable to open the group progress update from Calendar.", error);
+    pendingLessonUpdate = null;
+    setSectionMessage("groups", "Unable to open the group progress update.", "error");
   }
 }
 
@@ -1444,6 +1473,7 @@ export function initializeGroupsCrud(options) {
     groupUpdateMessage: dashboard?.querySelector("[data-group-quick-update-message]"),
     groupUpdateSave: dashboard?.querySelector("[data-group-quick-update-save]"),
     groupUpdateClose: dashboard?.querySelector("[data-group-quick-update-close]"),
+    calendarColor: dashboard?.querySelector("[data-group-calendar-color]"),
   };
 
   if (Object.values(elements).some((element) => !element)) {
@@ -1451,8 +1481,15 @@ export function initializeGroupsCrud(options) {
     return;
   }
 
+  groupCalendarColorPicker = createCalendarColorPicker(elements.calendarColor);
+  if (!groupCalendarColorPicker) {
+    console.error("Group calendar color picker markup is incomplete.");
+    return;
+  }
+
   dashboard.addEventListener("click", handleClick);
   window.addEventListener("teacher:lesson-progress", handleLessonProgressRequest);
+  window.addEventListener("teacher:group-progress-request", handleCalendarGroupProgressRequest);
   elements.form.addEventListener("submit", saveGroup);
   elements.form.addEventListener("input", syncPreview);
   elements.form.addEventListener("change", syncPreview);

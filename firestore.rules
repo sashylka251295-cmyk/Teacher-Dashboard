@@ -217,6 +217,12 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
+    // Lesson scheduling is part of the private teacher workspace. Calendar
+    // notes and manual event names are never exposed to student accounts.
+    match /calendarEvents/{eventId} {
+      allow read, create, update, delete: if isAdmin();
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

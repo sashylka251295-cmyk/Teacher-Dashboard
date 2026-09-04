@@ -43,7 +43,7 @@ import {
   renderReadingMap,
   renderReadingMapSummary,
 } from "../ui/reading-map.js";
-import { configureQuickUpdate } from "./quick-update.js?v=20260827-homework-details";
+import { configureQuickUpdate, openQuickUpdate } from "./quick-update.js?v=20260904-calendar";
 import { configureProgressUpdateEditor } from "./progress-update-editor.js?v=20260827-profile-hotfix";
 import { configureStudentAccess } from "./student-access.js";
 import { closeDialog, showDialog } from "./crud-helpers.js";
@@ -1200,7 +1200,7 @@ async function loadProfileData(studentId) {
   return { student: effectiveStudent, group, course, units, lessons, objectiveProgress, homeworkAssignments, progressHistory, legacyProgress, goals, feedbackDrafts, loadWarnings };
 }
 
-export async function loadAdminStudentProfile(studentId, successMessage = "") {
+export async function loadAdminStudentProfile(studentId, successMessage = "", quickUpdateSelection = null) {
   const root = document.querySelector('[data-admin-section="student-profile"]');
   if (!root) return console.error("Admin student profile markup was not found.");
   const requestId = ++activeRequestId;
@@ -1215,6 +1215,7 @@ export async function loadAdminStudentProfile(studentId, successMessage = "") {
       ? `Profile loaded, but these sections need attention: ${[...new Set(warnings)].join(", ")}.`
       : "";
     setText(root, "[data-profile-action-message]", successMessage || warningMessage);
+    if (quickUpdateSelection) openQuickUpdate(quickUpdateSelection);
   } catch (error) {
     if (requestId !== activeRequestId) return;
     console.error("Unable to load the admin student profile.", error);
