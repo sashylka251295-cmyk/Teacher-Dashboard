@@ -1,6 +1,6 @@
 import { requireRole } from "../auth/route-guards.js";
 import { signOutCurrentUser } from "../auth/auth-service.js";
-import { initializeAdminDashboard } from "../admin/admin-dashboard.js?v=20260904-calendar";
+import { initializeAdminDashboard } from "../admin/admin-dashboard.js?v=20260904-calendar-simple-form-fix";
 import { revealProtectedContent, setText } from "../core/dom.js";
 import { PAGE_PATHS, navigateTo } from "../core/navigation.js";
 import { USER_ROLES } from "../domain/constants.js";

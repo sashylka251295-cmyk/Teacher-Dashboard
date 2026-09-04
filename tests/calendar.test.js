@@ -76,6 +76,16 @@ test("Calendar scheduling stays compact and leaves Unit and Lesson to Progress U
   assert.match(source, /preserveExistingCurriculum/);
 });
 
+test("Calendar cache version is propagated through the complete admin module chain", async () => {
+  const html = await readFile(new URL("../admin.html", import.meta.url), "utf8");
+  const page = await readFile(new URL("../js/pages/admin-page.js", import.meta.url), "utf8");
+  const dashboard = await readFile(new URL("../js/admin/admin-dashboard.js", import.meta.url), "utf8");
+  const version = "20260904-calendar-simple-form-fix";
+  assert.match(html, new RegExp(`admin-page\\.js\\?v=${version}`));
+  assert.match(page, new RegExp(`admin-dashboard\\.js\\?v=${version}`));
+  assert.match(dashboard, new RegExp(`calendar\\.js\\?v=${version}`));
+});
+
 test("Week starts on Monday and includes the full 09:00–20:00 working range", () => {
   assert.equal(startOfCalendarWeek(new Date(2026, 8, 3)).getTime(), monday.getTime());
   assert.equal(CALENDAR_DAY_START_HOUR, 9);
