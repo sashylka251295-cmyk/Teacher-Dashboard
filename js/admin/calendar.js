@@ -192,23 +192,6 @@ function populateCourses(selectedId = "") {
   elements.course.replaceChildren(createOption("", "No course"), ...courses.map((course) =>
     createOption(course.id, course.name || "Untitled course")));
   elements.course.value = courses.some(({ id }) => id === selectedId) ? selectedId : "";
-  populateUnits();
-}
-
-function populateUnits(selectedId = "") {
-  const courseUnits = units.filter((unit) => unit.courseId === elements.course.value);
-  elements.unit.replaceChildren(createOption("", "No specific unit"), ...courseUnits.map((unit) =>
-    createOption(unit.id, unit.title || `Unit ${unit.number ?? ""}`.trim())));
-  elements.unit.value = courseUnits.some(({ id }) => id === selectedId) ? selectedId : "";
-  populateLessons();
-}
-
-function populateLessons(selectedId = "") {
-  const matching = lessons.filter((lesson) => lesson.courseId === elements.course.value
-    && (!elements.unit.value || lesson.unitId === elements.unit.value));
-  elements.lesson.replaceChildren(createOption("", "No specific lesson"), ...matching.map((lesson) =>
-    createOption(lesson.id, `${lesson.number ?? lesson.order ?? "—"}. ${lesson.title || "Lesson"}`)));
-  elements.lesson.value = matching.some(({ id }) => id === selectedId) ? selectedId : "";
 }
 
 async function ensureParticipantColor(participant) {
@@ -340,8 +323,6 @@ function openEditor(occurrence = null, mode = "edit", preset = null) {
       elements.form.elements.customDuration.value = duration;
     }
     populateCourses(editingEvent.courseId);
-    populateUnits(editingEvent.unitId);
-    populateLessons(editingEvent.lessonId);
     elements.form.elements.repeat.value = editingEvent.recurrence?.frequency ?? "none";
     elements.form.elements.repeatInterval.value = editingEvent.recurrence?.intervalWeeks ?? 1;
     elements.form.elements.repeatUntil.value = editingEvent.recurrence?.until ?? "";
@@ -365,6 +346,8 @@ function collectEditorEvent() {
     ? Number(elements.form.elements.customDuration.value)
     : Number(elements.form.elements.duration.value);
   const repeat = elements.form.elements.repeat.value;
+  const courseId = manual ? "" : elements.course.value;
+  const preserveExistingCurriculum = Boolean(editingEvent && courseId === (editingEvent.courseId ?? ""));
   const payload = buildCalendarEvent({
     startAt,
     durationMinutes,
@@ -374,9 +357,9 @@ function collectEditorEvent() {
     manualTitle: elements.form.elements.manualTitle.value,
     displayName: manual ? elements.form.elements.manualTitle.value : participant?.entity.name,
     calendarColor: colorPicker.value,
-    courseId: manual ? "" : elements.course.value,
-    unitId: manual ? "" : elements.unit.value,
-    lessonId: manual ? "" : elements.lesson.value,
+    courseId,
+    unitId: preserveExistingCurriculum ? editingEvent.unitId : "",
+    lessonId: preserveExistingCurriculum ? editingEvent.lessonId : "",
     status: editingEvent?.status ?? "planned",
     notes: elements.form.elements.notes.value,
     recurrence: {
@@ -773,8 +756,6 @@ function initialize() {
     colorContext: editorDialog.querySelector("[data-calendar-color-context]"),
     courseFields: editorDialog.querySelector("[data-calendar-course-fields]"),
     course: editorDialog.querySelector("[data-calendar-course]"),
-    unit: editorDialog.querySelector("[data-calendar-unit]"),
-    lesson: editorDialog.querySelector("[data-calendar-lesson]"),
     customDuration: editorDialog.querySelector("[data-calendar-custom-duration]"),
     repeatOptions: editorDialog.querySelector("[data-calendar-repeat-options]"),
     customRepeat: editorDialog.querySelector("[data-calendar-custom-repeat]"),
@@ -812,8 +793,6 @@ function initialize() {
   [...elements.form.elements.audienceMode].forEach((radio) => radio.addEventListener("change", syncAudienceMode));
   elements.participantSearch.addEventListener("input", () => renderParticipants());
   elements.participant.addEventListener("change", syncParticipant);
-  elements.course.addEventListener("change", () => populateUnits());
-  elements.unit.addEventListener("change", () => populateLessons());
   elements.form.elements.duration.addEventListener("change", syncDuration);
   elements.form.elements.repeat.addEventListener("change", syncRepeat);
   elements.detailsClose.addEventListener("click", () => closeDialog(detailsDialog));

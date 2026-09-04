@@ -68,6 +68,14 @@ test("Calendar participant selection is explicit and remains stable while search
   assert.match(styles, /\[aria-selected="true"\] \.calendar-participant-check/);
 });
 
+test("Calendar scheduling stays compact and leaves Unit and Lesson to Progress Update", async () => {
+  const html = await readFile(new URL("../admin.html", import.meta.url), "utf8");
+  const source = await readFile(new URL("../js/admin/calendar.js", import.meta.url), "utf8");
+  assert.doesNotMatch(html, /data-calendar-unit|data-calendar-lesson/);
+  assert.doesNotMatch(source, /function populateUnits|function populateLessons/);
+  assert.match(source, /preserveExistingCurriculum/);
+});
+
 test("Week starts on Monday and includes the full 09:00–20:00 working range", () => {
   assert.equal(startOfCalendarWeek(new Date(2026, 8, 3)).getTime(), monday.getTime());
   assert.equal(CALENDAR_DAY_START_HOUR, 9);

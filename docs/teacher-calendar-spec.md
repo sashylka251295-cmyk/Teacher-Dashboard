@@ -15,7 +15,8 @@ Each document stores:
 - `manualTitle`: label for a manual event that does not create a participant;
 - `displayName`: compact calendar snapshot;
 - `calendarColor`: muted palette color snapshot;
-- `courseId`, `unitId`, `lessonId`: optional curriculum context;
+- `courseId`: optional course context chosen in the compact scheduling form;
+- `unitId`, `lessonId`: optional legacy curriculum context retained when older events are edited, but no longer selected in Calendar;
 - `status`: `planned`, `completed`, `cancelled`, or `rescheduled`;
 - `notes`: optional private teacher note;
 - `recurrence`: `{ frequency, intervalWeeks, until }`;
@@ -32,7 +33,7 @@ Occupied colors are calculated client-side from the currently loaded Students an
 
 ## Progress integration
 
-Completing a student event marks only the calendar occurrence as completed, then opens that student's existing Quick Update with date, Unit, and Lesson preselected. Group events open the existing Group Quick Update in the same way. `Mark this lesson completed` remains unchecked so calendar completion never invents learning status or physical course completion.
+Completing a student event marks only the calendar occurrence as completed, then opens that student's existing Quick Update with the date and any saved curriculum context preselected. Unit and Lesson are chosen in Progress Update, where they belong. Group events open the existing Group Quick Update in the same way. `Mark this lesson completed` remains unchecked so calendar completion never invents learning status or physical course completion.
 
 ## MVP recurrence limitation
 
