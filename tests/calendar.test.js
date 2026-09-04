@@ -57,6 +57,17 @@ test("Week and Today time slots open Add lesson with their date and time pre-fil
   assert.match(styles, /\.calendar-time-slot:hover/);
 });
 
+test("Calendar participant selection is explicit and remains stable while searching", async () => {
+  const source = await readFile(new URL("../js/admin/calendar.js", import.meta.url), "utf8");
+  const styles = await readFile(new URL("../css/admin.css", import.meta.url), "utf8");
+  assert.match(source, /let selectedParticipantValue = ""/);
+  assert.match(source, /selectedParticipantValue = value/);
+  assert.match(source, /elements\.participant\.selectedIndex = -1/);
+  assert.match(source, /parseParticipant\(selectedParticipantValue\)/);
+  assert.match(source, /calendar-participant-check/);
+  assert.match(styles, /\[aria-selected="true"\] \.calendar-participant-check/);
+});
+
 test("Week starts on Monday and includes the full 09:00–20:00 working range", () => {
   assert.equal(startOfCalendarWeek(new Date(2026, 8, 3)).getTime(), monday.getTime());
   assert.equal(CALENDAR_DAY_START_HOUR, 9);

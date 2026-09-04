@@ -44,6 +44,7 @@ let events = [];
 let editingEvent = null;
 let editingOccurrence = null;
 let editorMode = "create";
+let selectedParticipantValue = "";
 
 function createOption(value, label) {
   const option = document.createElement("option");
@@ -127,11 +128,11 @@ function activeParticipants() {
 }
 
 function renderParticipants(preserveValue = true) {
-  const current = preserveValue ? elements.participant.value : "";
+  const participants = activeParticipants();
+  const current = preserveValue ? selectedParticipantValue : "";
   const query = elements.participantSearch.value.trim().toLowerCase();
-  const matches = activeParticipants()
-    .filter(({ entity }) => !query || String(entity.name).toLowerCase().includes(query))
-  const options = matches.map(({ type, entity }) => {
+  const matches = participants.filter(({ entity }) => !query || String(entity.name).toLowerCase().includes(query));
+  const options = participants.map(({ type, entity }) => {
       const option = createOption(
         participantValue(type, entity.id),
         `${type === "student" ? "Student" : "Group"} · ${entity.name}`,
@@ -139,26 +140,36 @@ function renderParticipants(preserveValue = true) {
       return option;
     });
   elements.participant.replaceChildren(...options);
-  if (current && options.some(({ value }) => value === current)) elements.participant.value = current;
-  else if (options.length) elements.participant.selectedIndex = 0;
+  if (current && options.some(({ value }) => value === current)) {
+    selectedParticipantValue = current;
+    elements.participant.value = current;
+  } else {
+    selectedParticipantValue = "";
+    elements.participant.selectedIndex = -1;
+  }
   elements.participantList.replaceChildren(...matches.map(({ type, entity }) => {
     const button = document.createElement("button");
     const swatch = document.createElement("span");
     const identity = document.createElement("span");
     const name = document.createElement("strong");
     const kind = document.createElement("small");
+    const check = document.createElement("span");
     const value = participantValue(type, entity.id);
     button.type = "button";
     button.dataset.participantValue = value;
     button.setAttribute("role", "option");
-    button.setAttribute("aria-selected", String(elements.participant.value === value));
+    button.setAttribute("aria-selected", String(selectedParticipantValue === value));
     swatch.className = "calendar-participant-color";
     swatch.style.backgroundColor = calendarColorForEntity(entity);
     name.textContent = entity.name || "Untitled";
     kind.textContent = type === "student" ? "Individual" : "Group";
+    check.className = "calendar-participant-check";
+    check.textContent = "✓";
+    check.setAttribute("aria-hidden", "true");
     identity.append(name, kind);
-    button.append(swatch, identity);
+    button.append(swatch, identity, check);
     button.addEventListener("click", () => {
+      selectedParticipantValue = value;
       elements.participant.value = value;
       elements.participantList.querySelectorAll("[aria-selected]").forEach((item) => {
         item.setAttribute("aria-selected", String(item === button));
@@ -216,7 +227,7 @@ async function ensureParticipantColor(participant) {
 
 function syncParticipant() {
   if (elements.form.elements.audienceMode.value !== "existing") return;
-  const participant = parseParticipant(elements.participant.value);
+  const participant = parseParticipant(selectedParticipantValue);
   const color = participant ? calendarColorForEntity(participant.entity) : "#8fa77d";
   colorPicker.setValue(color);
   colorPicker.setDisabled(true);
@@ -269,6 +280,7 @@ function resetEditor() {
   elements.form.elements.repeat.value = "none";
   elements.form.elements.repeatInterval.value = "3";
   elements.participantSearch.value = "";
+  selectedParticipantValue = "";
   colorPicker.setUsage(students, groups);
   colorPicker.setValue("#8fa77d");
   renderParticipants(false);
@@ -283,7 +295,11 @@ function selectExistingParticipant(event) {
     ? participantValue("student", event.studentId)
     : participantValue("group", event.groupId);
   if ([...elements.participant.options].some((option) => option.value === value)) {
+    selectedParticipantValue = value;
     elements.participant.value = value;
+    elements.participantList.querySelectorAll("[aria-selected]").forEach((item) => {
+      item.setAttribute("aria-selected", String(item.dataset.participantValue === value));
+    });
     syncParticipant();
   }
 }
@@ -340,7 +356,7 @@ function openEditor(occurrence = null, mode = "edit", preset = null) {
 
 function collectEditorEvent() {
   const manual = elements.form.elements.audienceMode.value === "manual";
-  const participant = manual ? null : parseParticipant(elements.participant.value);
+  const participant = manual ? null : parseParticipant(selectedParticipantValue);
   const startAt = dateTimeFromForm(
     elements.form.elements.lessonDate.value,
     elements.form.elements.startTime.value,
@@ -382,7 +398,7 @@ async function saveEditor(event) {
   setEditorMessage("Saving lesson…");
   try {
     const payload = collectEditorEvent();
-    const participant = payload.participantType === "manual" ? null : parseParticipant(elements.participant.value);
+    const participant = payload.participantType === "manual" ? null : parseParticipant(selectedParticipantValue);
     if (participant) {
       payload.calendarColor = await ensureParticipantColor(participant);
     }

@@ -2346,7 +2346,7 @@ dialog:not(:has(> form)) > button {
 .calendar-participant-list > button {
   display: grid;
   min-height: 2.45rem;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 0.55rem;
   padding: 0.38rem 0.6rem;
@@ -2362,7 +2362,26 @@ dialog:not(:has(> form)) > button {
 }
 
 .calendar-participant-list > button[aria-selected="true"] {
+  color: var(--color-green-dark);
   background: var(--color-green-soft);
+  box-shadow: inset 0 0 0 1px var(--color-green);
+}
+
+.calendar-participant-check {
+  display: grid;
+  width: 1.3rem;
+  height: 1.3rem;
+  place-content: center;
+  border-radius: 50%;
+  color: #fff;
+  background: var(--color-green);
+  font-size: 0.72rem;
+  font-weight: 900;
+  opacity: 0;
+}
+
+.calendar-participant-list > button[aria-selected="true"] .calendar-participant-check {
+  opacity: 1;
 }
 
 .calendar-participant-color {
@@ -2373,7 +2392,7 @@ dialog:not(:has(> form)) > button {
   box-shadow: 0 0 0 1px var(--color-border-strong);
 }
 
-.calendar-participant-list > button > span:last-child {
+.calendar-participant-list > button > span:nth-child(2) {
   display: flex;
   min-width: 0;
   align-items: baseline;
