@@ -15,7 +15,11 @@ import {
   isStudentVisualTheme,
   isValidHexColor,
 } from "../domain/validation.js";
-import { calendarColorForEntity } from "../domain/calendar.js?v=20260905-calendar-organizer";
+import {
+  CALENDAR_COLORS,
+  calendarColorForEntity,
+  calendarColorUsage,
+} from "../domain/calendar.js?v=20260905-calendar-organizer";
 import { createCalendarColorPicker } from "../ui/calendar-color-picker.js";
 import {
   closeDialog,
@@ -33,6 +37,7 @@ let elements = null;
 let editingStudentId = null;
 let availableGroups = [];
 let availableCourses = [];
+let availableStudents = [];
 let studentImageField = null;
 let calendarColorPicker = null;
 
@@ -47,12 +52,99 @@ function syncCourseToGroup() {
   );
   if (group && availableCourses.some((course) => course.id === group.courseId)) {
     elements.course.value = group.courseId;
+    field(elements.form, "lessonMode").value = group.lessonMode === "offline" ? "offline" : "online";
   }
   elements.course.disabled = Boolean(group);
   elements.courseCreatorToggle.disabled = Boolean(group);
   elements.courseHint.hidden = !group;
-  if (group) setCourseCreatorOpen(false);
+  if (group) {
+    setCourseCreatorOpen(false);
+    setGroupCreatorOpen(false);
+  }
   syncPreview();
+}
+
+function setGroupCreatorOpen(isOpen) {
+  elements.groupCreator.hidden = !isOpen;
+  elements.groupCreatorToggle.setAttribute("aria-expanded", String(isOpen));
+  if (isOpen) {
+    elements.group.value = "";
+    syncCourseToGroup();
+    elements.newGroupMode.value = field(elements.form, "lessonMode").value;
+    return;
+  }
+  elements.newGroupName.value = "";
+  elements.newGroupYear.value = "";
+  elements.newGroupMode.value = "online";
+  elements.newGroupActive.checked = true;
+  setMessage(elements.groupCreatorMessage, "");
+}
+
+function firstAvailableGroupColor() {
+  const selectedStudentColor = field(elements.form, "color").value.toLowerCase();
+  const usage = calendarColorUsage(availableStudents, availableGroups, {
+    studentId: editingStudentId,
+  });
+  return CALENDAR_COLORS.find(({ value }) =>
+    value.toLowerCase() !== selectedStudentColor
+    && !(usage.get(value.toLowerCase()) ?? []).length)?.value
+    ?? CALENDAR_COLORS.find(({ value }) => value.toLowerCase() !== selectedStudentColor)?.value
+    ?? CALENDAR_COLORS[0].value;
+}
+
+async function createGroupForStudent() {
+  if (elements.createGroup.disabled) return;
+  const name = elements.newGroupName.value.trim();
+  const courseId = elements.course.value;
+  const lessonMode = elements.newGroupMode.value;
+  if (!isNonEmptyText(name)) {
+    setMessage(elements.groupCreatorMessage, "Group name is required.");
+    return;
+  }
+  if (!availableCourses.some((course) => course.id === courseId)) {
+    setMessage(elements.groupCreatorMessage, "Select or create a course first.");
+    return;
+  }
+  if (!["online", "offline"].includes(lessonMode)) {
+    setMessage(elements.groupCreatorMessage, "Select a lesson format.");
+    return;
+  }
+
+  elements.createGroup.disabled = true;
+  setMessage(elements.groupCreatorMessage, "Saving…");
+  try {
+    const payload = {
+      name,
+      courseId,
+      academicYear: elements.newGroupYear.value.trim(),
+      active: elements.newGroupActive.checked,
+      lessonMode,
+      color: firstAvailableGroupColor(),
+    };
+    const id = await groupsRepository.create(payload);
+    const group = { id, ...payload };
+    availableGroups = [...availableGroups, group];
+    calendarColorPicker.setUsage(availableStudents, availableGroups, {
+      studentId: editingStudentId,
+    });
+    populateDocumentSelect(elements.group, availableGroups, "Individual — no group");
+    elements.group.value = id;
+    field(elements.form, "lessonMode").value = lessonMode;
+    setGroupCreatorOpen(false);
+    syncCourseToGroup();
+    setMessage(elements.message, `Group “${group.name}” created and selected. Save the student to confirm the assignment.`);
+
+    try {
+      await onEntityChanged("groups");
+    } catch (error) {
+      console.error("Group created, but dashboard data could not be refreshed.", error);
+    }
+  } catch (error) {
+    console.error("Unable to create the group from the student form.", error);
+    setMessage(elements.groupCreatorMessage, "Unable to create the group. Please try again.");
+  } finally {
+    elements.createGroup.disabled = false;
+  }
 }
 
 function selectedLabel(select, fallback) {
@@ -133,6 +225,7 @@ async function openForm(studentId = null, initialValues = {}) {
   field(elements.form, "lessonMode").value = "online";
   elements.visualTheme.value = DEFAULT_STUDENT_VISUAL_THEME;
   setCourseCreatorOpen(false);
+  setGroupCreatorOpen(false);
   elements.title.textContent = studentId ? "Edit Student" : "Add Student";
   syncPreview();
   elements.save.disabled = true;
@@ -148,6 +241,7 @@ async function openForm(studentId = null, initialValues = {}) {
     ]);
     availableGroups = groups;
     availableCourses = courses;
+    availableStudents = students;
     calendarColorPicker.setUsage(students, groups, { studentId });
     populateDocumentSelect(elements.group, groups, "Individual — no group");
     populateDocumentSelect(elements.course, courses, "Independent — no course");
@@ -341,6 +435,15 @@ export function initializeStudentsCrud(options) {
     newCourseActive: dashboard?.querySelector("[data-student-new-course-active]"),
     createCourse: dashboard?.querySelector("[data-student-course-create]"),
     cancelCourseCreation: dashboard?.querySelector("[data-student-course-create-cancel]"),
+    groupCreator: dashboard?.querySelector("[data-student-group-creator]"),
+    groupCreatorToggle: dashboard?.querySelector("[data-student-group-create-toggle]"),
+    groupCreatorMessage: dashboard?.querySelector("[data-student-group-create-message]"),
+    newGroupName: dashboard?.querySelector("[data-student-new-group-name]"),
+    newGroupYear: dashboard?.querySelector("[data-student-new-group-year]"),
+    newGroupMode: dashboard?.querySelector("[data-student-new-group-mode]"),
+    newGroupActive: dashboard?.querySelector("[data-student-new-group-active]"),
+    createGroup: dashboard?.querySelector("[data-student-group-create]"),
+    cancelGroupCreation: dashboard?.querySelector("[data-student-group-create-cancel]"),
     calendarColor: dashboard?.querySelector("[data-student-calendar-color]"),
   };
 
@@ -376,5 +479,17 @@ export function initializeStudentsCrud(options) {
   });
   elements.createCourse.addEventListener("click", createCourseForStudent);
   elements.cancelCourseCreation.addEventListener("click", () => setCourseCreatorOpen(false));
+  elements.groupCreatorToggle.addEventListener("click", () => {
+    const shouldOpen = elements.groupCreator.hidden;
+    setGroupCreatorOpen(shouldOpen);
+    if (shouldOpen) elements.newGroupName.focus();
+  });
+  elements.groupCreator.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" || event.target === elements.createGroup) return;
+    event.preventDefault();
+    void createGroupForStudent();
+  });
+  elements.createGroup.addEventListener("click", createGroupForStudent);
+  elements.cancelGroupCreation.addEventListener("click", () => setGroupCreatorOpen(false));
   elements.close.addEventListener("click", () => closeDialog(elements.dialog));
 }

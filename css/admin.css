@@ -5880,7 +5880,8 @@ a.overview-stat-card:hover {
   gap: var(--space-2);
 }
 
-.student-course-field {
+.student-course-field,
+.student-group-field {
   display: grid;
   gap: var(--space-2);
 }
@@ -5915,7 +5916,8 @@ a.overview-stat-card:hover {
   transform: none;
 }
 
-.field-label-with-action .student-course-create-toggle {
+.field-label-with-action .student-course-create-toggle,
+.field-label-with-action .student-group-create-toggle {
   min-height: 2rem;
   padding: 0.3rem 0.6rem;
   border: 1px solid #b9ccb1;
@@ -5925,10 +5927,16 @@ a.overview-stat-card:hover {
   text-decoration: none;
 }
 
-.field-label-with-action .student-course-create-toggle:hover:not(:disabled) {
+.field-label-with-action .student-course-create-toggle:hover:not(:disabled),
+.field-label-with-action .student-group-create-toggle:hover:not(:disabled) {
   border: 1px solid var(--color-green);
   background: #e3eedc;
   text-decoration: none;
+}
+
+.inline-group-creator {
+  border-color: rgb(100 112 73 / 27%);
+  background: #f3f2e5;
 }
 
 .inline-course-creator {

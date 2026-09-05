@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Teacher Dashboard — Student Progress Tracker</title>
     <link rel="stylesheet" href="./css/styles.css?v=20260828-route-decor">
-    <link rel="stylesheet" href="./css/admin.css?v=20260905-student-modes">
+    <link rel="stylesheet" href="./css/admin.css?v=20260905-inline-group">
   </head>
   <body>
     <main class="teacher-shell" data-protected-content hidden>
@@ -655,13 +655,34 @@
               </section>
 
               <div class="editor-form__field-row">
-                <label for="student-group"><span>Group <small>(optional)</small></span><select id="student-group" name="groupId" data-student-group></select></label>
+                <div class="student-group-field">
+                  <span class="field-label-with-action"><label for="student-group">Group (optional)</label><button class="student-group-create-toggle" type="button" data-student-group-create-toggle aria-expanded="false">+ New group</button></span>
+                  <select id="student-group" name="groupId" data-student-group></select>
+                </div>
                 <div class="student-course-field">
                   <span class="field-label-with-action"><label for="student-course">Course (optional)</label><button class="student-course-create-toggle" type="button" data-student-course-create-toggle aria-expanded="false">+ New course</button></span>
                   <select id="student-course" name="courseId" data-student-course></select>
                   <small class="student-course-inherited" data-student-course-hint hidden>Inherited from the selected group.</small>
                 </div>
               </div>
+
+              <fieldset class="inline-course-creator inline-group-creator" data-student-group-creator hidden>
+                <legend>Create and assign a group</legend>
+                <p class="inline-course-creator__hint">The group will use the selected course. If needed, create a new course first.</p>
+                <div class="editor-form__field-row">
+                  <label for="student-new-group-name"><span>Group name</span><input id="student-new-group-name" type="text" data-student-new-group-name></label>
+                  <label for="student-new-group-year"><span>Academic year <small>(optional)</small></span><input id="student-new-group-year" type="text" placeholder="For example, 2026–2027" data-student-new-group-year></label>
+                </div>
+                <div class="editor-form__field-row">
+                  <label for="student-new-group-mode"><span>Lesson format</span><select id="student-new-group-mode" data-student-new-group-mode><option value="online">Online</option><option value="offline">Offline</option></select></label>
+                  <label class="toggle-field" for="student-new-group-active"><input id="student-new-group-active" type="checkbox" data-student-new-group-active checked> Active</label>
+                </div>
+                <p data-student-group-create-message role="status" aria-live="polite"></p>
+                <div class="inline-course-creator__actions">
+                  <button type="button" data-student-group-create-cancel>Cancel</button>
+                  <button type="button" data-student-group-create>Create &amp; assign</button>
+                </div>
+              </fieldset>
 
               <fieldset class="inline-course-creator" data-student-course-creator hidden>
                 <legend>Create and assign a course</legend>
@@ -1290,6 +1311,6 @@
     </main>
 
     <p data-page-status role="status" aria-live="polite">Проверка доступа…</p>
-    <script type="module" src="./js/pages/admin-page.js?v=20260905-student-modes"></script>
+    <script type="module" src="./js/pages/admin-page.js?v=20260905-inline-group"></script>
   </body>
 </html>
