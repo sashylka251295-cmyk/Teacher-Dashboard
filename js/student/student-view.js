@@ -19,7 +19,6 @@ import {
   categorySummaries,
   learningObjectivesForUnit,
   objectiveStatusValue,
-  overallObjectiveStatus,
   progressByObjective,
   strongestObjectiveCategory,
 } from "../domain/learning-objectives.js";
@@ -39,6 +38,7 @@ const DEFAULT_SECTION = "dashboard";
 const PAGE_TITLES = Object.freeze({
   dashboard: "Dashboard",
   progress: "My Progress",
+  feedback: "Feedback",
   reading: "My Reading",
   "ai-practice": "AI Practice",
   homework: "Homework",
@@ -50,15 +50,6 @@ const DASHBOARD_ASSETS = Object.freeze({
   unitFallback: "./assets/references/teacher-dashboard/child-course-cover-fallback.png",
   homework: "./assets/references/teacher-dashboard/child-homework-notebook.png",
   achievement: "./assets/references/teacher-dashboard/child-achievement-placeholder.png",
-});
-
-const SKILL_ICON_PATHS = Object.freeze({
-  vocabulary: "./assets/images/skill-vocabulary.png.png",
-  grammar: "./assets/images/skill-grammar.png.png",
-  reading: "./assets/images/skill-reading.png.png",
-  listening: "./assets/images/skill-listening.png.png",
-  speaking: "./assets/images/skill-speaking.png.png",
-  writing: "./assets/images/decor-study-notebook-pencil.png.png",
 });
 
 function select(root, selector) {
@@ -98,6 +89,66 @@ function formatDate(value) {
   const milliseconds = timestampMillis(value);
   if (!milliseconds) return "";
   return new Intl.DateTimeFormat("en", { dateStyle: "medium" }).format(milliseconds);
+}
+
+function shortenedText(value, maximumLength = 170) {
+  const text = displayValue(value, "");
+  if (text.length <= maximumLength) return text;
+  return `${text.slice(0, maximumLength).trimEnd()}…`;
+}
+
+function renderCourseStory(root, course) {
+  const wrapper = select(root, "[data-student-course-story]");
+  const entries = [
+    {
+      value: course?.description,
+      card: "[data-course-description-card]",
+      preview: "[data-course-description-preview]",
+      full: "[data-course-description-full]",
+    },
+    {
+      value: course?.generalGoal,
+      card: "[data-course-goal-card]",
+      preview: "[data-course-goal-preview]",
+      full: "[data-course-goal-full]",
+    },
+  ];
+  let visibleCount = 0;
+  entries.forEach((entry) => {
+    const value = displayValue(entry.value, "");
+    const card = select(root, entry.card);
+    card.hidden = !value;
+    card.open = false;
+    setText(root, entry.preview, shortenedText(value));
+    setText(root, entry.full, value);
+    if (value) visibleCount += 1;
+  });
+  wrapper.hidden = visibleCount === 0;
+}
+
+function appendLimitedItems(container, items, {
+  limit = 3,
+  showLabel = "Show all",
+  hideLabel = "Show less",
+} = {}) {
+  container.replaceChildren(...items);
+  if (items.length <= limit) return;
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "student-list-toggle";
+  button.dataset.studentListToggle = "";
+  button.setAttribute("aria-expanded", "false");
+
+  function setExpanded(expanded) {
+    items.slice(limit).forEach((item) => { item.hidden = !expanded; });
+    button.textContent = expanded ? hideLabel : `${showLabel} (${items.length})`;
+    button.setAttribute("aria-expanded", String(expanded));
+  }
+
+  button.addEventListener("click", () => setExpanded(button.getAttribute("aria-expanded") !== "true"));
+  setExpanded(false);
+  container.append(button);
 }
 
 function unitName(unit) {
@@ -243,41 +294,22 @@ function dashboardCurrentUnit(units, journey) {
   return currentPhysicalUnit(units, journey);
 }
 
-function createDashboardLearningTarget(objective, status) {
-  const row = document.createElement("div");
-  const icon = document.createElement("span");
-  const image = document.createElement("img");
-  const title = document.createElement("strong");
-  row.className = "dashboard-learning-target";
-  row.dataset.status = status;
-  image.src = SKILL_ICON_PATHS[objective.category] ?? SKILL_ICON_PATHS.reading;
-  image.alt = "";
-  icon.append(image);
-  title.textContent = objective.title;
-  row.append(icon, title, createStatusBadge(status));
-  return row;
+function journeyForUnit(student, unit) {
+  return student.unitJourneys?.[unit.id]
+    ?? (student.courseJourney?.unitId === unit.id ? student.courseJourney : null);
 }
 
-function renderDashboardLearning(root, unit, progressDocuments, journey, independentLearning) {
-  const container = select(root, "[data-dashboard-learning]");
-  const empty = select(root, "[data-dashboard-learning-empty]");
-  const currentStop = journey?.unitId === unit?.id && Array.isArray(journey?.lessonStops)
-    ? journey.lessonStops.find(({ id }) => id === journey.currentLessonId)
-    : null;
-  const objectives = !unit && Array.isArray(independentLearning?.currentLearningTargets)
-    ? independentLearning.currentLearningTargets.slice(0, 3)
-    : Array.isArray(journey?.currentLearningTargets)
-    ? journey.currentLearningTargets.slice(0, 3)
-    : Array.isArray(currentStop?.learningTargets) && currentStop.learningTargets.length
-      ? currentStop.learningTargets.slice(0, 3)
-      : learningObjectivesForUnit(unit).slice(0, 3);
-  const progressMap = progressByObjective(progressDocuments);
-  container.replaceChildren(...objectives.map((objective) => createDashboardLearningTarget(
-    objective,
-    progressMap.get(objective.id)?.status ?? "not_assessed",
-  )));
-  container.hidden = objectives.length === 0;
-  empty.hidden = objectives.length > 0;
+function coursePhysicalProgress(units, student) {
+  const totals = units.reduce((summary, unit) => {
+    const progress = physicalProgress(unit, journeyForUnit(student, unit), []);
+    summary.completed += progress.completed;
+    summary.total += progress.total;
+    return summary;
+  }, { completed: 0, total: 0 });
+  return {
+    ...totals,
+    percent: totals.total ? Math.round((totals.completed / totals.total) * 100) : 0,
+  };
 }
 
 function renderDashboardJourney(root, unit, journey, theme) {
@@ -335,7 +367,8 @@ function renderDashboardHomework(root, assignments, units) {
   empty.hidden = Boolean(active);
   if (!active) return;
 
-  const item = document.createElement("a");
+  const item = document.createElement("article");
+  const mainLink = document.createElement("a");
   const image = document.createElement("img");
   const body = document.createElement("div");
   const title = document.createElement("strong");
@@ -343,18 +376,80 @@ function renderDashboardHomework(root, assignments, units) {
   const status = createStatusBadge(active.status, HOMEWORK_STATUS_LABELS);
   const unit = units.find((candidate) => candidate.id === active.unitId);
   item.className = "dashboard-homework-item";
-  item.href = "#homework";
-  item.dataset.studentLink = "homework";
-  item.dataset.homeworkId = active.id;
-  item.setAttribute("aria-label", `Open homework: ${displayValue(active.title, "Homework")}`);
+  mainLink.className = "dashboard-homework-item__main";
+  mainLink.href = "#homework";
+  mainLink.dataset.studentLink = "homework";
+  mainLink.dataset.homeworkId = active.id;
+  mainLink.setAttribute("aria-label", `Open homework: ${displayValue(active.title, "Homework")}`);
   image.src = DASHBOARD_ASSETS.homework;
   image.alt = "";
   title.textContent = displayValue(active.title, "Homework");
   meta.textContent = [unit ? unitName(unit) : "", formatDate(active.lessonDate)].filter(Boolean).join(" · ");
   body.append(title);
   if (meta.textContent) body.append(meta);
-  item.append(image, body, status);
+  mainLink.append(image, body, status);
+  item.append(mainLink);
+
+  if (typeof active.description === "string" && active.description.trim()) {
+    const description = document.createElement("p");
+    description.className = "dashboard-homework-description";
+    appendTextWithLinks(description, active.description);
+    item.append(description);
+  }
+
+  const resources = normalizeHomeworkResources(active.resources).slice(0, 2);
+  if (resources.length) {
+    const resourceList = document.createElement("div");
+    resourceList.className = "dashboard-homework-resources";
+    resources.forEach((resource) => {
+      const link = document.createElement("a");
+      link.href = resource.url;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.textContent = resource.type === "pdf" ? `PDF · ${resource.title}` : resource.title;
+      resourceList.append(link);
+    });
+    item.append(resourceList);
+  }
   container.append(item);
+}
+
+function createHomeworkPreviewCard(assignment, units) {
+  const card = document.createElement("article");
+  const mainLink = document.createElement("a");
+  const identity = document.createElement("span");
+  const title = document.createElement("strong");
+  const meta = document.createElement("small");
+  const unit = units.find((candidate) => candidate.id === assignment.unitId);
+  const assignedDate = formatDate(assignment.lessonDate ?? assignment.createdAt);
+  card.className = "student-homework-preview-card";
+  mainLink.href = "#homework";
+  mainLink.dataset.studentLink = "homework";
+  mainLink.dataset.homeworkId = assignment.id;
+  title.textContent = displayValue(assignment.title, "Homework");
+  meta.textContent = [unit ? unitName(unit) : "Independent learning", assignedDate]
+    .filter(Boolean)
+    .join(" · ");
+  identity.append(title);
+  if (meta.textContent) identity.append(meta);
+  mainLink.append(identity, createStatusBadge(assignment.status, HOMEWORK_STATUS_LABELS));
+  card.append(mainLink);
+
+  const resources = normalizeHomeworkResources(assignment.resources).slice(0, 2);
+  if (resources.length) {
+    const resourceList = document.createElement("div");
+    resourceList.className = "student-homework-preview-card__resources";
+    resources.forEach((resource) => {
+      const link = document.createElement("a");
+      link.href = resource.url;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.textContent = resource.type === "pdf" ? `Open PDF · ${resource.title}` : resource.title;
+      resourceList.append(link);
+    });
+    card.append(resourceList);
+  }
+  return card;
 }
 
 function homeworkResourceHost(url) {
@@ -463,7 +558,11 @@ function renderHomeworkPage(root, assignments, units) {
     return timestampMillis(second.lessonDate ?? second.createdAt)
       - timestampMillis(first.lessonDate ?? first.createdAt);
   });
-  container.replaceChildren(...ordered.map((assignment) => createHomeworkAssignment(assignment, units)));
+  appendLimitedItems(
+    container,
+    ordered.map((assignment) => createHomeworkAssignment(assignment, units)),
+    { showLabel: "Show all homework", hideLabel: "Show less" },
+  );
   container.hidden = ordered.length === 0;
   empty.hidden = ordered.length > 0;
 }
@@ -534,55 +633,91 @@ function createFeedbackSection(title, text) {
   const heading = document.createElement("h4");
   const content = document.createElement("p");
   heading.textContent = title;
-  content.textContent = displayValue(text);
+  appendTextWithLinks(content, displayValue(text));
   section.append(heading, content);
   return section;
 }
 
-function createFeedbackCard(feedback) {
-  const card = document.createElement("article");
-  const avatar = document.createElement("span");
-  const body = document.createElement("div");
-  const excerpt = document.createElement("p");
-  const details = document.createElement("details");
-  const summary = document.createElement("summary");
-  const full = document.createElement("div");
-  const published = document.createElement("small");
+function feedbackPreviewText(feedback) {
   const content = feedback.content ?? {};
-  const previewText = [content.message, content.whatWentWell, content.whatToPractise, content.nextStep]
+  return [content.message, content.whatWentWell, content.whatToPractise, content.nextStep]
     .find((value) => typeof value === "string" && value.trim());
-  card.className = "dashboard-feedback-item";
-  avatar.className = "dashboard-teacher-avatar";
-  avatar.textContent = "T";
-  avatar.setAttribute("aria-label", "Teacher");
-  excerpt.textContent = displayValue(previewText, "Your teacher has shared new feedback.");
-  published.textContent = formatDate(feedback.publishedAt);
-  summary.textContent = "Read feedback →";
-  const sections = [
+}
+
+function feedbackSections(feedback) {
+  const content = feedback.content ?? {};
+  return [
     ["What went well", content.whatWentWell],
     ["Next focus", content.whatToPractise],
     ["Next step", content.nextStep],
     ["Message from your teacher", content.message],
   ].filter(([, value]) => typeof value === "string" && value.trim())
     .map(([title, value]) => createFeedbackSection(title, value));
-  full.append(...sections);
-  details.append(summary, full);
+}
+
+function createDashboardFeedbackCard(feedback) {
+  const card = document.createElement("a");
+  const avatar = document.createElement("span");
+  const body = document.createElement("div");
+  const excerpt = document.createElement("p");
+  const published = document.createElement("small");
+  card.className = "dashboard-feedback-item";
+  card.href = "#feedback";
+  card.dataset.studentLink = "feedback";
+  avatar.className = "dashboard-teacher-avatar";
+  avatar.textContent = "T";
+  avatar.setAttribute("aria-label", "Teacher");
+  excerpt.textContent = displayValue(feedbackPreviewText(feedback), "Your teacher has shared new feedback.");
+  published.textContent = formatDate(feedback.publishedAt);
   body.append(excerpt);
   if (published.textContent) body.append(published);
-  body.append(details);
+  const action = document.createElement("strong");
+  action.textContent = "Open feedback →";
+  body.append(action);
   card.append(avatar, body);
+  return card;
+}
+
+function createFeedbackPageCard(feedback) {
+  const card = document.createElement("details");
+  const summary = document.createElement("summary");
+  const avatar = document.createElement("span");
+  const identity = document.createElement("span");
+  const preview = document.createElement("strong");
+  const published = document.createElement("small");
+  const content = document.createElement("div");
+  card.className = "student-feedback-card";
+  avatar.className = "dashboard-teacher-avatar";
+  avatar.textContent = "T";
+  avatar.setAttribute("aria-label", "Teacher");
+  preview.textContent = displayValue(feedbackPreviewText(feedback), "Feedback from your teacher");
+  published.textContent = formatDate(feedback.publishedAt) || "Published feedback";
+  identity.append(preview, published);
+  summary.append(avatar, identity);
+  content.className = "student-feedback-card__content";
+  content.append(...feedbackSections(feedback));
+  card.append(summary, content);
   return card;
 }
 
 function renderFeedback(root, feedbackVersions) {
   const list = select(root, "[data-student-feedback-list]");
   const empty = select(root, "[data-student-feedback-empty]");
+  const pageList = select(root, "[data-student-feedback-page-list]");
+  const pageEmpty = select(root, "[data-student-feedback-page-empty]");
   const sorted = [...feedbackVersions].sort(
     (first, second) => timestampMillis(second.publishedAt) - timestampMillis(first.publishedAt),
   );
-  list.replaceChildren(...sorted.slice(0, 1).map(createFeedbackCard));
+  list.replaceChildren(...sorted.slice(0, 1).map(createDashboardFeedbackCard));
   list.hidden = sorted.length === 0;
   empty.hidden = sorted.length > 0;
+  appendLimitedItems(
+    pageList,
+    sorted.map(createFeedbackPageCard),
+    { showLabel: "Show all feedback", hideLabel: "Show less" },
+  );
+  pageList.hidden = sorted.length === 0;
+  pageEmpty.hidden = sorted.length > 0;
 }
 
 function createUnitCard(unit, homeworkAssignments, journey, isCurrent) {
@@ -590,7 +725,10 @@ function createUnitCard(unit, homeworkAssignments, journey, isCurrent) {
   const number = document.createElement("span");
   const title = document.createElement("h4");
   const value = document.createElement("strong");
-  const homework = homeworkAssignments.filter((item) => item.unitId === unit.id);
+  const homework = homeworkAssignments
+    .filter((item) => item.unitId === unit.id)
+    .sort((first, second) => timestampMillis(second.lessonDate ?? second.createdAt)
+      - timestampMillis(first.lessonDate ?? first.createdAt));
   const completedHomework = homework.filter((item) => item.status === "completed").length;
   const physical = physicalProgress(unit, journey, []);
   card.dataset.unitState = isCurrent
@@ -683,7 +821,10 @@ function createUnitDetails(unit, progressDocuments, homeworkAssignments, journey
   }
   const homeworkSection = document.createElement("section");
   const homeworkHeading = document.createElement("h4");
-  const homework = homeworkAssignments.filter((item) => item.unitId === unit.id);
+  const homework = homeworkAssignments
+    .filter((item) => item.unitId === unit.id)
+    .sort((first, second) => timestampMillis(second.lessonDate ?? second.createdAt)
+      - timestampMillis(first.lessonDate ?? first.createdAt));
   homeworkHeading.textContent = "Learning habits — Homework";
   homeworkSection.className = "student-homework-section";
   homeworkSection.append(homeworkHeading);
@@ -692,14 +833,13 @@ function createUnitDetails(unit, progressDocuments, homeworkAssignments, journey
     empty.textContent = "No homework assigned.";
     homeworkSection.append(empty);
   } else {
-    const list = document.createElement("ul");
-    homework.forEach((assignment) => {
-      const item = document.createElement("li");
-      const assignmentTitle = document.createElement("span");
-      appendTextWithLinks(assignmentTitle, assignment.title || "Homework");
-      item.append(assignmentTitle, createStatusBadge(assignment.status, HOMEWORK_STATUS_LABELS));
-      list.append(item);
-    });
+    const list = document.createElement("div");
+    list.className = "student-homework-preview-grid";
+    appendLimitedItems(
+      list,
+      homework.map((assignment) => createHomeworkPreviewCard(assignment, [unit])),
+      { showLabel: "Show all homework", hideLabel: "Show less" },
+    );
     homeworkSection.append(list);
   }
   card.append(homeworkSection);
@@ -737,15 +877,17 @@ function createIndependentDetails(progressDocuments, homeworkAssignments) {
   if (independentHomework.length) {
     const section = document.createElement("section");
     const heading = document.createElement("h4");
-    const list = document.createElement("ul");
+    const list = document.createElement("div");
     heading.textContent = "Learning habits — Homework";
-    independentHomework.forEach((assignment) => {
-      const item = document.createElement("li");
-      const title = document.createElement("span");
-      appendTextWithLinks(title, assignment.title || "Homework");
-      item.append(title, createStatusBadge(assignment.status, HOMEWORK_STATUS_LABELS));
-      list.append(item);
-    });
+    list.className = "student-homework-preview-grid";
+    appendLimitedItems(
+      list,
+      [...independentHomework]
+        .sort((first, second) => timestampMillis(second.lessonDate ?? second.createdAt)
+          - timestampMillis(first.lessonDate ?? first.createdAt))
+        .map((assignment) => createHomeworkPreviewCard(assignment, [])),
+      { showLabel: "Show all homework", hideLabel: "Show less" },
+    );
     section.append(heading, list);
     card.append(section);
   }
@@ -805,9 +947,6 @@ function renderStudent(root, data) {
   const courseName = displayValue(course?.name, "Independent learning");
   const independentProgress = objectiveProgress.filter(isIndependentProgressEntry);
   const skillSummaries = calculateSkillSummaries(units, objectiveProgress);
-  const overall = units.length
-    ? overallObjectiveStatus(objectiveProgress, units)
-    : aggregateObjectiveStatus(independentProgress);
   const strongest = units.length
     ? strongestObjectiveCategory(units, objectiveProgress)
     : [...skillSummaries].filter(({ average }) => average !== null)
@@ -815,6 +954,7 @@ function renderStudent(root, data) {
   const currentGoal = activeGoal(goals);
   const currentUnit = dashboardCurrentUnit(units, student.courseJourney);
   const averages = skillSummaries;
+  const courseProgress = coursePhysicalProgress(units, student);
 
   const theme = applyStudentTheme(root, student.visualTheme);
   if (typeof student.color === "string" && globalThis.CSS?.supports?.("color", student.color)) {
@@ -822,6 +962,7 @@ function renderStudent(root, data) {
   }
   renderStudentAvatar(root, student);
   renderCourseArt(root, course);
+  renderCourseStory(root, course);
 
   setText(root, "[data-student-name]", name);
   setText(root, "[data-student-account-name]", name);
@@ -835,7 +976,13 @@ function renderStudent(root, data) {
         ? "Independent learning"
         : "No learning update yet",
   );
-  setText(root, "[data-progress-overall]", summaryStatusLabel(overall));
+  setText(
+    root,
+    "[data-progress-overall]",
+    courseProgress.total
+      ? `${courseProgress.completed} of ${courseProgress.total} lessons · ${courseProgress.percent}%`
+      : "No course lessons yet",
+  );
   setText(root, "[data-progress-course]", courseName);
   setText(
     root,
@@ -849,7 +996,6 @@ function renderStudent(root, data) {
     currentGoal ? goalStatusLabel(currentGoal.status) : "Your next goal will appear here",
   );
   renderSkills(root, "[data-progress-skills]", "[data-progress-skills-empty]", averages);
-  renderDashboardLearning(root, currentUnit, objectiveProgress, student.courseJourney, student.independentLearning);
   const physical = renderDashboardJourney(root, currentUnit, student.courseJourney, theme);
   renderNextLesson(root, physical, nextCalendarOccurrence(scheduleEntries), course);
   if (currentUnit && physical?.total) {
@@ -976,6 +1122,9 @@ function initializeNavigation(root) {
         `[data-homework-assignment="${CSS.escape(link.dataset.homeworkId)}"]`,
       );
       if (assignment) {
+        if (assignment.hidden) {
+          assignment.parentElement?.querySelector("[data-student-list-toggle]")?.click();
+        }
         assignment.open = true;
         requestAnimationFrame(() => assignment.scrollIntoView({ behavior: "smooth", block: "start" }));
       }

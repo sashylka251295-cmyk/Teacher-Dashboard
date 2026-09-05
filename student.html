@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Learning — Student Progress Tracker</title>
     <link rel="stylesheet" href="./css/styles.css?v=20260830-ai-practice">
-    <link rel="stylesheet" href="./css/student.css?v=20260905-homework-links">
+    <link rel="stylesheet" href="./css/student.css?v=20260905-student-cleanup">
   </head>
   <body data-student-theme="neutral">
     <svg class="student-icon-sprite" aria-hidden="true">
@@ -68,7 +68,7 @@
           <a href="#reading" data-student-link="reading" data-student-reading-link hidden><svg aria-hidden="true"><use href="#student-icon-book"/></svg><span>My Reading</span></a>
           <a href="#ai-practice" data-student-link="ai-practice"><svg aria-hidden="true"><use href="#student-icon-sparkles"/></svg><span>AI Practice</span></a>
           <a href="#my-goals" data-student-unavailable aria-disabled="true"><svg aria-hidden="true"><use href="#student-icon-target"/></svg><span>My Goals</span></a>
-          <a href="#feedback" data-student-unavailable aria-disabled="true"><svg aria-hidden="true"><use href="#student-icon-message"/></svg><span>Feedback</span></a>
+          <a href="#feedback" data-student-link="feedback"><svg aria-hidden="true"><use href="#student-icon-message"/></svg><span>Feedback</span></a>
           <a href="#homework" data-student-link="homework"><svg aria-hidden="true"><use href="#student-icon-clipboard"/></svg><span>Homework</span></a>
           <a href="#achievements" data-student-link="achievements"><svg aria-hidden="true"><use href="#student-icon-star"/></svg><span>Achievements</span></a>
         </nav>
@@ -114,33 +114,27 @@
               </article>
 
               <article class="dashboard-card dashboard-feedback-preview">
-                <div class="dashboard-card__heading"><svg aria-hidden="true"><use href="#student-icon-message"/></svg><h2>Feedback from your teacher</h2></div>
+                <div class="dashboard-card__heading"><svg aria-hidden="true"><use href="#student-icon-message"/></svg><h2>Current Feedback</h2><a href="#feedback" data-student-link="feedback">View all</a></div>
                 <div data-student-feedback-list></div>
                 <div class="dashboard-empty dashboard-empty--feedback" data-student-feedback-empty hidden>
                   <img src="./assets/references/teacher-dashboard/child-feedback-empty.png" alt="">
                   <div><strong>No feedback yet</strong><p>Published feedback from your teacher will appear here.</p></div>
                 </div>
               </article>
-            </div>
 
-            <article class="dashboard-card dashboard-current-learning">
-              <div class="dashboard-card__heading"><svg aria-hidden="true"><use href="#student-icon-progress"/></svg><div><h2>Current Learning</h2><p>Focus on your key learning targets.</p></div></div>
-              <div class="dashboard-learning-list" data-dashboard-learning></div>
-              <p class="dashboard-empty-copy" data-dashboard-learning-empty hidden>No learning targets are available for the current unit.</p>
-            </article>
+              <article class="dashboard-card dashboard-homework-card">
+                <div class="dashboard-card__heading"><svg aria-hidden="true"><use href="#student-icon-clipboard"/></svg><h2>Current Homework</h2><a href="#homework" data-student-link="homework">View all</a></div>
+                <div data-dashboard-homework></div>
+                <div class="dashboard-empty dashboard-empty--homework" data-dashboard-homework-empty hidden>
+                  <img src="./assets/references/teacher-dashboard/child-homework-empty.png" alt="">
+                  <div><strong>No active homework</strong><p>Your next assignment will appear here.</p></div>
+                </div>
+              </article>
+            </div>
 
             <article class="dashboard-card dashboard-course-journey">
               <div class="dashboard-card__heading"><svg aria-hidden="true"><use href="#student-icon-book"/></svg><div><h2>Course Journey</h2><p>Lessons completed in your current unit.</p></div></div>
               <div data-dashboard-journey></div>
-            </article>
-
-            <article class="dashboard-card dashboard-homework-card">
-              <div class="dashboard-card__heading"><svg aria-hidden="true"><use href="#student-icon-clipboard"/></svg><h2>Homework</h2></div>
-              <div data-dashboard-homework></div>
-              <div class="dashboard-empty dashboard-empty--homework" data-dashboard-homework-empty hidden>
-                <img src="./assets/references/teacher-dashboard/child-homework-empty.png" alt="">
-                <div><strong>No active homework</strong><p>Your next assignment will appear here.</p></div>
-              </div>
             </article>
 
             <article class="dashboard-card dashboard-achievement-card">
@@ -159,8 +153,29 @@
             <div><p class="student-eyebrow">Learning journey</p><h2>My Progress</h2><p>See how your learning objectives are developing across the course.</p></div>
           </div>
 
+          <div class="student-course-story" data-student-course-story hidden>
+            <details class="student-course-story__card" data-course-description-card hidden>
+              <summary>
+                <span class="student-eyebrow">About this course</span>
+                <strong>Course Description</strong>
+                <p data-course-description-preview></p>
+                <span class="student-course-story__action">Read more</span>
+              </summary>
+              <p class="student-course-story__full" data-course-description-full></p>
+            </details>
+            <details class="student-course-story__card student-course-story__card--goal" data-course-goal-card hidden>
+              <summary>
+                <span class="student-eyebrow">Where we are going</span>
+                <strong>Course Goal</strong>
+                <p data-course-goal-preview></p>
+                <span class="student-course-story__action">Read more</span>
+              </summary>
+              <p class="student-course-story__full" data-course-goal-full></p>
+            </details>
+          </div>
+
           <div class="progress-overview">
-            <article><span>Overall Status</span><strong data-progress-overall>—</strong></article>
+            <article><span>Course Progress</span><strong data-progress-overall>—</strong></article>
             <article><span>Current Course</span><strong data-progress-course>—</strong></article>
             <article><span>Strongest Area</span><strong data-progress-strongest>—</strong></article>
           </div>
@@ -184,6 +199,17 @@
             <div class="student-matrix" data-student-progress-matrix></div>
             <p class="student-empty" data-student-progress-empty hidden>No course units are available yet.</p>
           </section>
+        </section>
+
+        <section class="student-page student-feedback-page" id="feedback" data-student-section="feedback" hidden>
+          <div class="student-page-heading">
+            <div><p class="student-eyebrow">From your teacher</p><h2>Feedback</h2><p>Your published feedback is saved here, with the newest update first.</p></div>
+          </div>
+          <div class="student-feedback-page-list" data-student-feedback-page-list></div>
+          <div class="student-empty student-empty--large" data-student-feedback-page-empty hidden>
+            <strong>No feedback yet.</strong>
+            <span>Published feedback from your teacher will appear here.</span>
+          </div>
         </section>
 
         <section class="student-page student-ai-practice-page" id="ai-practice" data-student-section="ai-practice" hidden>
@@ -241,6 +267,6 @@
     </main>
 
     <p data-page-status role="status" aria-live="polite">Checking access…</p>
-    <script type="module" src="./js/pages/student-page.js?v=20260905-homework-links"></script>
+    <script type="module" src="./js/pages/student-page.js?v=20260905-student-cleanup"></script>
   </body>
 </html>

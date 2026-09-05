@@ -908,6 +908,353 @@ body[data-student-theme] > [data-page-status] {
   }
 }
 
+/* Student portal: focused dashboard, course context and compact history lists. */
+.dashboard-course-journey,
+.dashboard-achievement-card {
+  grid-column: 1 / -1;
+}
+
+.dashboard-side-stack {
+  grid-template-rows: repeat(3, minmax(0, auto));
+}
+
+.dashboard-feedback-item {
+  padding: 0.2rem;
+  border-radius: 0.75rem;
+  color: inherit;
+  text-decoration: none;
+  transition: background-color 160ms ease, box-shadow 160ms ease;
+}
+
+.dashboard-feedback-item:hover,
+.dashboard-feedback-item:focus-visible {
+  background: rgb(232 239 220 / 58%);
+  box-shadow: inset 0 0 0 1px rgb(129 151 105 / 22%);
+}
+
+.dashboard-feedback-item > div {
+  min-width: 0;
+}
+
+.dashboard-feedback-item > div > strong {
+  display: inline-block;
+  margin-top: 0.25rem;
+  color: #3d7445;
+  font-size: 0.76rem;
+}
+
+.dashboard-homework-item {
+  display: block;
+  padding: 0 0.85rem 0.7rem;
+}
+
+.student-feedback-card {
+  display: block;
+  gap: 0;
+  padding: 0;
+}
+
+.dashboard-homework-item__main {
+  display: grid;
+  grid-template-columns: 4.25rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.2rem;
+  border-radius: 0.75rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.dashboard-homework-item__main:hover,
+.dashboard-homework-item__main:focus-visible {
+  background: rgb(232 239 220 / 58%);
+}
+
+.dashboard-homework-item__main > img {
+  width: 4.25rem;
+  height: 3.75rem;
+  object-fit: contain;
+}
+
+.dashboard-homework-resources,
+.student-homework-preview-card__resources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.35rem 0.2rem 0;
+}
+
+.dashboard-homework-resources a,
+.student-homework-preview-card__resources a {
+  max-width: 100%;
+  overflow: hidden;
+  padding: 0.28rem 0.5rem;
+  border: 1px solid #d7dfca;
+  border-radius: 999px;
+  color: #345f3d;
+  background: #f3f6eb;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.student-course-story {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.student-course-story[hidden] {
+  display: none;
+}
+
+.student-course-story__card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--student-accent) 23%, var(--student-border));
+  border-radius: 1rem;
+  background: linear-gradient(145deg, #fffdf8, color-mix(in srgb, var(--student-accent-soft) 52%, white));
+  box-shadow: 0 0.4rem 1.1rem rgb(57 72 54 / 6%);
+}
+
+.student-course-story__card--goal {
+  background: linear-gradient(145deg, #fffaf0, color-mix(in srgb, #f0dca7 34%, white));
+}
+
+.student-course-story__card > summary {
+  display: grid;
+  gap: 0.3rem;
+  padding: 1rem 1.1rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.student-course-story__card > summary::-webkit-details-marker {
+  display: none;
+}
+
+.student-course-story__card > summary > strong {
+  color: var(--student-ink);
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+}
+
+.student-course-story__card > summary p,
+.student-course-story__full {
+  margin: 0;
+  color: #536158;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.student-course-story__action {
+  justify-self: start;
+  color: var(--student-primary-dark);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.student-course-story__card[open] .student-course-story__action {
+  font-size: 0;
+}
+
+.student-course-story__card[open] .student-course-story__action::after {
+  content: "Show less";
+  font-size: 0.76rem;
+}
+
+.student-course-story__card[open] > summary p {
+  display: none;
+}
+
+.student-course-story__full {
+  margin: 0 1.1rem 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid rgb(111 130 99 / 18%);
+}
+
+.student-homework-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 0.65rem;
+  margin-top: 0.65rem;
+}
+
+.student-homework-preview-card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #ddd5c3;
+  border-radius: 0.85rem;
+  background: #fffdf8;
+  box-shadow: 0 0.25rem 0.7rem rgb(57 72 54 / 5%);
+}
+
+.student-homework-preview-card > a:first-child {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 4.25rem;
+  padding: 0.7rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.student-homework-preview-card > a:first-child:hover,
+.student-homework-preview-card > a:first-child:focus-visible {
+  background: #f3f6eb;
+}
+
+.student-homework-preview-card > a:first-child > span {
+  display: grid;
+  min-width: 0;
+  gap: 0.18rem;
+}
+
+.student-homework-preview-card strong {
+  overflow-wrap: anywhere;
+  color: #2f4936;
+  font-family: var(--font-heading);
+  font-size: 0.9rem;
+}
+
+.student-homework-preview-card small {
+  color: #747c74;
+  font-size: 0.7rem;
+}
+
+.student-homework-preview-card__resources {
+  margin: 0;
+  padding: 0 0.7rem 0.65rem;
+}
+
+.dashboard-homework-description {
+  display: -webkit-box;
+  margin: 0.1rem 0.2rem 0.35rem;
+  overflow: hidden;
+  color: #59665d;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.student-list-toggle {
+  grid-column: 1 / -1;
+  justify-self: center;
+  min-height: 2.4rem;
+  padding: 0.45rem 0.85rem;
+  border: 1px solid #cfd8c3;
+  border-radius: 999px;
+  color: #355d3d;
+  background: #f4f7ed;
+  font-weight: 750;
+}
+
+.student-feedback-page,
+.student-homework-page {
+  width: min(100%, 70rem);
+}
+
+.student-feedback-page-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.student-feedback-card {
+  padding: 0;
+}
+
+.student-feedback-card > summary {
+  display: grid;
+  grid-template-columns: 3.4rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.9rem 1rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.student-feedback-card > summary::-webkit-details-marker {
+  display: none;
+}
+
+.student-feedback-card > summary::after {
+  content: "+";
+  color: var(--student-primary-dark);
+  font-size: 1.2rem;
+}
+
+.student-feedback-card[open] > summary::after {
+  content: "−";
+}
+
+.student-feedback-card > summary > span:nth-child(2) {
+  display: grid;
+  min-width: 0;
+  gap: 0.2rem;
+}
+
+.student-feedback-card > summary strong {
+  overflow-wrap: anywhere;
+  color: var(--student-ink);
+  font-family: var(--font-heading);
+}
+
+.student-feedback-card > summary small {
+  color: var(--student-muted);
+}
+
+.student-feedback-card__content {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+  padding: 0 1rem 1rem;
+}
+
+.student-feedback-card__content section {
+  margin: 0;
+}
+
+@media (max-width: 78rem) and (min-width: 46.0625rem) {
+  .dashboard-side-stack {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .dashboard-course-journey,
+  .dashboard-achievement-card {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 46rem) {
+  .student-course-story,
+  .student-feedback-card__content {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dashboard-side-stack {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dashboard-homework-item__main {
+    grid-template-columns: 3.75rem minmax(0, 1fr);
+  }
+
+  .dashboard-homework-item__main > img {
+    width: 3.75rem;
+    height: 3.5rem;
+  }
+
+  .dashboard-homework-item__main .learning-status-badge {
+    grid-column: 2;
+    justify-self: start;
+  }
+}
+
 /* Student dashboard v2 — page-level composition from student-dashboard-reference-v2.png */
 .student-icon-sprite {
   position: absolute;
@@ -3287,5 +3634,39 @@ body.student-menu-open {
     height: max(44rem, calc(100dvh - 8rem));
     margin-left: -0.5rem;
     border-radius: 0.85rem;
+  }
+}
+
+/* Final layout overrides for the focused student dashboard. */
+.dashboard-course-journey,
+.dashboard-achievement-card {
+  grid-column: 1 / -1;
+}
+
+.dashboard-side-stack {
+  grid-template-rows: repeat(3, minmax(0, auto));
+}
+
+.dashboard-homework-item {
+  display: block;
+  padding: 0 0.85rem 0.7rem;
+}
+
+@media (max-width: 78rem) and (min-width: 46.0625rem) {
+  .dashboard-side-stack {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: auto;
+  }
+
+  .dashboard-course-journey,
+  .dashboard-achievement-card {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 46rem) {
+  .dashboard-side-stack {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto;
   }
 }
