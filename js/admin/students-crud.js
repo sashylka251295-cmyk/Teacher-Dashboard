@@ -101,7 +101,7 @@ async function createCourseForStudent() {
     elements.course.value = course.id;
     setCourseCreatorOpen(false);
     syncPreview();
-    setMessage(elements.message, `Course “${course.name}” created and selected.`);
+    setMessage(elements.message, `Course “${course.name}” created and selected. Save the student to confirm the assignment.`);
 
     try {
       await onEntityChanged("courses");

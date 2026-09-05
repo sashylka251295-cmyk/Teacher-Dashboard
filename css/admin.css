@@ -481,6 +481,58 @@
   min-width: 0;
 }
 
+.student-mode-tabs {
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border: 1px solid #d9d1bf;
+  border-radius: 0.85rem;
+  background: #f6f2e8;
+}
+
+.student-mode-tabs button {
+  display: inline-flex;
+  min-height: 2.35rem;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.75rem;
+  border: 0;
+  border-radius: 0.65rem;
+  color: var(--color-ink-soft);
+  background: transparent;
+  box-shadow: none;
+  font-size: 0.8rem;
+  font-weight: 750;
+}
+
+.student-mode-tabs button:hover:not(:disabled) {
+  border: 0;
+  background: rgb(255 255 255 / 72%);
+  transform: none;
+}
+
+.student-mode-tabs button[aria-pressed="true"] {
+  color: #fff;
+  background: var(--color-green-dark);
+}
+
+.student-mode-tabs button span {
+  display: grid;
+  min-width: 1.35rem;
+  height: 1.35rem;
+  padding: 0 0.3rem;
+  place-items: center;
+  border-radius: 999px;
+  color: var(--color-muted);
+  background: #fffdf8;
+  font-size: 0.68rem;
+}
+
+.student-mode-tabs button[aria-pressed="true"] span {
+  color: var(--color-green-dark);
+}
+
 [data-section-message],
 [data-section-state],
 [data-profile-state],
@@ -576,6 +628,22 @@
   background: transparent;
   text-decoration: underline;
   transform: none;
+}
+
+.student-mode-badge {
+  flex: 0 0 auto;
+  padding: 0.2rem 0.48rem;
+  border-radius: 999px;
+  color: #315f42;
+  background: #e3efdc;
+  font-family: var(--font-ui);
+  font-size: 0.66rem;
+  font-weight: 750;
+}
+
+.student-mode-badge[data-mode="offline"] {
+  color: #865f20;
+  background: #f7e9c8;
 }
 
 .entity-marker {
@@ -5847,6 +5915,22 @@ a.overview-stat-card:hover {
   transform: none;
 }
 
+.field-label-with-action .student-course-create-toggle {
+  min-height: 2rem;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid #b9ccb1;
+  border-radius: 999px;
+  color: var(--color-green-dark);
+  background: #edf4e8;
+  text-decoration: none;
+}
+
+.field-label-with-action .student-course-create-toggle:hover:not(:disabled) {
+  border: 1px solid var(--color-green);
+  background: #e3eedc;
+  text-decoration: none;
+}
+
 .inline-course-creator {
   display: grid;
   gap: var(--space-3);
@@ -5867,6 +5951,13 @@ a.overview-stat-card:hover {
   font-family: var(--font-heading);
   font-size: 1.05rem;
   font-weight: 600;
+}
+
+.inline-course-creator__hint {
+  margin: 0;
+  color: var(--color-ink-soft);
+  font-size: 0.78rem;
+  line-height: 1.45;
 }
 
 .inline-course-creator > p[role="status"] {

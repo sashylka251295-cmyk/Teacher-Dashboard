@@ -7,8 +7,8 @@ import { unitsRepository } from "../data/repositories/units-repository.js";
 import { OBJECTIVE_STATUS_LABELS } from "../domain/constants.js";
 import { ENTITY_IMAGE_CONFIG, ENTITY_IMAGE_TYPES } from "../domain/entity-images.js";
 import { overallObjectiveStatus } from "../domain/learning-objectives.js";
-import { initializeCalendar, invalidateCalendar, showCalendar } from "./calendar.js?v=20260905-group-recalculation";
-import { initializeAdminCrud } from "./admin-crud.js?v=20260905-group-recalculation";
+import { initializeCalendar, invalidateCalendar, showCalendar } from "./calendar.js?v=20260905-student-modes";
+import { initializeAdminCrud } from "./admin-crud.js?v=20260905-student-modes";
 import { clearStudentAccess } from "./student-access.js";
 import { loadAdminStudentProfile } from "./student-profile.js?v=20260905-homework-links";
 
@@ -269,8 +269,14 @@ function studentStatus(student) {
   return student.active === false ? "paused" : "active";
 }
 
+function studentLessonMode(student) {
+  return student.lessonMode === "offline" ? "offline" : "online";
+}
+
 function filterStudents(students) {
   const filter = document.querySelector("[data-student-filter]")?.value ?? "active";
+  const mode = document.querySelector('[data-student-mode-filter][aria-pressed="true"]')
+    ?.dataset.studentModeFilter ?? "all";
   const searchTerm = document
     .querySelector("[data-student-search]")
     ?.value.trim()
@@ -278,13 +284,14 @@ function filterStudents(students) {
 
   return students.filter((student) => {
     const matchesStatus = filter === "all" || studentStatus(student) === filter;
+    const matchesMode = mode === "all" || studentLessonMode(student) === mode;
     const searchableValues = [student.name, student.groupName, student.courseName];
     const matchesSearch =
       !searchTerm ||
       searchableValues.some((value) =>
         String(value ?? "").toLocaleLowerCase().includes(searchTerm),
       );
-    return matchesStatus && matchesSearch;
+    return matchesStatus && matchesMode && matchesSearch;
   });
 }
 
@@ -367,8 +374,12 @@ function renderStudent(student) {
   link.dataset.studentProfileLink = student.id;
   link.textContent = displayValue(student.name);
   const marker = createEntityMarker(student.name, "student");
+  const mode = document.createElement("span");
+  mode.className = "student-mode-badge";
+  mode.dataset.mode = studentLessonMode(student);
+  mode.textContent = studentLessonMode(student) === "offline" ? "Offline" : "Online";
   if (student.avatarImageUrl) addMarkerImage(marker, student.avatarImageUrl, "", `${displayValue(student.name)} avatar`);
-  heading.replaceChildren(marker, link);
+  heading.replaceChildren(marker, link, mode);
   setStudentColor(item, student.color);
 
   const actions = document.createElement("div");
@@ -471,6 +482,15 @@ function renderSectionSummary(sectionName, documents) {
     setSummaryValue(
       "students-archived",
       documents.filter((student) => studentStatus(student) === "archived").length,
+    );
+    setSummaryValue("student-mode-all", documents.length);
+    setSummaryValue(
+      "student-mode-online",
+      documents.filter((student) => studentLessonMode(student) === "online").length,
+    );
+    setSummaryValue(
+      "student-mode-offline",
+      documents.filter((student) => studentLessonMode(student) === "offline").length,
     );
   } else if (sectionName === "groups") {
     setSummaryValue("groups-total", documents.length);
@@ -672,6 +692,16 @@ export function initializeAdminDashboard() {
   document.querySelector("[data-student-filter]")?.addEventListener("change", () => {
     const students = sectionDocuments.get("students");
     if (students) renderSectionDocuments("students", students);
+  });
+
+  document.querySelectorAll("[data-student-mode-filter]").forEach((button) => {
+    button.addEventListener("click", () => {
+      document.querySelectorAll("[data-student-mode-filter]").forEach((candidate) => {
+        candidate.setAttribute("aria-pressed", String(candidate === button));
+      });
+      const students = sectionDocuments.get("students");
+      if (students) renderSectionDocuments("students", students);
+    });
   });
 
   document.querySelector("[data-student-search]")?.addEventListener("input", () => {

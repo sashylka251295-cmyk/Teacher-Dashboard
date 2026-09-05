@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Teacher Dashboard — Student Progress Tracker</title>
     <link rel="stylesheet" href="./css/styles.css?v=20260828-route-decor">
-    <link rel="stylesheet" href="./css/admin.css?v=20260905-calendar-organizer">
+    <link rel="stylesheet" href="./css/admin.css?v=20260905-student-modes">
   </head>
   <body>
     <main class="teacher-shell" data-protected-content hidden>
@@ -179,6 +179,11 @@
           <article><span>Archived</span><strong data-summary-value="students-archived">—</strong></article>
         </div>
         <div class="filter-bar">
+          <div class="student-mode-tabs" role="group" aria-label="Filter students by lesson format">
+            <button type="button" data-student-mode-filter="all" aria-pressed="true">All <span data-student-mode-count="all" data-summary-value="student-mode-all">0</span></button>
+            <button type="button" data-student-mode-filter="online" aria-pressed="false">Online <span data-student-mode-count="online" data-summary-value="student-mode-online">0</span></button>
+            <button type="button" data-student-mode-filter="offline" aria-pressed="false">Offline <span data-student-mode-count="offline" data-summary-value="student-mode-offline">0</span></button>
+          </div>
           <label class="filter-bar__search" for="student-list-search">
             <span>Search</span>
             <input id="student-list-search" type="search" placeholder="Student, group or course" data-student-search>
@@ -652,14 +657,15 @@
               <div class="editor-form__field-row">
                 <label for="student-group"><span>Group <small>(optional)</small></span><select id="student-group" name="groupId" data-student-group></select></label>
                 <div class="student-course-field">
-                  <span class="field-label-with-action"><label for="student-course">Course (optional)</label><button type="button" data-student-course-create-toggle aria-expanded="false">+ Create course</button></span>
+                  <span class="field-label-with-action"><label for="student-course">Course (optional)</label><button class="student-course-create-toggle" type="button" data-student-course-create-toggle aria-expanded="false">+ New course</button></span>
                   <select id="student-course" name="courseId" data-student-course></select>
                   <small class="student-course-inherited" data-student-course-hint hidden>Inherited from the selected group.</small>
                 </div>
               </div>
 
               <fieldset class="inline-course-creator" data-student-course-creator hidden>
-                <legend>New course</legend>
+                <legend>Create and assign a course</legend>
+                <p class="inline-course-creator__hint">Create the course here and it will be selected for this student. Finish by clicking “Save Student”.</p>
                 <div class="editor-form__field-row">
                   <label for="student-new-course-name"><span>Course name</span><input id="student-new-course-name" type="text" data-student-new-course-name></label>
                   <label for="student-new-course-level"><span>Level</span><input id="student-new-course-level" type="text" data-student-new-course-level></label>
@@ -668,7 +674,7 @@
                 <p data-student-course-create-message role="status" aria-live="polite"></p>
                 <div class="inline-course-creator__actions">
                   <button type="button" data-student-course-create-cancel>Cancel</button>
-                  <button type="button" data-student-course-create>Save and select</button>
+                  <button type="button" data-student-course-create>Create &amp; assign</button>
                 </div>
               </fieldset>
 
@@ -1284,6 +1290,6 @@
     </main>
 
     <p data-page-status role="status" aria-live="polite">Проверка доступа…</p>
-    <script type="module" src="./js/pages/admin-page.js?v=20260905-group-recalculation"></script>
+    <script type="module" src="./js/pages/admin-page.js?v=20260905-student-modes"></script>
   </body>
 </html>
