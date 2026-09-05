@@ -82,7 +82,7 @@ test("Calendar cache version is propagated through the complete admin module cha
   const html = await readFile(new URL("../admin.html", import.meta.url), "utf8");
   const page = await readFile(new URL("../js/pages/admin-page.js", import.meta.url), "utf8");
   const dashboard = await readFile(new URL("../js/admin/admin-dashboard.js", import.meta.url), "utf8");
-  const version = "20260904-student-schedule";
+  const version = "20260905-calendar-organizer";
   assert.match(html, new RegExp(`admin-page\\.js\\?v=${version}`));
   assert.match(page, new RegExp(`admin-dashboard\\.js\\?v=${version}`));
   assert.match(dashboard, new RegExp(`calendar\\.js\\?v=${version}`));
@@ -114,9 +114,9 @@ test("Week starts on Monday and includes the full 09:00–20:00 working range", 
   assert.ok(20 < CALENDAR_DAY_END_HOUR);
 });
 
-test("Existing student selection keeps its calendar color", () => {
+test("Existing student selection migrates its calendar color to the bright palette", () => {
   const color = calendarColorForEntity({ id: "student-1", name: "Vera", color: "#7ea3bd" });
-  assert.equal(color, "#7ea3bd");
+  assert.equal(color, "#3f91d2");
 });
 
 test("Existing group selection is a valid calendar participant", () => {
@@ -147,9 +147,9 @@ test("Color availability reports occupied students and groups", () => {
     [{ id: "s1", name: "Vera", color: "#8fa77d" }],
     [{ id: "g1", name: "Group 5", color: "#d7ae55" }],
   );
-  assert.deepEqual(usage.get("#8fa77d").map(({ name }) => name), ["Vera"]);
-  assert.deepEqual(usage.get("#d7ae55").map(({ name }) => name), ["Group 5"]);
-  assert.deepEqual(usage.get("#7ea3bd"), []);
+  assert.deepEqual(usage.get("#59a85b").map(({ name }) => name), ["Vera"]);
+  assert.deepEqual(usage.get("#e0a928").map(({ name }) => name), ["Group 5"]);
+  assert.deepEqual(usage.get("#3f91d2"), []);
 });
 
 test("Reused color warning still provides Use anyway", async () => {
@@ -250,7 +250,7 @@ test("Complete lesson links to the existing student and group Progress Update fl
   const quickUpdate = await readFile(new URL("../js/admin/quick-update.js", import.meta.url), "utf8");
   assert.match(calendar, /teacher:student-progress-request/);
   assert.match(calendar, /teacher:group-progress-request/);
-  assert.match(dashboard, /loadAdminStudentProfile\(route\.studentId, "", selection\)/);
+  assert.match(dashboard, /loadAdminStudentProfile\(route\.studentId, "", selection, homeworkId\)/);
   assert.match(groupsCrud, /openGroupQuickUpdate\("", selection\)/);
   assert.match(quickUpdate, /selection\.lessonId/);
   assert.match(quickUpdate, /elements\.completeLesson\.checked = false/);
@@ -262,6 +262,20 @@ test("Student and group colors persist through their existing edit forms", async
   assert.match(studentsCrud, /const color = field\(elements\.form, "color"\)\.value/);
   assert.match(studentsCrud, /\bcolor,/);
   assert.match(groupsCrud, /color: field\(elements\.form, "color"\)\.value/);
+});
+
+test("Calendar keeps notes and separates online/offline students and groups", async () => {
+  const html = await readFile(new URL("../admin.html", import.meta.url), "utf8");
+  const source = await readFile(new URL("../js/admin/calendar.js", import.meta.url), "utf8");
+  const rules = await readFile(new URL("../firestore.rules", import.meta.url), "utf8");
+  for (const category of ["student:online", "student:offline", "group:online", "group:offline"]) {
+    assert.match(html, new RegExp(`data-calendar-participant-filter="${category}"`));
+  }
+  assert.match(html, /data-calendar-note-form/);
+  assert.match(source, /calendarNotesRepository/);
+  assert.match(source, /await Promise\.all\(events\.map/);
+  assert.doesNotMatch(html, /data-calendar-event-color/);
+  assert.match(rules, /match \/calendarNotes\/\{noteId\}[\s\S]*?isAdmin\(\)/);
 });
 
 test("Calendar events use a narrow teacher-only Firestore rule", async () => {

@@ -23,21 +23,38 @@ export const CALENDAR_RECURRENCE_LABELS = Object.freeze({
 });
 
 export const CALENDAR_COLORS = Object.freeze([
-  { name: "Sage", value: "#8fa77d" },
-  { name: "Soft olive", value: "#aebd91" },
-  { name: "Eucalyptus", value: "#789982" },
-  { name: "Muted blue", value: "#7ea3bd" },
-  { name: "Dusty blue", value: "#91aab8" },
-  { name: "Dusty pink", value: "#c99aa1" },
-  { name: "Lavender", value: "#ac8db8" },
-  { name: "Mustard", value: "#d7ae55" },
-  { name: "Terracotta", value: "#c68167" },
-  { name: "Mauve", value: "#a98aa6" },
-  { name: "Teal", value: "#6e9c98" },
-  { name: "Warm beige", value: "#b8a98f" },
-  { name: "Moss", value: "#829477" },
-  { name: "Stone", value: "#aaa69d" },
+  { name: "Leaf green", value: "#59a85b" },
+  { name: "Lime", value: "#8dbb45" },
+  { name: "Emerald", value: "#2d9b78" },
+  { name: "Sky blue", value: "#3f91d2" },
+  { name: "Ocean blue", value: "#4d75c5" },
+  { name: "Coral", value: "#df6f79" },
+  { name: "Purple", value: "#9465c4" },
+  { name: "Sunflower", value: "#e0a928" },
+  { name: "Orange", value: "#dc7545" },
+  { name: "Berry", value: "#b55b91" },
+  { name: "Turquoise", value: "#2ca5a0" },
+  { name: "Caramel", value: "#b8894d" },
+  { name: "Forest", value: "#477e51" },
+  { name: "Slate", value: "#687b8b" },
 ]);
+
+const LEGACY_CALENDAR_COLORS = Object.freeze({
+  "#8fa77d": "#59a85b",
+  "#aebd91": "#8dbb45",
+  "#789982": "#2d9b78",
+  "#7ea3bd": "#3f91d2",
+  "#91aab8": "#4d75c5",
+  "#c99aa1": "#df6f79",
+  "#ac8db8": "#9465c4",
+  "#d7ae55": "#e0a928",
+  "#c68167": "#dc7545",
+  "#a98aa6": "#b55b91",
+  "#6e9c98": "#2ca5a0",
+  "#b8a98f": "#b8894d",
+  "#829477": "#477e51",
+  "#aaa69d": "#687b8b",
+});
 
 const HEX_COLOR_PATTERN = /^#[0-9a-f]{6}$/i;
 const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -98,6 +115,8 @@ function stableColorIndex(value) {
 
 export function calendarColorForEntity(entity, fallbackKey = "") {
   if (isCalendarPaletteColor(entity?.color)) return entity.color.toLowerCase();
+  const migratedColor = LEGACY_CALENDAR_COLORS[String(entity?.color ?? "").toLowerCase()];
+  if (migratedColor) return migratedColor;
   return CALENDAR_COLORS[stableColorIndex(entity?.id || entity?.name || fallbackKey)].value;
 }
 
@@ -105,7 +124,7 @@ export function calendarColorUsage(students = [], groups = [], excluded = {}) {
   const usage = new Map(CALENDAR_COLORS.map(({ value }) => [value.toLowerCase(), []]));
   const add = (entity, type) => {
     if (!entity?.id || entity.id === excluded[`${type}Id`]) return;
-    const color = isCalendarPaletteColor(entity.color) ? entity.color.toLowerCase() : "";
+    const color = calendarColorForEntity(entity);
     if (!usage.has(color)) return;
     usage.get(color).push({ id: entity.id, name: entity.name || "Untitled", type });
   };

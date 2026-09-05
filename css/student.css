@@ -1845,6 +1845,20 @@ body.student-menu-open {
   gap: 0.65rem;
 }
 
+.homework-inline-link {
+  display: inline;
+  color: var(--student-accent-strong, #315f40);
+  font-weight: inherit;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
+  text-underline-offset: 0.18em;
+  overflow-wrap: anywhere;
+}
+
+.homework-inline-link:hover {
+  text-decoration-color: currentColor;
+}
+
 .homework-resource-card {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;

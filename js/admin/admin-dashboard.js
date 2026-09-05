@@ -7,15 +7,16 @@ import { unitsRepository } from "../data/repositories/units-repository.js";
 import { OBJECTIVE_STATUS_LABELS } from "../domain/constants.js";
 import { ENTITY_IMAGE_CONFIG, ENTITY_IMAGE_TYPES } from "../domain/entity-images.js";
 import { overallObjectiveStatus } from "../domain/learning-objectives.js";
-import { initializeCalendar, invalidateCalendar, showCalendar } from "./calendar.js?v=20260904-student-schedule";
-import { initializeAdminCrud } from "./admin-crud.js?v=20260904-calendar";
+import { initializeCalendar, invalidateCalendar, showCalendar } from "./calendar.js?v=20260905-calendar-organizer";
+import { initializeAdminCrud } from "./admin-crud.js?v=20260905-calendar-organizer";
 import { clearStudentAccess } from "./student-access.js";
-import { loadAdminStudentProfile } from "./student-profile.js?v=20260904-calendar";
+import { loadAdminStudentProfile } from "./student-profile.js?v=20260905-homework-links";
 
 const DEFAULT_SECTION = "overview";
 const STUDENT_PROFILE_SECTION = "student-profile";
 const CALENDAR_SECTION = "calendar";
 let pendingStudentProgress = null;
+let pendingHomeworkEdit = null;
 
 const SECTION_CONFIG = Object.freeze({
   groups: {
@@ -603,7 +604,11 @@ function activateRoute(route) {
       ? pendingStudentProgress
       : null;
     pendingStudentProgress = null;
-    void loadAdminStudentProfile(route.studentId, "", selection);
+    const homeworkId = pendingHomeworkEdit?.studentId === route.studentId
+      ? pendingHomeworkEdit.homeworkId
+      : "";
+    pendingHomeworkEdit = null;
+    void loadAdminStudentProfile(route.studentId, "", selection, homeworkId);
   } else if (activeSection === CALENDAR_SECTION) {
     clearStudentAccess();
     void showCalendar();
@@ -629,6 +634,13 @@ export function initializeAdminDashboard() {
     console.error("Admin dashboard markup was not found.");
     return;
   }
+
+  window.addEventListener("teacher:homework-edit-request", (event) => {
+    const detail = event.detail && typeof event.detail === "object" ? event.detail : {};
+    if (!detail.studentId || !detail.homeworkId) return;
+    pendingHomeworkEdit = { studentId: detail.studentId, homeworkId: detail.homeworkId };
+    navigateWithinAdmin(`#student/${encodeURIComponent(detail.studentId)}`);
+  });
 
   navigation.addEventListener("click", (event) => {
     const target = event.target instanceof Element ? event.target : null;

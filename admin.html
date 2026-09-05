@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Teacher Dashboard — Student Progress Tracker</title>
     <link rel="stylesheet" href="./css/styles.css?v=20260828-route-decor">
-    <link rel="stylesheet" href="./css/admin.css?v=20260904-calendar-mini-month">
+    <link rel="stylesheet" href="./css/admin.css?v=20260905-calendar-organizer">
   </head>
   <body>
     <main class="teacher-shell" data-protected-content hidden>
@@ -131,7 +131,20 @@
         </div>
         <p class="calendar-page__state" data-calendar-state role="status" aria-live="polite">Loading calendar…</p>
         <div class="calendar-workspace" data-calendar-workspace hidden>
-          <aside class="calendar-mini-month" data-calendar-mini-month aria-label="Choose a date"></aside>
+          <aside class="calendar-sidebar">
+            <section class="calendar-mini-month" data-calendar-mini-month aria-label="Choose a date"></section>
+            <section class="calendar-notes" aria-labelledby="calendar-notes-heading">
+              <header><div><p class="eyebrow">Quick notes</p><h3 id="calendar-notes-heading">Notes</h3></div></header>
+              <form data-calendar-note-form>
+                <label class="sr-only" for="calendar-note-text">New note</label>
+                <input id="calendar-note-text" name="noteText" type="text" maxlength="180" placeholder="Add a short note…" required>
+                <button type="submit" aria-label="Add note">+</button>
+              </form>
+              <div class="calendar-note-list" data-calendar-note-list></div>
+              <p class="calendar-note-empty" data-calendar-note-empty>No notes yet.</p>
+              <p class="calendar-note-message" data-calendar-note-message role="status" aria-live="polite"></p>
+            </section>
+          </aside>
           <div class="calendar-stage" data-calendar-stage></div>
         </div>
       </section>
@@ -598,8 +611,11 @@
             </fieldset>
             <p data-homework-editor-message role="status" aria-live="polite"></p>
             <footer>
-              <button type="button" data-homework-editor-close>Cancel</button>
-              <button class="button-primary" type="submit" data-homework-editor-save>Save homework</button>
+              <button class="button-danger" type="button" data-homework-editor-delete>Delete homework</button>
+              <div>
+                <button type="button" data-homework-editor-close>Cancel</button>
+                <button class="button-primary" type="submit" data-homework-editor-save>Save homework</button>
+              </div>
             </footer>
           </form>
         </dialog>
@@ -656,11 +672,14 @@
                 </div>
               </fieldset>
 
-              <label for="student-status"><span>Status</span><select id="student-status" name="status" required><option value="active">Active</option><option value="paused">Paused</option><option value="archived">Archived</option></select></label>
+              <div class="editor-form__field-row">
+                <label for="student-status"><span>Status</span><select id="student-status" name="status" required><option value="active">Active</option><option value="paused">Paused</option><option value="archived">Archived</option></select></label>
+                <label for="student-lesson-mode"><span>Lesson format</span><select id="student-lesson-mode" name="lessonMode" required><option value="online">Online</option><option value="offline">Offline</option></select></label>
+              </div>
 
               <fieldset class="calendar-color-field" data-student-calendar-color>
                 <legend>Calendar color</legend>
-                <p>The same calm color will identify this student across scheduled lessons.</p>
+                <p>The same bright color will identify this student across scheduled lessons.</p>
                 <input id="student-color" name="color" type="hidden" value="#8fa77d" data-calendar-color-value>
                 <div class="calendar-color-swatches" data-calendar-color-swatches></div>
                 <p class="calendar-color-availability" data-calendar-color-availability></p>
@@ -711,7 +730,10 @@
                 <label for="group-academic-year"><span>Academic year</span><input id="group-academic-year" name="academicYear" type="text"></label>
               </div>
 
-              <label class="toggle-field" for="group-active"><input id="group-active" name="active" type="checkbox"><span>Active group</span></label>
+              <div class="editor-form__field-row editor-form__field-row--compact">
+                <label class="toggle-field" for="group-active"><input id="group-active" name="active" type="checkbox"><span>Active group</span></label>
+                <label for="group-lesson-mode"><span>Lesson format</span><select id="group-lesson-mode" name="lessonMode" required><option value="online">Online</option><option value="offline">Offline</option></select></label>
+              </div>
 
               <fieldset class="calendar-color-field" data-group-calendar-color>
                 <legend>Calendar color</legend>
@@ -763,25 +785,19 @@
 
           <section data-calendar-existing-fields>
             <label for="calendar-participant-search">Student or group</label>
+            <div class="calendar-participant-filters" data-calendar-participant-filters aria-label="Participant type">
+              <button type="button" data-calendar-participant-filter="student:online" aria-pressed="true">Online students</button>
+              <button type="button" data-calendar-participant-filter="student:offline">Offline students</button>
+              <button type="button" data-calendar-participant-filter="group:online">Online groups</button>
+              <button type="button" data-calendar-participant-filter="group:offline">Offline groups</button>
+            </div>
             <input id="calendar-participant-search" type="search" placeholder="Search student or group…" data-calendar-participant-search>
             <div class="calendar-participant-list" data-calendar-participant-list role="listbox" aria-label="Choose student or group"></div>
+            <p class="calendar-participant-empty" data-calendar-participant-empty hidden>No participants in this section.</p>
             <select name="participant" data-calendar-participant hidden aria-hidden="true"></select>
           </section>
 
           <label data-calendar-manual-field hidden>Event / student name<input name="manualTitle" type="text" placeholder="Trial lesson — Anna"></label>
-
-          <fieldset class="calendar-color-field calendar-color-field--event" data-calendar-event-color>
-            <legend>Calendar color</legend>
-            <p data-calendar-color-context>Choose a color for this manual event.</p>
-            <input name="calendarColor" type="hidden" value="#8fa77d" data-calendar-color-value>
-            <div class="calendar-color-swatches" data-calendar-color-swatches></div>
-            <p class="calendar-color-availability" data-calendar-color-availability></p>
-            <div class="calendar-color-warning" data-warning="false">
-              <p data-calendar-color-message role="status" aria-live="polite"></p>
-              <button type="button" data-calendar-color-choose-another hidden>Choose another</button>
-              <button type="button" data-calendar-color-use-anyway hidden>Use anyway</button>
-            </div>
-          </fieldset>
 
           <div class="calendar-form-row calendar-form-row--time">
             <label>Date<input name="lessonDate" type="date" required></label>
@@ -1268,6 +1284,6 @@
     </main>
 
     <p data-page-status role="status" aria-live="polite">Проверка доступа…</p>
-    <script type="module" src="./js/pages/admin-page.js?v=20260904-student-schedule"></script>
+    <script type="module" src="./js/pages/admin-page.js?v=20260905-calendar-organizer"></script>
   </body>
 </html>

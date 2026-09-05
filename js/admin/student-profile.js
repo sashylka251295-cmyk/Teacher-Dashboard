@@ -27,6 +27,7 @@ import {
   strongestObjectiveCategory,
 } from "../domain/learning-objectives.js";
 import { normalizeHomeworkResources } from "../domain/homework.js";
+import { appendTextWithLinks } from "../ui/linked-text.js?v=20260905-homework-links";
 import {
   hasFeedbackContent,
   mergeFeedbackContent,
@@ -394,7 +395,7 @@ function renderProfileHomework(root, assignments, units) {
     const meta = document.createElement("small");
     const actions = document.createElement("footer");
     const edit = document.createElement("button");
-    title.textContent = assignment.title || "Homework";
+    appendTextWithLinks(title, assignment.title || "Homework");
     meta.textContent = [
       unitNames.get(assignment.unitId) || (assignment.scope === "independent" ? "Independent learning" : ""),
       assignment.dueDate ? `Due ${formatDate(assignment.dueDate)}` : "",
@@ -410,8 +411,24 @@ function renderProfileHomework(root, assignments, units) {
     if (meta.textContent) card.append(meta);
     if (assignment.description) {
       const description = document.createElement("p");
-      description.textContent = assignment.description;
+      appendTextWithLinks(description, assignment.description);
       card.append(description);
+    }
+    const homeworkResources = normalizeHomeworkResources(assignment.resources);
+    if (homeworkResources.length) {
+      const resourceList = document.createElement("ul");
+      resourceList.className = "homework-resource-links";
+      homeworkResources.forEach((resource) => {
+        const item = document.createElement("li");
+        const link = document.createElement("a");
+        link.href = resource.url;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.textContent = `${resource.type === "pdf" ? "PDF" : "Open link"} · ${resource.title}`;
+        item.append(link);
+        resourceList.append(item);
+      });
+      card.append(resourceList);
     }
     card.append(actions);
     return card;
@@ -484,6 +501,7 @@ function openHomeworkEditor(assignmentId) {
   homeworkEditorElements.resources.replaceChildren(...resources.map(createHomeworkResourceRow));
   homeworkEditorElements.message.textContent = "";
   homeworkEditorElements.save.disabled = false;
+  homeworkEditorElements.remove.disabled = false;
   syncHomeworkResourceEditor();
   showDialog(homeworkEditorElements.dialog);
 }
@@ -542,6 +560,26 @@ async function saveHomework(event) {
   }
 }
 
+async function deleteHomework() {
+  const assignment = homeworkEditorAssignments.find(({ id }) => id === editingHomeworkId);
+  if (!assignment || !window.confirm("Delete this homework permanently?")) return;
+  homeworkEditorElements.remove.disabled = true;
+  homeworkEditorElements.save.disabled = true;
+  homeworkEditorElements.message.textContent = "Deleting homework…";
+  try {
+    await homeworkAssignmentsRepository.remove(assignment.id);
+    closeDialog(homeworkEditorElements.dialog);
+    editingHomeworkId = "";
+    await homeworkEditorOnSaved?.("Homework deleted.");
+  } catch (error) {
+    console.error("Unable to delete homework.", error);
+    homeworkEditorElements.message.textContent = "Unable to delete homework. Please try again.";
+  } finally {
+    homeworkEditorElements.remove.disabled = false;
+    homeworkEditorElements.save.disabled = false;
+  }
+}
+
 function configureHomeworkEditor(root, assignments, onSaved) {
   homeworkEditorAssignments = assignments;
   homeworkEditorOnSaved = onSaved;
@@ -560,6 +598,7 @@ function configureHomeworkEditor(root, assignments, onSaved) {
     addResource: select(root, "[data-homework-resource-add]"),
     message: select(root, "[data-homework-editor-message]"),
     save: select(root, "[data-homework-editor-save]"),
+    remove: select(root, "[data-homework-editor-delete]"),
     close: select(root, "[data-homework-editor-close]"),
   };
   root.addEventListener("click", (event) => {
@@ -577,6 +616,7 @@ function configureHomeworkEditor(root, assignments, onSaved) {
     syncHomeworkResourceEditor();
   });
   homeworkEditorElements.close.addEventListener("click", () => closeDialog(dialog));
+  homeworkEditorElements.remove.addEventListener("click", deleteHomework);
   form.addEventListener("submit", saveHomework);
 }
 
@@ -1200,7 +1240,7 @@ async function loadProfileData(studentId) {
   return { student: effectiveStudent, group, course, units, lessons, objectiveProgress, homeworkAssignments, progressHistory, legacyProgress, goals, feedbackDrafts, loadWarnings };
 }
 
-export async function loadAdminStudentProfile(studentId, successMessage = "", quickUpdateSelection = null) {
+export async function loadAdminStudentProfile(studentId, successMessage = "", quickUpdateSelection = null, homeworkId = "") {
   const root = document.querySelector('[data-admin-section="student-profile"]');
   if (!root) return console.error("Admin student profile markup was not found.");
   const requestId = ++activeRequestId;
@@ -1216,6 +1256,7 @@ export async function loadAdminStudentProfile(studentId, successMessage = "", qu
       : "";
     setText(root, "[data-profile-action-message]", successMessage || warningMessage);
     if (quickUpdateSelection) openQuickUpdate(quickUpdateSelection);
+    if (homeworkId) openHomeworkEditor(homeworkId);
   } catch (error) {
     if (requestId !== activeRequestId) return;
     console.error("Unable to load the admin student profile.", error);

@@ -15,7 +15,7 @@ import {
   isStudentVisualTheme,
   isValidHexColor,
 } from "../domain/validation.js";
-import { calendarColorForEntity } from "../domain/calendar.js";
+import { calendarColorForEntity } from "../domain/calendar.js?v=20260905-calendar-organizer";
 import { createCalendarColorPicker } from "../ui/calendar-color-picker.js";
 import {
   closeDialog,
@@ -130,6 +130,7 @@ async function openForm(studentId = null, initialValues = {}) {
   studentImageField.reset();
   calendarColorPicker.setValue("#8fa77d");
   field(elements.form, "status").value = "active";
+  field(elements.form, "lessonMode").value = "online";
   elements.visualTheme.value = DEFAULT_STUDENT_VISUAL_THEME;
   setCourseCreatorOpen(false);
   elements.title.textContent = studentId ? "Edit Student" : "Add Student";
@@ -163,6 +164,7 @@ async function openForm(studentId = null, initialValues = {}) {
       elements.course.value = selectedGroup?.courseId ?? student.courseId ?? "";
       calendarColorPicker.setValue(calendarColorForEntity(student));
       field(elements.form, "status").value = studentStatus(student);
+      field(elements.form, "lessonMode").value = student.lessonMode === "offline" ? "offline" : "online";
       elements.visualTheme.value = isStudentVisualTheme(student.visualTheme)
         ? (student.visualTheme === "neutral" ? "adult" : student.visualTheme)
         : DEFAULT_STUDENT_VISUAL_THEME;
@@ -195,6 +197,7 @@ async function saveStudent(event) {
   const courseId = elements.course.value;
   const color = field(elements.form, "color").value;
   const status = field(elements.form, "status").value;
+  const lessonMode = field(elements.form, "lessonMode").value;
   const visualTheme = elements.visualTheme.value;
   const group = availableGroups.find((candidate) => candidate.id === groupId);
   const course = availableCourses.find((candidate) => candidate.id === courseId);
@@ -219,6 +222,10 @@ async function saveStudent(event) {
     setMessage(elements.message, "Select a valid status.");
     return;
   }
+  if (!["online", "offline"].includes(lessonMode)) {
+    setMessage(elements.message, "Select a lesson format.");
+    return;
+  }
   if (!isStudentVisualTheme(visualTheme)) {
     setMessage(elements.message, "Select a valid student interface.");
     return;
@@ -230,6 +237,7 @@ async function saveStudent(event) {
     courseId,
     color,
     status,
+    lessonMode,
     active: status === "active",
     visualTheme,
   };

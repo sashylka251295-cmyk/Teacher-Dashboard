@@ -33,11 +33,12 @@ import {
 } from "../domain/physical-progress.js";
 import { renderCourseJourneyMap } from "../ui/course-journey-map.js?v=20260828-route-decor";
 import { normalizeHomeworkResources } from "../domain/homework.js";
+import { appendTextWithLinks } from "../ui/linked-text.js?v=20260905-homework-links";
 import { isGoalStatus, isNonEmptyText, isStudentStatus, isValidHexColor } from "../domain/validation.js";
 import { readingSoundForObjective } from "../domain/reading-sounds.js";
 import { createReadingSoundChip } from "../ui/reading-map.js";
 import { createCalendarColorPicker } from "../ui/calendar-color-picker.js";
-import { calendarColorForEntity } from "../domain/calendar.js";
+import { calendarColorForEntity } from "../domain/calendar.js?v=20260905-calendar-organizer";
 import {
   closeDialog,
   displayValue,
@@ -164,6 +165,7 @@ async function openForm(groupId = null) {
   editingGroupId = groupId;
   elements.form.reset();
   field(elements.form, "active").checked = true;
+  field(elements.form, "lessonMode").value = "online";
   groupCalendarColorPicker.setValue("#8fa77d");
   elements.title.textContent = groupId ? "Edit Group" : "Add Group";
   elements.groupDelete.hidden = !groupId;
@@ -196,6 +198,7 @@ async function openForm(groupId = null) {
       elements.course.value = group.courseId ?? "";
       field(elements.form, "academicYear").value = group.academicYear ?? "";
       field(elements.form, "active").checked = group.active !== false;
+      field(elements.form, "lessonMode").value = group.lessonMode === "offline" ? "offline" : "online";
       groupCalendarColorPicker.setValue(calendarColorForEntity(group));
       elements.groupDelete.disabled = false;
     } else {
@@ -254,12 +257,17 @@ async function saveGroup(event) {
     setMessage(elements.message, "Select a valid calendar color.");
     return;
   }
+  if (!["online", "offline"].includes(field(elements.form, "lessonMode").value)) {
+    setMessage(elements.message, "Select a lesson format.");
+    return;
+  }
 
   const payload = {
     name,
     courseId,
     academicYear: field(elements.form, "academicYear").value.trim(),
     active: field(elements.form, "active").checked,
+    lessonMode: field(elements.form, "lessonMode").value,
     color: field(elements.form, "color").value,
   };
   elements.save.disabled = true;
@@ -357,6 +365,17 @@ function createGroupStudentAction(studentId, label = "Open student") {
   button.type = "button";
   button.dataset.groupStudentProfile = studentId;
   button.textContent = label;
+  return button;
+}
+
+function createGroupHomeworkAction(assignment, action) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.dataset.groupHomeworkAction = action;
+  button.dataset.groupHomeworkId = assignment.id;
+  button.dataset.groupHomeworkStudent = assignment.studentId;
+  button.textContent = action === "delete" ? "Delete homework" : "Edit homework";
+  if (action === "delete") button.className = "button-danger";
   return button;
 }
 
@@ -509,7 +528,7 @@ function renderGroupHomeworkHistory(assignments, students, units, lessons) {
     const meta = document.createElement("small");
     const status = document.createElement("span");
     const content = document.createElement("div");
-    title.textContent = assignment.title || "Homework";
+    appendTextWithLinks(title, assignment.title || "Homework");
     meta.textContent = [
       studentNames.get(assignment.studentId) ?? "Unknown student",
       unitNames.get(assignment.unitId),
@@ -524,24 +543,33 @@ function renderGroupHomeworkHistory(assignments, students, units, lessons) {
     content.className = "group-activity__homework-content";
     if (assignment.description) {
       const description = document.createElement("p");
-      description.textContent = assignment.description;
+      appendTextWithLinks(description, assignment.description);
       content.append(description);
     }
-    if (Array.isArray(assignment.resources) && assignment.resources.length) {
+    const homeworkResources = normalizeHomeworkResources(assignment.resources);
+    if (homeworkResources.length) {
       const resources = document.createElement("ul");
-      assignment.resources.forEach((resource) => {
+      resources.className = "homework-resource-links";
+      homeworkResources.forEach((resource) => {
         const item = document.createElement("li");
         const link = document.createElement("a");
         link.href = resource.url;
         link.target = "_blank";
         link.rel = "noopener noreferrer";
-        link.textContent = resource.title || (resource.type === "pdf" ? "PDF file" : "Web resource");
+        link.textContent = `${resource.type === "pdf" ? "PDF" : "Open link"} · ${resource.title}`;
         item.append(link);
         resources.append(item);
       });
       content.append(resources);
     }
-    content.append(createGroupStudentAction(assignment.studentId, "Open student homework"));
+    const actions = document.createElement("footer");
+    actions.className = "group-homework-actions";
+    actions.append(
+      createGroupHomeworkAction(assignment, "delete"),
+      createGroupStudentAction(assignment.studentId, "Open student"),
+      createGroupHomeworkAction(assignment, "edit"),
+    );
+    content.append(actions);
     card.className = "group-activity-card";
     card.append(summary, content);
     return card;
@@ -1347,8 +1375,24 @@ function handleClick(event) {
   const courseLink = target?.closest("[data-group-open-course]");
   const groupQuickUpdate = target?.closest("[data-group-quick-update]");
   const studentQuickUpdate = target?.closest("[data-group-student-update]");
+  const homeworkAction = target?.closest("[data-group-homework-action]");
 
-  if (addButton) void openForm();
+  if (homeworkAction) {
+    const { groupHomeworkAction: action, groupHomeworkId: homeworkId, groupHomeworkStudent: studentId } = homeworkAction.dataset;
+    if (action === "edit") {
+      closeDialog(elements.detailsDialog);
+      window.dispatchEvent(new CustomEvent("teacher:homework-edit-request", { detail: { studentId, homeworkId } }));
+    } else if (action === "delete" && window.confirm("Delete this homework permanently?")) {
+      homeworkAction.disabled = true;
+      void homeworkAssignmentsRepository.remove(homeworkId)
+        .then(() => openDetails(currentGroupDetails.group.id, "Homework deleted."))
+        .catch((error) => {
+          console.error("Unable to delete group homework.", error);
+          homeworkAction.disabled = false;
+          setMessage(elements.detailsState, "Unable to delete homework. Please try again.");
+        });
+    }
+  } else if (addButton) void openForm();
   else if (editButton) {
     closeDialog(elements.detailsDialog);
     void openForm(editButton.dataset.editGroup);

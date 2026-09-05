@@ -1,4 +1,5 @@
-import { calendarEventsRepository } from "../data/repositories/calendar-events-repository.js?v=20260904-student-schedule";
+import { calendarEventsRepository } from "../data/repositories/calendar-events-repository.js?v=20260905-calendar-organizer";
+import { calendarNotesRepository } from "../data/repositories/calendar-notes-repository.js?v=20260905-calendar-organizer";
 import { coursesRepository } from "../data/repositories/courses-repository.js";
 import { groupsRepository } from "../data/repositories/groups-repository.js";
 import { lessonsRepository } from "../data/repositories/lessons-repository.js";
@@ -8,6 +9,7 @@ import {
   CALENDAR_DAY_END_HOUR,
   CALENDAR_DAY_START_HOUR,
   CALENDAR_STATUS_LABELS,
+  CALENDAR_COLORS,
   addCalendarDays,
   buildCalendarEvent,
   calendarColorForEntity,
@@ -18,8 +20,7 @@ import {
   calendarOccurrences,
   isCalendarPaletteColor,
   startOfCalendarWeek,
-} from "../domain/calendar.js";
-import { createCalendarColorPicker } from "../ui/calendar-color-picker.js";
+} from "../domain/calendar.js?v=20260905-calendar-organizer";
 
 const MONTH_FORMAT = new Intl.DateTimeFormat("en", { month: "short" });
 const MONTH_YEAR_FORMAT = new Intl.DateTimeFormat("en", { month: "long", year: "numeric" });
@@ -32,9 +33,9 @@ let elements = null;
 let initialized = false;
 let loaded = false;
 let loading = null;
-let colorPicker = null;
 let view = "week";
 let filter = "all";
+let participantFilter = "student:online";
 let anchorDate = new Date();
 let miniMonthDate = new Date(anchorDate.getFullYear(), anchorDate.getMonth(), 1);
 let students = [];
@@ -43,6 +44,7 @@ let courses = [];
 let units = [];
 let lessons = [];
 let events = [];
+let calendarNotes = [];
 let editingEvent = null;
 let editingOccurrence = null;
 let editorMode = "create";
@@ -129,11 +131,24 @@ function activeParticipants() {
   ].sort((first, second) => String(first.entity.name).localeCompare(String(second.entity.name)));
 }
 
+function participantLessonMode(entity) {
+  return entity?.lessonMode === "offline" ? "offline" : "online";
+}
+
+function participantFilterLabel() {
+  const [type, mode] = participantFilter.split(":");
+  return `${mode === "offline" ? "offline" : "online"} ${type === "group" ? "groups" : "students"}`;
+}
+
 function renderParticipants(preserveValue = true) {
   const participants = activeParticipants();
   const current = preserveValue ? selectedParticipantValue : "";
   const query = elements.participantSearch.value.trim().toLowerCase();
-  const matches = participants.filter(({ entity }) => !query || String(entity.name).toLowerCase().includes(query));
+  const matches = participants.filter(({ type, entity }) => {
+    const category = `${type}:${participantLessonMode(entity)}`;
+    return category === participantFilter
+      && (!query || String(entity.name).toLowerCase().includes(query));
+  });
   const options = participants.map(({ type, entity }) => {
       const option = createOption(
         participantValue(type, entity.id),
@@ -164,7 +179,7 @@ function renderParticipants(preserveValue = true) {
     swatch.className = "calendar-participant-color";
     swatch.style.backgroundColor = calendarColorForEntity(entity);
     name.textContent = entity.name || "Untitled";
-    kind.textContent = type === "student" ? "Individual" : "Group";
+    kind.textContent = `${type === "student" ? "Individual" : "Group"} · ${participantLessonMode(entity)}`;
     check.className = "calendar-participant-check";
     check.textContent = "✓";
     check.setAttribute("aria-hidden", "true");
@@ -180,6 +195,11 @@ function renderParticipants(preserveValue = true) {
     });
     return button;
   }));
+  elements.participantEmpty.hidden = matches.length > 0;
+  elements.participantEmpty.textContent = `No ${participantFilterLabel()} found.`;
+  elements.participantFilterButtons.forEach((button) => {
+    button.setAttribute("aria-pressed", String(button.dataset.calendarParticipantFilter === participantFilter));
+  });
   syncParticipant();
 }
 
@@ -213,12 +233,6 @@ async function ensureParticipantColor(participant) {
 function syncParticipant() {
   if (elements.form.elements.audienceMode.value !== "existing") return;
   const participant = parseParticipant(selectedParticipantValue);
-  const color = participant ? calendarColorForEntity(participant.entity) : "#8fa77d";
-  colorPicker.setValue(color);
-  colorPicker.setDisabled(true);
-  elements.colorContext.textContent = participant
-    ? `${participant.entity.name} keeps this saved color across calendar events.`
-    : "Select a student or group to use their saved color.";
   populateCourses(effectiveCourseId(participant));
 }
 
@@ -229,9 +243,6 @@ function syncAudienceMode() {
   elements.courseFields.hidden = manual;
   elements.form.elements.manualTitle.required = manual;
   if (manual) {
-    colorPicker.setDisabled(false);
-    if (editorMode === "create") colorPicker.setValue(colorPicker.firstAvailable());
-    elements.colorContext.textContent = "Choose a calm color for this manual event.";
     populateCourses("");
   } else syncParticipant();
 }
@@ -266,8 +277,7 @@ function resetEditor() {
   elements.form.elements.repeatInterval.value = "3";
   elements.participantSearch.value = "";
   selectedParticipantValue = "";
-  colorPicker.setUsage(students, groups);
-  colorPicker.setValue("#8fa77d");
+  participantFilter = "student:online";
   renderParticipants(false);
   syncDuration();
   syncRepeat();
@@ -279,6 +289,11 @@ function selectExistingParticipant(event) {
   const value = event.participantType === "student"
     ? participantValue("student", event.studentId)
     : participantValue("group", event.groupId);
+  const participant = parseParticipant(value);
+  if (participant) {
+    participantFilter = `${participant.type}:${participantLessonMode(participant.entity)}`;
+    renderParticipants();
+  }
   if ([...elements.participant.options].some((option) => option.value === value)) {
     selectedParticipantValue = value;
     elements.participant.value = value;
@@ -313,8 +328,6 @@ function openEditor(occurrence = null, mode = "edit", preset = null) {
     syncAudienceMode();
     if (manual) {
       elements.form.elements.manualTitle.value = editingEvent.manualTitle || editingEvent.displayName || "";
-      colorPicker.setDisabled(false);
-      colorPicker.setValue(editingEvent.calendarColor);
     } else selectExistingParticipant(editingEvent);
     elements.form.elements.lessonDate.value = toDateInput(source.startAt);
     elements.form.elements.startTime.value = toTimeInput(source.startAt);
@@ -358,7 +371,9 @@ function collectEditorEvent() {
     groupId: participant?.type === "group" ? participant.entity.id : "",
     manualTitle: elements.form.elements.manualTitle.value,
     displayName: manual ? elements.form.elements.manualTitle.value : participant?.entity.name,
-    calendarColor: colorPicker.value,
+    calendarColor: participant
+      ? calendarColorForEntity(participant.entity)
+      : (editingEvent?.calendarColor || CALENDAR_COLORS[0].value),
     courseId,
     unitId: preserveExistingCurriculum ? editingEvent.unitId : "",
     lessonId: preserveExistingCurriculum ? editingEvent.lessonId : "",
@@ -455,6 +470,17 @@ function visibleOccurrences(range) {
     .filter((event) => filter === "all" || event.participantType === filter);
 }
 
+function eventDisplayColor(event) {
+  const linkedParticipant = event.participantType === "student"
+    ? students.find(({ id }) => id === event.studentId)
+    : event.participantType === "group"
+      ? groups.find(({ id }) => id === event.groupId)
+      : null;
+  return linkedParticipant
+    ? calendarColorForEntity(linkedParticipant)
+    : (event.calendarColor || CALENDAR_COLORS[0].value);
+}
+
 function formatRange(range) {
   if (view === "today") return LONG_DATE_FORMAT.format(range.start);
   if (view === "month") return new Intl.DateTimeFormat("en", { month: "long", year: "numeric" }).format(anchorDate);
@@ -474,7 +500,7 @@ function eventCard(occurrence) {
   card.dataset.calendarEvent = occurrence.id;
   card.dataset.calendarOccurrence = occurrence.occurrenceKey;
   card.dataset.status = occurrence.status;
-  card.style.setProperty("--event-color", occurrence.calendarColor || "#8fa77d");
+  card.style.setProperty("--event-color", eventDisplayColor(occurrence));
   const linkedParticipant = occurrence.participantType === "student"
     ? students.find(({ id }) => id === occurrence.studentId)
     : groups.find(({ id }) => id === occurrence.groupId);
@@ -577,7 +603,7 @@ function renderMonth(range, occurrences) {
       const item = document.createElement("button");
       item.type = "button";
       item.className = "calendar-month-event";
-      item.style.setProperty("--event-color", event.calendarColor || "#8fa77d");
+      item.style.setProperty("--event-color", eventDisplayColor(event));
       item.textContent = `${toTimeInput(event.startAt)} ${event.displayName}`;
       item.addEventListener("click", () => openDetails(event));
       cell.append(item);
@@ -642,6 +668,106 @@ function renderMiniMonth() {
   elements.miniMonth.replaceChildren(header, grid);
 }
 
+function calendarNoteTime(note) {
+  const value = note.updatedAt ?? note.createdAt;
+  const date = value && typeof value.toDate === "function" ? value.toDate() : new Date(value ?? 0);
+  return Number.isNaN(date.getTime()) ? 0 : date.getTime();
+}
+
+function setNoteMessage(message = "", isError = false) {
+  elements.noteMessage.textContent = message;
+  elements.noteMessage.dataset.error = String(isError);
+}
+
+function renderCalendarNotes() {
+  const sorted = [...calendarNotes].sort((first, second) => {
+    if (Boolean(first.completed) !== Boolean(second.completed)) return first.completed ? 1 : -1;
+    return calendarNoteTime(second) - calendarNoteTime(first);
+  });
+  elements.noteList.replaceChildren(...sorted.map((note) => {
+    const item = document.createElement("article");
+    const checkbox = document.createElement("input");
+    const text = document.createElement("span");
+    const edit = document.createElement("button");
+    const remove = document.createElement("button");
+    item.className = "calendar-note-item";
+    item.dataset.completed = String(Boolean(note.completed));
+    checkbox.type = "checkbox";
+    checkbox.checked = Boolean(note.completed);
+    checkbox.setAttribute("aria-label", note.completed ? "Mark note as active" : "Mark note as completed");
+    text.textContent = note.text || "Untitled note";
+    edit.type = "button";
+    edit.className = "calendar-note-item__edit";
+    edit.textContent = "Edit";
+    remove.type = "button";
+    remove.className = "calendar-note-item__delete";
+    remove.textContent = "Delete";
+    checkbox.addEventListener("change", async () => {
+      checkbox.disabled = true;
+      try {
+        await calendarNotesRepository.update(note.id, { completed: checkbox.checked, updatedAt: new Date() });
+        note.completed = checkbox.checked;
+        note.updatedAt = new Date();
+        renderCalendarNotes();
+      } catch (error) {
+        console.error("Unable to update calendar note.", error);
+        checkbox.checked = !checkbox.checked;
+        checkbox.disabled = false;
+        setNoteMessage("Unable to update the note.", true);
+      }
+    });
+    edit.addEventListener("click", async () => {
+      const updatedText = window.prompt("Edit note", note.text || "");
+      if (updatedText === null || !updatedText.trim() || updatedText.trim() === note.text) return;
+      try {
+        await calendarNotesRepository.update(note.id, { text: updatedText.trim(), updatedAt: new Date() });
+        note.text = updatedText.trim();
+        note.updatedAt = new Date();
+        renderCalendarNotes();
+      } catch (error) {
+        console.error("Unable to edit calendar note.", error);
+        setNoteMessage("Unable to edit the note.", true);
+      }
+    });
+    remove.addEventListener("click", async () => {
+      if (!window.confirm("Delete this note?")) return;
+      try {
+        await calendarNotesRepository.remove(note.id);
+        calendarNotes = calendarNotes.filter(({ id }) => id !== note.id);
+        renderCalendarNotes();
+      } catch (error) {
+        console.error("Unable to delete calendar note.", error);
+        setNoteMessage("Unable to delete the note.", true);
+      }
+    });
+    item.append(checkbox, text, edit, remove);
+    return item;
+  }));
+  elements.noteEmpty.hidden = sorted.length > 0;
+}
+
+async function addCalendarNote(event) {
+  event.preventDefault();
+  const text = elements.noteForm.elements.noteText.value.trim();
+  if (!text) return;
+  const submit = elements.noteForm.querySelector('[type="submit"]');
+  submit.disabled = true;
+  setNoteMessage("Saving…");
+  try {
+    const note = { text, completed: false, createdAt: new Date(), updatedAt: new Date() };
+    const id = await calendarNotesRepository.create(note);
+    calendarNotes.unshift({ id, ...note });
+    elements.noteForm.reset();
+    setNoteMessage("");
+    renderCalendarNotes();
+  } catch (error) {
+    console.error("Unable to add calendar note.", error);
+    setNoteMessage("Unable to add the note.", true);
+  } finally {
+    submit.disabled = false;
+  }
+}
+
 function renderCalendar() {
   const range = rangeForView();
   const occurrences = visibleOccurrences(range);
@@ -666,17 +792,18 @@ async function loadCalendarData(force = false) {
     groupsRepository.list(),
     coursesRepository.list(),
     unitsRepository.list(),
-    lessonsRepository.list(),
-    calendarEventsRepository.list(),
-  ]).then((data) => {
-    [students, groups, courses, units, lessons, events] = data;
-    void Promise.all(events
-      .filter((event) => ["planned", "rescheduled"].includes(event.status))
-      .map((event) => calendarEventsRepository.reconcileStudentSchedules(event, scheduleStudentIds(event))))
-      .catch((error) => console.error("Unable to reconcile student schedules.", error));
+  lessonsRepository.list(),
+  calendarEventsRepository.list(),
+    calendarNotesRepository.list(),
+  ]).then(async (data) => {
+    [students, groups, courses, units, lessons, events, calendarNotes] = data;
+    await Promise.all(events.map((event) =>
+      calendarEventsRepository.reconcileStudentSchedules(event, scheduleStudentIds(event))));
     loaded = true;
     elements.add.disabled = false;
     setState("");
+    setNoteMessage("");
+    renderCalendarNotes();
     renderCalendar();
   }).catch((error) => {
     console.error("Unable to load the teacher calendar.", error);
@@ -807,6 +934,10 @@ function initialize() {
     workspace: root.querySelector("[data-calendar-workspace]"),
     stage: root.querySelector("[data-calendar-stage]"),
     miniMonth: root.querySelector("[data-calendar-mini-month]"),
+    noteForm: root.querySelector("[data-calendar-note-form]"),
+    noteList: root.querySelector("[data-calendar-note-list]"),
+    noteEmpty: root.querySelector("[data-calendar-note-empty]"),
+    noteMessage: root.querySelector("[data-calendar-note-message]"),
     state: root.querySelector("[data-calendar-state]"),
     range: root.querySelector("[data-calendar-range]"),
     viewButtons: [...root.querySelectorAll("[data-calendar-view]")],
@@ -825,8 +956,9 @@ function initialize() {
     manualField: editorDialog.querySelector("[data-calendar-manual-field]"),
     participantSearch: editorDialog.querySelector("[data-calendar-participant-search]"),
     participantList: editorDialog.querySelector("[data-calendar-participant-list]"),
+    participantEmpty: editorDialog.querySelector("[data-calendar-participant-empty]"),
+    participantFilterButtons: [...editorDialog.querySelectorAll("[data-calendar-participant-filter]")],
     participant: editorDialog.querySelector("[data-calendar-participant]"),
-    colorContext: editorDialog.querySelector("[data-calendar-color-context]"),
     courseFields: editorDialog.querySelector("[data-calendar-course-fields]"),
     course: editorDialog.querySelector("[data-calendar-course]"),
     customDuration: editorDialog.querySelector("[data-calendar-custom-duration]"),
@@ -845,8 +977,6 @@ function initialize() {
     cancelLesson: detailsDialog.querySelector("[data-calendar-cancel]"),
   };
   if (Object.values(elements).some((element) => !element)) return false;
-  colorPicker = createCalendarColorPicker(editorDialog.querySelector("[data-calendar-event-color]"));
-  if (!colorPicker) return false;
 
   elements.viewButtons.forEach((button) => button.addEventListener("click", () => {
     view = button.dataset.calendarView;
@@ -863,8 +993,15 @@ function initialize() {
   elements.editorClose.addEventListener("click", () => closeDialog(editorDialog));
   elements.editorCancel.addEventListener("click", () => closeDialog(editorDialog));
   elements.form.addEventListener("submit", saveEditor);
+  elements.noteForm.addEventListener("submit", addCalendarNote);
   [...elements.form.elements.audienceMode].forEach((radio) => radio.addEventListener("change", syncAudienceMode));
   elements.participantSearch.addEventListener("input", () => renderParticipants());
+  elements.participantFilterButtons.forEach((button) => button.addEventListener("click", () => {
+    participantFilter = button.dataset.calendarParticipantFilter;
+    elements.participantSearch.value = "";
+    selectedParticipantValue = "";
+    renderParticipants(false);
+  }));
   elements.participant.addEventListener("change", syncParticipant);
   elements.form.elements.duration.addEventListener("change", syncDuration);
   elements.form.elements.repeat.addEventListener("change", syncRepeat);

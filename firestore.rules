@@ -223,6 +223,11 @@ service cloud.firestore {
       allow read, create, update, delete: if isAdmin();
     }
 
+    // Private checklist shown beside the teacher calendar.
+    match /calendarNotes/{noteId} {
+      allow read, create, update, delete: if isAdmin();
+    }
+
     // Safe student-facing schedule projection. Teacher notes, other student
     // identifiers and manual events are intentionally excluded.
     match /studentScheduleEntries/{entryId} {

@@ -10,8 +10,8 @@ import {
 
 import { createRepository } from "../firestore-repository.js";
 import { getFirestoreClient } from "../../core/firebase-client.js";
-import { buildStudentScheduleEntry } from "../../domain/calendar.js?v=20260904-student-schedule";
-import { COLLECTIONS } from "../collection-names.js?v=20260904-student-schedule";
+import { buildStudentScheduleEntry } from "../../domain/calendar.js?v=20260905-calendar-organizer";
+import { COLLECTIONS } from "../collection-names.js?v=20260905-calendar-organizer";
 
 const repository = createRepository(COLLECTIONS.CALENDAR_EVENTS);
 

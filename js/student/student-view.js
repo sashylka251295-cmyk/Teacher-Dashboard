@@ -25,7 +25,8 @@ import {
 } from "../domain/learning-objectives.js";
 import { isIndependentProgressEntry } from "../domain/independent-learning.js";
 import { normalizeHomeworkResources } from "../domain/homework.js";
-import { calendarDate, calendarEndTime, nextCalendarOccurrence } from "../domain/calendar.js?v=20260904-student-schedule";
+import { appendTextWithLinks } from "../ui/linked-text.js?v=20260905-homework-links";
+import { calendarDate, calendarEndTime, nextCalendarOccurrence } from "../domain/calendar.js?v=20260905-calendar-organizer";
 import { applyStudentTheme } from "./student-theme.js";
 import { currentPhysicalUnit, physicalProgress } from "../domain/physical-progress.js";
 import { renderCourseJourneyMap } from "../ui/course-journey-map.js?v=20260828-route-decor";
@@ -412,16 +413,16 @@ function createHomeworkAssignment(assignment, units) {
   const dueDate = formatDate(assignment.dueDate);
   details.className = "homework-assignment-card";
   details.dataset.homeworkAssignment = assignment.id;
-  title.textContent = displayValue(assignment.title, "Homework");
+  appendTextWithLinks(title, displayValue(assignment.title, "Homework"));
   meta.textContent = [unit ? unitName(unit) : "Independent learning", assignedDate ? `Assigned ${assignedDate}` : ""]
     .filter(Boolean).join(" · ");
   identity.append(title, meta);
   summary.append(identity, createStatusBadge(assignment.status, HOMEWORK_STATUS_LABELS));
   instructionsHeading.textContent = "What to do";
-  instructionsText.textContent = displayValue(
+  appendTextWithLinks(instructionsText, displayValue(
     assignment.description,
     "No additional instructions were added. Ask your teacher if anything is unclear.",
-  );
+  ));
   instructions.append(instructionsHeading, instructionsText);
   content.className = "homework-assignment-card__content";
   content.append(instructions);
@@ -695,7 +696,7 @@ function createUnitDetails(unit, progressDocuments, homeworkAssignments, journey
     homework.forEach((assignment) => {
       const item = document.createElement("li");
       const assignmentTitle = document.createElement("span");
-      assignmentTitle.textContent = assignment.title || "Homework";
+      appendTextWithLinks(assignmentTitle, assignment.title || "Homework");
       item.append(assignmentTitle, createStatusBadge(assignment.status, HOMEWORK_STATUS_LABELS));
       list.append(item);
     });
@@ -741,7 +742,7 @@ function createIndependentDetails(progressDocuments, homeworkAssignments) {
     independentHomework.forEach((assignment) => {
       const item = document.createElement("li");
       const title = document.createElement("span");
-      title.textContent = assignment.title || "Homework";
+      appendTextWithLinks(title, assignment.title || "Homework");
       item.append(title, createStatusBadge(assignment.status, HOMEWORK_STATUS_LABELS));
       list.append(item);
     });
