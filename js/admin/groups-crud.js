@@ -31,6 +31,7 @@ import {
   createJourneySnapshot,
   currentPhysicalUnit,
 } from "../domain/physical-progress.js";
+import { groupJourneyChanged, groupJourneyFromHistory } from "../domain/group-physical-progress.js?v=20260905-group-recalculation";
 import { renderCourseJourneyMap } from "../ui/course-journey-map.js?v=20260828-route-decor";
 import { normalizeHomeworkResources } from "../domain/homework.js";
 import { appendTextWithLinks } from "../ui/linked-text.js?v=20260905-homework-links";
@@ -620,6 +621,24 @@ async function openDetails(groupId, successMessage = "") {
       studentIds.has(assignment.studentId) && assignment.courseId === group.courseId);
     const groupFeedbackDrafts = feedbackDrafts.filter((feedback) =>
       studentIds.has(feedback.studentId) && feedback.courseId === group.courseId);
+    const calculatedGroupProgress = groupJourneyFromHistory({
+      group,
+      units,
+      lessons,
+      history: groupProgressHistory,
+    });
+    if (calculatedGroupProgress.journey) {
+      if (groupJourneyChanged(group.courseJourney, calculatedGroupProgress.journey)) {
+        try {
+          await groupsRepository.update(group.id, {
+            courseJourney: { ...calculatedGroupProgress.journey, updatedAt: new Date() },
+          });
+        } catch (error) {
+          console.error("Unable to synchronize the stored group journey.", error);
+        }
+      }
+      group.courseJourney = calculatedGroupProgress.journey;
+    }
     currentGroupDetails = {
       group,
       course,
@@ -636,7 +655,7 @@ async function openDetails(groupId, successMessage = "") {
     setMessage(elements.detailsYear, displayValue(group.academicYear));
     setMessage(elements.detailsActive, displayValue(group.active));
     elements.detailsActive.dataset.status = group.active === false ? "inactive" : "active";
-    const journeyUnit = currentPhysicalUnit(units, group.courseJourney);
+    const journeyUnit = calculatedGroupProgress.unit;
     const journeyProgress = renderCourseJourneyMap(elements.detailsJourney, {
       unit: journeyUnit,
       journey: group.courseJourney,
