@@ -167,6 +167,7 @@ async function openForm(groupId = null) {
   elements.form.reset();
   field(elements.form, "active").checked = true;
   field(elements.form, "lessonMode").value = "online";
+  field(elements.form, "lessonRate").value = "";
   groupCalendarColorPicker.setValue("#8fa77d");
   elements.title.textContent = groupId ? "Edit Group" : "Add Group";
   elements.groupDelete.hidden = !groupId;
@@ -200,6 +201,12 @@ async function openForm(groupId = null) {
       field(elements.form, "academicYear").value = group.academicYear ?? "";
       field(elements.form, "active").checked = group.active !== false;
       field(elements.form, "lessonMode").value = group.lessonMode === "offline" ? "offline" : "online";
+      const storedLessonRate = group.billing?.lessonRate;
+      field(elements.form, "lessonRate").value = storedLessonRate !== null
+        && storedLessonRate !== undefined
+        && String(storedLessonRate).trim() !== ""
+        && Number.isFinite(Number(storedLessonRate))
+        ? String(storedLessonRate) : "";
       groupCalendarColorPicker.setValue(calendarColorForEntity(group));
       elements.groupDelete.disabled = false;
     } else {
@@ -262,6 +269,12 @@ async function saveGroup(event) {
     setMessage(elements.message, "Select a lesson format.");
     return;
   }
+  const lessonRateValue = field(elements.form, "lessonRate").value;
+  const lessonRate = lessonRateValue === "" ? null : Number(lessonRateValue);
+  if (lessonRate !== null && (!(lessonRate >= 0) || !Number.isFinite(lessonRate))) {
+    setMessage(elements.message, "Enter a default lesson rate of zero or more.");
+    return;
+  }
 
   const payload = {
     name,
@@ -270,6 +283,7 @@ async function saveGroup(event) {
     active: field(elements.form, "active").checked,
     lessonMode: field(elements.form, "lessonMode").value,
     color: field(elements.form, "color").value,
+    billing: { lessonRate },
   };
   elements.save.disabled = true;
   setMessage(elements.message, "Saving…");

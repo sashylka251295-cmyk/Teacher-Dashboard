@@ -228,6 +228,32 @@ service cloud.firestore {
       allow read, create, update, delete: if isAdmin();
     }
 
+    // Teacher-only financial ledger. Student accounts cannot read balances,
+    // rates, payment methods or notes from this collection.
+    match /paymentTransactions/{transactionId} {
+      allow read, delete: if isAdmin();
+      allow create: if isAdmin()
+        && request.resource.data.studentId is string
+        && request.resource.data.studentId.size() > 0
+        && request.resource.data.type in ["PAYMENT", "CHARGE", "ADJUSTMENT"]
+        && request.resource.data.amount is number
+        && request.resource.data.amount > 0
+        && request.resource.data.date is timestamp
+        && (
+          request.resource.data.type != "ADJUSTMENT" || (
+            request.resource.data.adjustmentDirection in ["credit", "debit"]
+            && request.resource.data.note is string
+            && request.resource.data.note.size() > 0
+          )
+        );
+      allow update: if isAdmin()
+        && request.resource.data.studentId is string
+        && request.resource.data.type in ["PAYMENT", "CHARGE", "ADJUSTMENT"]
+        && request.resource.data.amount is number
+        && request.resource.data.amount > 0
+        && request.resource.data.date is timestamp;
+    }
+
     // Safe student-facing schedule projection. Teacher notes, other student
     // identifiers and manual events are intentionally excluded.
     match /studentScheduleEntries/{entryId} {

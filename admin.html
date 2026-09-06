@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Teacher Dashboard — Student Progress Tracker</title>
     <link rel="stylesheet" href="./css/styles.css?v=20260828-route-decor">
-    <link rel="stylesheet" href="./css/admin.css?v=20260905-inline-group">
+    <link rel="stylesheet" href="./css/admin.css?v=20260906-payments">
   </head>
   <body>
     <main class="teacher-shell" data-protected-content hidden>
@@ -34,6 +34,7 @@
         <div class="teacher-nav">
           <a href="#groups" data-admin-link="groups"><span aria-hidden="true"><img src="./assets/images/icon-groups.png.png" alt=""></span>Groups</a>
           <a href="#calendar" data-admin-link="calendar"><span aria-hidden="true" class="teacher-nav__calendar-icon"><svg viewBox="0 0 24 24" focusable="false"><path d="M7 3v3m10-3v3M4.5 9h15M6 5h12a2 2 0 0 1 2 2v12H4V7a2 2 0 0 1 2-2Zm2 7h3v3H8v-3Z"/></svg></span>Calendar</a>
+          <a href="#payments" data-admin-link="payments"><span aria-hidden="true" class="teacher-nav__calendar-icon"><svg viewBox="0 0 24 24" focusable="false"><path d="M4 7.5h16v11H4v-11Zm0 3.5h16M7 15h4M6 5h12"/></svg></span>Payments</a>
           <a href="#students" data-admin-link="students"><span aria-hidden="true"><img src="./assets/images/icon-students.png.png" alt=""></span>Students</a>
           <a href="#courses" data-admin-link="courses"><span aria-hidden="true"><img src="./assets/images/icon-courses.png.png" alt=""></span>Courses</a>
         </div>
@@ -146,6 +147,37 @@
             </section>
           </aside>
           <div class="calendar-stage" data-calendar-stage></div>
+        </div>
+      </section>
+
+      <section class="admin-page payments-page" id="payments" data-feature="payments" data-admin-section="payments" hidden>
+        <header class="payments-page__heading">
+          <div><p class="eyebrow">Teacher billing</p><h2>Payments</h2><p>Track lesson charges, payments and student balances.</p></div>
+          <button class="button-primary" type="button" data-payment-add>+ Add payment</button>
+        </header>
+        <p class="payments-state" data-payments-state role="status" aria-live="polite">Loading payments…</p>
+        <div data-payments-content hidden>
+          <div class="payments-summary-grid" aria-label="Payments summary">
+            <article><span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 6h16v13H4V6Zm0 4h16M7 15h5"/></svg></span><div><small>Received this month</small><strong data-payment-summary="received">0 ₽</strong><em data-payment-summary-detail="received">0 payments</em></div></article>
+            <article><span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 3v3m10-3v3M4 8h16v12H4V8Zm3 4h3v3H7v-3Z"/></svg></span><div><small>Expected this month</small><strong data-payment-summary="expected">0 ₽</strong><em data-payment-summary-detail="expected">Recorded charges only</em></div></article>
+            <article><span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 4a8 8 0 1 1-8 8 8 8 0 0 1 8-8Zm0 4v5l3 2"/></svg></span><div><small>Outstanding</small><strong data-payment-summary="outstanding">0 ₽</strong><em data-payment-summary-detail="outstanding">0 students</em></div></article>
+            <article><span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 7c0 1.1 3.1 2 7 2s7-.9 7-2-3.1-2-7-2-7 .9-7 2Zm0 0v4c0 1.1 3.1 2 7 2s7-.9 7-2V7M5 11v4c0 1.1 3.1 2 7 2s7-.9 7-2v-4M5 15v2c0 1.1 3.1 2 7 2s7-.9 7-2v-2"/></svg></span><div><small>Credit balance</small><strong data-payment-summary="credit">0 ₽</strong><em data-payment-summary-detail="credit">0 students</em></div></article>
+          </div>
+          <div class="payments-toolbar">
+            <div class="payments-filters" role="group" aria-label="Filter balances">
+              <button type="button" data-payment-filter="all" aria-pressed="true">All</button>
+              <button type="button" data-payment-filter="credit" aria-pressed="false">Has credit</button>
+              <button type="button" data-payment-filter="outstanding" aria-pressed="false">Outstanding</button>
+              <button type="button" data-payment-filter="zero" aria-pressed="false">Zero balance</button>
+            </div>
+            <label class="payments-search"><span class="sr-only">Search students</span><input type="search" placeholder="Search students…" data-payment-search></label>
+          </div>
+          <div class="payments-table" role="table" aria-label="Student balances">
+            <div class="payments-table__head" role="row"><span>Student</span><span>Format</span><span>Lesson rate</span><span>Balance</span><span>Last payment</span><span></span></div>
+            <div class="payments-table__body" data-payment-rows></div>
+          </div>
+          <p class="payments-empty" data-payments-empty hidden>No students match this filter.</p>
+          <p class="payments-count" data-payments-count></p>
         </div>
       </section>
 
@@ -762,6 +794,9 @@
                 <label for="group-lesson-mode"><span>Lesson format</span><select id="group-lesson-mode" name="lessonMode" required><option value="online">Online</option><option value="offline">Offline</option></select></label>
               </div>
 
+              <label for="group-lesson-rate">Default lesson rate <small>(RUB, optional)</small></label>
+              <input id="group-lesson-rate" name="lessonRate" type="number" min="0" step="1" inputmode="decimal" placeholder="Not configured">
+
               <fieldset class="calendar-color-field" data-group-calendar-color>
                 <legend>Calendar color</legend>
                 <p>The same color will identify this group across scheduled lessons.</p>
@@ -794,6 +829,35 @@
           </div>
           <p data-group-form-message role="status" aria-live="polite"></p>
           <footer class="editor-form__actions"><button type="button" data-group-dialog-close>Cancel</button><button type="button" data-group-delete hidden>Delete Group</button><button type="submit" data-group-save>Save Group</button></footer>
+        </form>
+      </dialog>
+
+      <dialog class="payment-drawer" data-payment-drawer aria-labelledby="payment-drawer-heading">
+        <button class="payment-drawer__close" type="button" data-payment-drawer-close aria-label="Close payment details">×</button>
+        <div data-payment-drawer-content></div>
+      </dialog>
+
+      <dialog class="payment-dialog" data-payment-dialog aria-labelledby="payment-dialog-heading">
+        <form data-payment-form>
+          <header><div><p class="eyebrow">Student ledger</p><h2 id="payment-dialog-heading">Add payment</h2><p>Record money received from a student.</p></div><button type="button" data-payment-dialog-close aria-label="Close">×</button></header>
+          <label>Student<select name="studentId" data-payment-student required></select></label>
+          <div class="payment-form-row"><label>Amount, ₽<input name="amount" type="number" min="0.01" step="0.01" inputmode="decimal" required></label><label>Date<input name="date" type="date" required></label></div>
+          <label>Payment method<select name="method"><option value="">Not specified</option><option value="bank_transfer">Bank transfer</option><option value="cash">Cash</option><option value="other">Other</option></select></label>
+          <label>Note <small>(optional)</small><textarea name="note" rows="3" maxlength="500"></textarea></label>
+          <p data-payment-form-message role="status" aria-live="polite"></p>
+          <footer><button type="button" data-payment-dialog-cancel>Cancel</button><button class="button-primary" type="submit" data-payment-save>Save payment</button></footer>
+        </form>
+      </dialog>
+
+      <dialog class="payment-dialog" data-billing-dialog aria-labelledby="billing-dialog-heading">
+        <form data-billing-form>
+          <header><div><p class="eyebrow">Student billing</p><h2 id="billing-dialog-heading">Edit billing</h2><p data-billing-student-name></p></div><button type="button" data-billing-dialog-close aria-label="Close">×</button></header>
+          <div class="payment-form-row"><label>Lesson format<select name="lessonFormat" required><option value="individual">Individual</option><option value="pair">Pair</option><option value="group">Group</option></select></label><label>Duration<select name="standardDuration" required><option value="30">30 minutes</option><option value="45">45 minutes</option><option value="60">60 minutes</option><option value="90">90 minutes</option></select></label></div>
+          <fieldset data-billing-rate-choice hidden><legend>Lesson rate</legend><label><input type="radio" name="rateChoice" value="group" checked> Use group rate <span data-billing-group-rate></span></label><label><input type="radio" name="rateChoice" value="custom"> Custom rate</label></fieldset>
+          <label data-billing-rate-field>Lesson rate, ₽<input name="lessonRate" type="number" min="0" step="1" inputmode="decimal" placeholder="Not configured"></label>
+          <p class="form-hint">A zero rate is allowed. Balances are still calculated only from ledger entries.</p>
+          <p data-billing-form-message role="status" aria-live="polite"></p>
+          <footer><button type="button" data-billing-dialog-cancel>Cancel</button><button class="button-primary" type="submit" data-billing-save>Save billing</button></footer>
         </form>
       </dialog>
 
@@ -1311,6 +1375,6 @@
     </main>
 
     <p data-page-status role="status" aria-live="polite">Проверка доступа…</p>
-    <script type="module" src="./js/pages/admin-page.js?v=20260905-inline-group"></script>
+    <script type="module" src="./js/pages/admin-page.js?v=20260906-payments"></script>
   </body>
 </html>

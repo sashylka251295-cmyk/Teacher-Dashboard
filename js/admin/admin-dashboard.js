@@ -7,14 +7,16 @@ import { unitsRepository } from "../data/repositories/units-repository.js";
 import { OBJECTIVE_STATUS_LABELS } from "../domain/constants.js";
 import { ENTITY_IMAGE_CONFIG, ENTITY_IMAGE_TYPES } from "../domain/entity-images.js";
 import { overallObjectiveStatus } from "../domain/learning-objectives.js";
-import { initializeCalendar, invalidateCalendar, showCalendar } from "./calendar.js?v=20260905-inline-group";
-import { initializeAdminCrud } from "./admin-crud.js?v=20260905-inline-group";
+import { initializeCalendar, invalidateCalendar, showCalendar } from "./calendar.js?v=20260906-payments";
+import { initializeAdminCrud } from "./admin-crud.js?v=20260906-payments";
+import { initializePayments, showPayments } from "./payments.js?v=20260906-payments";
 import { clearStudentAccess } from "./student-access.js";
 import { loadAdminStudentProfile } from "./student-profile.js?v=20260905-homework-links";
 
 const DEFAULT_SECTION = "overview";
 const STUDENT_PROFILE_SECTION = "student-profile";
 const CALENDAR_SECTION = "calendar";
+const PAYMENTS_SECTION = "payments";
 let pendingStudentProgress = null;
 let pendingHomeworkEdit = null;
 
@@ -632,6 +634,9 @@ function activateRoute(route) {
   } else if (activeSection === CALENDAR_SECTION) {
     clearStudentAccess();
     void showCalendar();
+  } else if (activeSection === PAYMENTS_SECTION) {
+    clearStudentAccess();
+    void showPayments();
   } else if (activeSection === DEFAULT_SECTION) {
     clearStudentAccess();
     void loadOverview();
@@ -727,6 +732,7 @@ export function initializeAdminDashboard() {
   });
 
   initializeCalendar();
+  initializePayments();
   window.addEventListener("teacher:student-progress-request", (event) => {
     const detail = event.detail && typeof event.detail === "object" ? event.detail : {};
     if (!detail.studentId) return;

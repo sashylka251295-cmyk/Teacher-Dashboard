@@ -19,4 +19,5 @@ export const COLLECTIONS = Object.freeze({
   CALENDAR_EVENTS: "calendarEvents",
   CALENDAR_NOTES: "calendarNotes",
   STUDENT_SCHEDULE_ENTRIES: "studentScheduleEntries",
+  PAYMENT_TRANSACTIONS: "paymentTransactions",
 });
