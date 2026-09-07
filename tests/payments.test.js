@@ -146,6 +146,15 @@ test("student search also matches group names", () => {
   assert.equal(filterPaymentRows(rows, "all", "bob").length, 0);
 });
 
+test("Payments separates online and offline students with online first", () => {
+  const rows = [
+    { student: { name: "Online", lessonMode: "online" }, balance: 0 },
+    { student: { name: "Offline", lessonMode: "offline" }, balance: 0 },
+  ];
+  assert.deepEqual(filterPaymentRows(rows, "all", "", "online").map((row) => row.student.name), ["Online"]);
+  assert.deepEqual(filterPaymentRows(rows, "all", "", "offline").map((row) => row.student.name), ["Offline"]);
+});
+
 test("ledger sorts newest transaction first", () => {
   const sorted = sortTransactionsNewestFirst([payment("a", 1, "2026-01-01"), payment("a", 1, "2026-09-01")]);
   assert.equal(sorted[0].date, "2026-09-01");
@@ -157,6 +166,24 @@ test("admin markup contains the Payments route and no student Payments navigatio
   assert.match(admin, /data-admin-link="payments"/);
   assert.match(admin, /data-admin-section="payments"/);
   assert.doesNotMatch(student, /data-student-link="payments"/);
+});
+
+test("Payments defaults to the online student view", () => {
+  const admin = readFileSync(new URL("../admin.html", import.meta.url), "utf8");
+  const source = readFileSync(new URL("../js/admin/payments.js", import.meta.url), "utf8");
+  assert.match(admin, /data-payment-mode="online" aria-pressed="true"[\s\S]*data-payment-mode="offline"/);
+  assert.match(source, /let activeMode = "online"/);
+});
+
+test("teacher student profiles show the effective rate and ledger balance", () => {
+  const admin = readFileSync(new URL("../admin.html", import.meta.url), "utf8");
+  const profile = readFileSync(new URL("../js/admin/student-profile.js", import.meta.url), "utf8");
+  const student = readFileSync(new URL("../student.html", import.meta.url), "utf8");
+  assert.match(admin, /data-profile-billing-rate/);
+  assert.match(admin, /data-profile-balance/);
+  assert.match(profile, /paymentTransactionsRepository\.listByStudent/);
+  assert.match(profile, /effectiveStudentBilling\(student, group\)/);
+  assert.doesNotMatch(student, /data-profile-balance/);
 });
 
 test("Firestore keeps paymentTransactions teacher-only", () => {

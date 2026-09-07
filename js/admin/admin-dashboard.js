@@ -7,11 +7,11 @@ import { unitsRepository } from "../data/repositories/units-repository.js";
 import { OBJECTIVE_STATUS_LABELS } from "../domain/constants.js";
 import { ENTITY_IMAGE_CONFIG, ENTITY_IMAGE_TYPES } from "../domain/entity-images.js";
 import { overallObjectiveStatus } from "../domain/learning-objectives.js";
-import { initializeCalendar, invalidateCalendar, showCalendar } from "./calendar.js?v=20260907-student-colors";
-import { initializeAdminCrud } from "./admin-crud.js?v=20260907-student-colors";
-import { initializePayments, showPayments } from "./payments.js?v=20260906-payments";
+import { initializeCalendar, invalidateCalendar, showCalendar } from "./calendar.js?v=20260907-billing-filters";
+import { initializeAdminCrud } from "./admin-crud.js?v=20260907-billing-filters";
+import { initializePayments, showPayments } from "./payments.js?v=20260907-billing-filters";
 import { clearStudentAccess } from "./student-access.js";
-import { loadAdminStudentProfile } from "./student-profile.js?v=20260905-homework-links";
+import { loadAdminStudentProfile } from "./student-profile.js?v=20260907-billing-filters";
 
 const DEFAULT_SECTION = "overview";
 const STUDENT_PROFILE_SECTION = "student-profile";
@@ -23,8 +23,9 @@ let pendingHomeworkEdit = null;
 const SECTION_CONFIG = Object.freeze({
   groups: {
     loadDocuments: loadGroupsWithCourseNames,
+    filterDocuments: filterGroups,
     loadingMessage: "Loading groups…",
-    emptyMessage: "No groups yet.",
+    emptyMessage: "No groups in this section.",
     errorMessage: "Unable to load groups. Please try again.",
     renderItem: renderGroup,
   },
@@ -275,6 +276,16 @@ function studentLessonMode(student) {
   return student.lessonMode === "offline" ? "offline" : "online";
 }
 
+function groupLessonMode(group) {
+  return group.lessonMode === "offline" ? "offline" : "online";
+}
+
+function filterGroups(groups) {
+  const mode = document.querySelector('[data-group-mode-filter][aria-pressed="true"]')
+    ?.dataset.groupModeFilter ?? "online";
+  return groups.filter((group) => mode === "all" || groupLessonMode(group) === mode);
+}
+
 function filterStudents(students) {
   const filter = document.querySelector("[data-student-filter]")?.value ?? "active";
   const mode = document.querySelector('[data-student-mode-filter][aria-pressed="true"]')
@@ -360,7 +371,11 @@ function renderGroup(group) {
   openButton.className = "entity-name-button";
   openButton.dataset.openGroup = group.id;
   openButton.textContent = displayValue(group.name);
-  heading?.replaceChildren(createEntityMarker(group.name, "group"), openButton);
+  const mode = document.createElement("span");
+  mode.className = "student-mode-badge";
+  mode.dataset.mode = groupLessonMode(group);
+  mode.textContent = groupLessonMode(group) === "offline" ? "Offline" : "Online";
+  heading?.replaceChildren(createEntityMarker(group.name, "group"), openButton, mode);
   return item;
 }
 
@@ -503,6 +518,15 @@ function renderSectionSummary(sectionName, documents) {
     setSummaryValue(
       "groups-courses",
       new Set(documents.map((group) => group.courseId).filter(Boolean)).size,
+    );
+    setSummaryValue("group-mode-all", documents.length);
+    setSummaryValue(
+      "group-mode-online",
+      documents.filter((group) => groupLessonMode(group) === "online").length,
+    );
+    setSummaryValue(
+      "group-mode-offline",
+      documents.filter((group) => groupLessonMode(group) === "offline").length,
     );
   } else if (sectionName === "courses") {
     const activeCount = documents.filter((course) => course.active !== false).length;
@@ -706,6 +730,16 @@ export function initializeAdminDashboard() {
       });
       const students = sectionDocuments.get("students");
       if (students) renderSectionDocuments("students", students);
+    });
+  });
+
+  document.querySelectorAll("[data-group-mode-filter]").forEach((button) => {
+    button.addEventListener("click", () => {
+      document.querySelectorAll("[data-group-mode-filter]").forEach((candidate) => {
+        candidate.setAttribute("aria-pressed", String(candidate === button));
+      });
+      const groups = sectionDocuments.get("groups");
+      if (groups) renderSectionDocuments("groups", groups);
     });
   });
 

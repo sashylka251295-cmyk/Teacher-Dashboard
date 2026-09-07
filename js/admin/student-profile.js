@@ -7,6 +7,7 @@ import { lessonsRepository } from "../data/repositories/lessons-repository.js";
 import { objectiveProgressRepository } from "../data/repositories/objective-progress-repository.js";
 import { progressRepository } from "../data/repositories/progress-repository.js";
 import { progressHistoryRepository } from "../data/repositories/progress-history-repository.js";
+import { paymentTransactionsRepository } from "../data/repositories/payment-transactions-repository.js?v=20260907-billing-filters";
 import { studentsRepository } from "../data/repositories/students-repository.js";
 import { unitsRepository } from "../data/repositories/units-repository.js";
 import {
@@ -35,6 +36,11 @@ import {
 } from "../domain/feedback.js?v=20260831-feedback-editor";
 import { isIndependentProgressEntry } from "../domain/independent-learning.js";
 import { lessonStopsForUnit } from "../domain/physical-progress.js";
+import {
+  calculateStudentBalance,
+  effectiveStudentBilling,
+  formatRubles,
+} from "../domain/payments.js?v=20260907-billing-filters";
 import {
   cumulativeUnitTargets,
   unitPhysicalProgressFromHistory,
@@ -1153,7 +1159,7 @@ function renderAssessmentHistory(root, history, units, lessons) {
 }
 
 function renderProfile(root, data, onQuickUpdateSaved) {
-  const { student, group, course, units, lessons, objectiveProgress, homeworkAssignments, progressHistory, legacyProgress, goals, feedbackDrafts } = data;
+  const { student, group, course, units, lessons, objectiveProgress, homeworkAssignments, progressHistory, legacyProgress, goals, feedbackDrafts, paymentTransactions } = data;
   const warnings = [...(data.loadWarnings ?? [])];
   const initial = displayValue(student.name).trim().charAt(0).toUpperCase() || "S";
   setText(root, "[data-profile-initial]", initial);
@@ -1174,6 +1180,17 @@ function renderProfile(root, data, onQuickUpdateSaved) {
   setText(root, "[data-profile-group]", student.groupId ? relatedName(group, "Unknown group") : "Individual");
   setText(root, "[data-profile-course]", student.courseId ? relatedName(course, "Unknown course") : "Independent learning");
   setText(root, "[data-profile-status]", displayValue(student.status ?? student.active));
+  const billing = effectiveStudentBilling(student, group);
+  setText(root, "[data-profile-billing-rate]", formatRubles(billing.lessonRate));
+  const balanceElement = select(root, "[data-profile-balance]");
+  if (Array.isArray(paymentTransactions)) {
+    const balance = calculateStudentBalance(paymentTransactions, student.id);
+    balanceElement.textContent = formatRubles(balance, { signed: true });
+    balanceElement.dataset.balance = balance > 0 ? "credit" : balance < 0 ? "outstanding" : "zero";
+  } else {
+    balanceElement.textContent = "Unavailable";
+    balanceElement.dataset.balance = "unavailable";
+  }
   select(root, "[data-profile-edit-student]").dataset.editStudent = student.id;
   renderProfilePart("learning objectives", () => renderLearningObjectives(
     root,
@@ -1226,7 +1243,7 @@ async function loadProfileData(studentId) {
     : null;
   const courseId = group?.courseId || student.courseId || "";
   const effectiveStudent = courseId === student.courseId ? student : { ...student, courseId };
-  const [course, units, lessons, objectiveProgress, homeworkAssignments, progressHistory, legacyProgress, goals, feedbackDrafts] = await Promise.all([
+  const [course, units, lessons, objectiveProgress, homeworkAssignments, progressHistory, legacyProgress, goals, feedbackDrafts, paymentTransactions] = await Promise.all([
     loadProfilePart("course", courseId ? coursesRepository.getById(courseId) : Promise.resolve(null), null, loadWarnings),
     loadProfilePart("units", courseId ? unitsRepository.listByCourse(courseId) : Promise.resolve([]), [], loadWarnings),
     loadProfilePart("lessons", courseId ? lessonsRepository.listByCourse(courseId) : Promise.resolve([]), [], loadWarnings),
@@ -1236,8 +1253,9 @@ async function loadProfileData(studentId) {
     loadProfilePart("legacy progress", progressRepository.listByStudent(studentId), [], loadWarnings),
     loadProfilePart("goals", goalsRepository.listByStudent(studentId), [], loadWarnings),
     loadProfilePart("feedback drafts", feedbackDraftsRepository.listByStudent(studentId), [], loadWarnings),
+    loadProfilePart("payments", paymentTransactionsRepository.listByStudent(studentId), null, loadWarnings),
   ]);
-  return { student: effectiveStudent, group, course, units, lessons, objectiveProgress, homeworkAssignments, progressHistory, legacyProgress, goals, feedbackDrafts, loadWarnings };
+  return { student: effectiveStudent, group, course, units, lessons, objectiveProgress, homeworkAssignments, progressHistory, legacyProgress, goals, feedbackDrafts, paymentTransactions, loadWarnings };
 }
 
 export async function loadAdminStudentProfile(studentId, successMessage = "", quickUpdateSelection = null, homeworkId = "") {

@@ -144,7 +144,10 @@
   margin: 1.35rem 0 0.8rem;
 }
 
-.payments-filters { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.payments-mode-tabs, .payments-filters { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.payments-mode-tabs { flex: none; padding: 0.25rem; border: 1px solid #d8d1c3; border-radius: 999px; background: #f3f0e8; }
+.payments-mode-tabs button { border-color: transparent; border-radius: 999px; background: transparent; }
+.payments-mode-tabs button[aria-pressed="true"] { color: white; background: #315f45; }
 .payments-filters button { border-color: transparent; border-radius: 999px; background: #f4f4f0; }
 .payments-filters button[aria-pressed="true"] { color: white; background: #315f45; }
 .payments-search { width: min(23rem, 38%); }
@@ -190,6 +193,14 @@
 .payments-table__arrow { font-size: 1.45rem; }
 .payments-empty, .payments-count { color: #758078; }
 .payments-count { margin: 0.75rem 0 0; font-size: 0.8rem; }
+
+.filter-bar--groups { justify-content: flex-start; }
+.profile-payments-link { display: inline-flex; min-height: 2.75rem; align-items: center; padding: 0.65rem 1rem; border: 1px solid #bfd0b9; border-radius: var(--radius-button); color: #315f45; background: #edf3e9; font-weight: 750; text-decoration: none; }
+.profile-payments-link:hover { color: white; background: #315f45; }
+.profile-billing-balance[data-balance="credit"] { color: #356642; }
+.profile-billing-balance[data-balance="outstanding"] { color: #a45445; }
+.profile-billing-balance[data-balance="zero"],
+.profile-billing-balance[data-balance="unavailable"] { color: #68736c; }
 
 .payment-drawer {
   width: min(31rem, 100vw);

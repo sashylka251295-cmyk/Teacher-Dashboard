@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Teacher Dashboard — Student Progress Tracker</title>
     <link rel="stylesheet" href="./css/styles.css?v=20260828-route-decor">
-    <link rel="stylesheet" href="./css/admin.css?v=20260907-student-colors">
+    <link rel="stylesheet" href="./css/admin.css?v=20260907-billing-filters">
   </head>
   <body>
     <main class="teacher-shell" data-protected-content hidden>
@@ -164,6 +164,11 @@
             <article><span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 7c0 1.1 3.1 2 7 2s7-.9 7-2-3.1-2-7-2-7 .9-7 2Zm0 0v4c0 1.1 3.1 2 7 2s7-.9 7-2V7M5 11v4c0 1.1 3.1 2 7 2s7-.9 7-2v-4M5 15v2c0 1.1 3.1 2 7 2s7-.9 7-2v-2"/></svg></span><div><small>Credit balance</small><strong data-payment-summary="credit">0 ₽</strong><em data-payment-summary-detail="credit">0 students</em></div></article>
           </div>
           <div class="payments-toolbar">
+            <div class="payments-mode-tabs" role="group" aria-label="Filter students by lesson format">
+              <button type="button" data-payment-mode="online" aria-pressed="true">Online</button>
+              <button type="button" data-payment-mode="offline" aria-pressed="false">Offline</button>
+              <button type="button" data-payment-mode="all" aria-pressed="false">All</button>
+            </div>
             <div class="payments-filters" role="group" aria-label="Filter balances">
               <button type="button" data-payment-filter="all" aria-pressed="true">All</button>
               <button type="button" data-payment-filter="credit" aria-pressed="false">Has credit</button>
@@ -190,6 +195,13 @@
           <article><span>Total groups</span><strong data-summary-value="groups-total">—</strong></article>
           <article><span>Active groups</span><strong data-summary-value="groups-active">—</strong></article>
           <article><span>Courses represented</span><strong data-summary-value="groups-courses">—</strong></article>
+        </div>
+        <div class="filter-bar filter-bar--groups">
+          <div class="student-mode-tabs group-mode-tabs" role="group" aria-label="Filter groups by lesson format">
+            <button type="button" data-group-mode-filter="online" aria-pressed="true">Online <span data-summary-value="group-mode-online">0</span></button>
+            <button type="button" data-group-mode-filter="offline" aria-pressed="false">Offline <span data-summary-value="group-mode-offline">0</span></button>
+            <button type="button" data-group-mode-filter="all" aria-pressed="false">All <span data-summary-value="group-mode-all">0</span></button>
+          </div>
         </div>
         <p data-section-message="groups" role="status" aria-live="polite"></p>
         <p data-section-state role="status" aria-live="polite"></p>
@@ -279,9 +291,12 @@
                 <div><dt>Group</dt><dd data-profile-group></dd></div>
                 <div><dt>Course</dt><dd data-profile-course></dd></div>
                 <div><dt>Status</dt><dd data-profile-status></dd></div>
+                <div><dt>Lesson rate</dt><dd data-profile-billing-rate></dd></div>
+                <div><dt>Current balance</dt><dd class="profile-billing-balance" data-profile-balance></dd></div>
               </dl>
             </div>
             <div class="profile-actions">
+              <a class="profile-payments-link" href="#payments" data-dashboard-link="payments">Open payments</a>
               <button type="button" data-profile-edit-student>Edit Student</button>
               <button class="quick-update-button" type="button" data-quick-update-open>Quick Update</button>
             </div>
@@ -1375,6 +1390,6 @@
     </main>
 
     <p data-page-status role="status" aria-live="polite">Проверка доступа…</p>
-    <script type="module" src="./js/pages/admin-page.js?v=20260907-student-colors"></script>
+    <script type="module" src="./js/pages/admin-page.js?v=20260907-billing-filters"></script>
   </body>
 </html>

@@ -20,6 +20,16 @@ test("Students can be viewed separately as online or offline", async () => {
   assert.match(dashboard, /student-mode-badge/);
 });
 
+test("Groups can be viewed separately as online or offline with online first", async () => {
+  const [html, dashboard] = await directorySources();
+  assert.match(html, /data-group-mode-filter="online" aria-pressed="true"/);
+  assert.match(html, /data-group-mode-filter="offline" aria-pressed="false"/);
+  assert.match(html, /data-group-mode-filter="all" aria-pressed="false"/);
+  assert.match(dashboard, /function groupLessonMode\(group\)/);
+  assert.match(dashboard, /function filterGroups\(groups\)/);
+  assert.match(dashboard, /data-group-mode-filter/);
+});
+
 test("A course can be created and selected without leaving Add Student", async () => {
   const [html, , studentsCrud] = await directorySources();
   assert.match(html, /data-student-course-create-toggle/);

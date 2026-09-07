@@ -13,7 +13,7 @@ import {
   signedTransactionAmount,
   sortTransactionsNewestFirst,
   validateTransaction,
-} from "../domain/payments.js?v=20260906-payments";
+} from "../domain/payments.js?v=20260907-billing-filters";
 
 const DATE_FORMAT = new Intl.DateTimeFormat("en", { day: "numeric", month: "short", year: "numeric" });
 const METHOD_LABELS = Object.freeze({ bank_transfer: "Bank transfer", cash: "Cash", other: "Other" });
@@ -27,6 +27,7 @@ let groups = [];
 let transactions = [];
 let rows = [];
 let activeFilter = "all";
+let activeMode = "online";
 let selectedStudentId = "";
 
 function toDate(value) {
@@ -69,7 +70,13 @@ function summaryText(key, value, detail) {
 }
 
 function renderSummary() {
-  const summary = paymentsSummary(transactions, students);
+  const scopedStudents = students.filter((student) => {
+    const mode = student.lessonMode === "offline" ? "offline" : "online";
+    return activeMode === "all" || mode === activeMode;
+  });
+  const scopedStudentIds = new Set(scopedStudents.map(({ id }) => id));
+  const scopedTransactions = transactions.filter(({ studentId }) => scopedStudentIds.has(studentId));
+  const summary = paymentsSummary(scopedTransactions, scopedStudents);
   summaryText("received", summary.received, `${summary.receivedCount} ${summary.receivedCount === 1 ? "payment" : "payments"}`);
   summaryText("expected", summary.expected, `${summary.chargeCount} recorded ${summary.chargeCount === 1 ? "charge" : "charges"}`);
   summaryText("outstanding", summary.outstanding, `${summary.outstandingCount} ${summary.outstandingCount === 1 ? "student" : "students"}`);
@@ -135,10 +142,11 @@ function createPaymentRow(row) {
 }
 
 function renderRows() {
-  const visible = filterPaymentRows(rows, activeFilter, elements.search.value);
+  const modeRows = filterPaymentRows(rows, "all", "", activeMode);
+  const visible = filterPaymentRows(rows, activeFilter, elements.search.value, activeMode);
   elements.rows.replaceChildren(...visible.map(createPaymentRow));
   elements.empty.hidden = visible.length > 0;
-  elements.count.textContent = `Showing ${visible.length} of ${rows.length} students`;
+  elements.count.textContent = `Showing ${visible.length} of ${modeRows.length} students`;
 }
 
 function renderPage() {
@@ -394,6 +402,12 @@ export function initializePayments() {
   root.querySelectorAll("[data-payment-filter]").forEach((button) => button.addEventListener("click", () => {
     activeFilter = button.dataset.paymentFilter;
     root.querySelectorAll("[data-payment-filter]").forEach((candidate) => candidate.setAttribute("aria-pressed", String(candidate === button)));
+    renderRows();
+  }));
+  root.querySelectorAll("[data-payment-mode]").forEach((button) => button.addEventListener("click", () => {
+    activeMode = button.dataset.paymentMode;
+    root.querySelectorAll("[data-payment-mode]").forEach((candidate) => candidate.setAttribute("aria-pressed", String(candidate === button)));
+    renderSummary();
     renderRows();
   }));
   elements.search.addEventListener("input", renderRows);

@@ -159,7 +159,7 @@ export function paymentsSummary(transactions, students, referenceDate = new Date
   };
 }
 
-export function filterPaymentRows(rows, filter = "all", search = "") {
+export function filterPaymentRows(rows, filter = "all", search = "", lessonMode = "all") {
   const term = search.trim().toLocaleLowerCase();
   return rows.filter((row) => {
     const balanceMatches = filter === "credit" ? row.balance > 0
@@ -167,7 +167,9 @@ export function filterPaymentRows(rows, filter = "all", search = "") {
         : filter === "zero" ? row.balance === 0 : true;
     const searchMatches = !term || [row.student.name, row.group?.name]
       .some((value) => String(value ?? "").toLocaleLowerCase().includes(term));
-    return balanceMatches && searchMatches;
+    const rowMode = row.student.lessonMode === "offline" ? "offline" : "online";
+    const modeMatches = lessonMode === "all" || rowMode === lessonMode;
+    return balanceMatches && searchMatches && modeMatches;
   });
 }
 
