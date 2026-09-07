@@ -2613,7 +2613,7 @@ dialog:not(:has(> form)) > button {
 
 .calendar-color-swatches {
   display: grid;
-  grid-template-columns: repeat(7, 1.65rem);
+  grid-template-columns: repeat(10, 1.65rem);
   gap: 0.45rem;
 }
 

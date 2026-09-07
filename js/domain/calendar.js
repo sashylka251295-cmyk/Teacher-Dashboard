@@ -37,7 +37,25 @@ export const CALENDAR_COLORS = Object.freeze([
   { name: "Caramel", value: "#b8894d" },
   { name: "Forest", value: "#477e51" },
   { name: "Slate", value: "#687b8b" },
+  { name: "Mint", value: "#43b581" },
+  { name: "Aqua", value: "#27a9c1" },
+  { name: "Cobalt", value: "#3567d6" },
+  { name: "Indigo", value: "#5b55c8" },
+  { name: "Periwinkle", value: "#7883db" },
+  { name: "Lavender", value: "#ad78d2" },
+  { name: "Orchid", value: "#c858b4" },
+  { name: "Rose", value: "#e4589a" },
+  { name: "Raspberry", value: "#c94761" },
+  { name: "Salmon", value: "#ed8064" },
+  { name: "Tangerine", value: "#ef9633" },
+  { name: "Amber", value: "#c99020" },
+  { name: "Olive", value: "#7e9644" },
+  { name: "Pistachio", value: "#70b85a" },
+  { name: "Cocoa", value: "#9b7055" },
+  { name: "Brick", value: "#c65c47" },
 ]);
+
+const LEGACY_PALETTE_SIZE = 14;
 
 const LEGACY_CALENDAR_COLORS = Object.freeze({
   "#8fa77d": "#59a85b",
@@ -110,7 +128,7 @@ export function isCalendarPaletteColor(value) {
 function stableColorIndex(value) {
   return [...String(value || "calendar")]
     .reduce((total, character) => ((total * 31) + character.charCodeAt(0)) >>> 0, 0)
-    % CALENDAR_COLORS.length;
+    % LEGACY_PALETTE_SIZE;
 }
 
 export function calendarColorForEntity(entity, fallbackKey = "") {

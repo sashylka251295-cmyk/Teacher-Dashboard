@@ -38,8 +38,8 @@ import { appendTextWithLinks } from "../ui/linked-text.js?v=20260905-homework-li
 import { isGoalStatus, isNonEmptyText, isStudentStatus, isValidHexColor } from "../domain/validation.js";
 import { readingSoundForObjective } from "../domain/reading-sounds.js";
 import { createReadingSoundChip } from "../ui/reading-map.js";
-import { createCalendarColorPicker } from "../ui/calendar-color-picker.js";
-import { calendarColorForEntity } from "../domain/calendar.js?v=20260905-calendar-organizer";
+import { createCalendarColorPicker } from "../ui/calendar-color-picker.js?v=20260907-student-colors";
+import { calendarColorForEntity } from "../domain/calendar.js?v=20260907-student-colors";
 import {
   closeDialog,
   displayValue,

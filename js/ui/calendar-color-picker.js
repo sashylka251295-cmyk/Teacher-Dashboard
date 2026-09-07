@@ -2,7 +2,7 @@ import {
   CALENDAR_COLORS,
   calendarColorUsage,
   isCalendarPaletteColor,
-} from "../domain/calendar.js";
+} from "../domain/calendar.js?v=20260907-student-colors";
 
 function usageLabel(entries) {
   if (!entries?.length) return "Available";

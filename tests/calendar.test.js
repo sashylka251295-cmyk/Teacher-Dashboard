@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
+  CALENDAR_COLORS,
   CALENDAR_DAY_END_HOUR,
   CALENDAR_DAY_START_HOUR,
   buildCalendarEvent,
@@ -82,7 +83,7 @@ test("Calendar cache version is propagated through the complete admin module cha
   const html = await readFile(new URL("../admin.html", import.meta.url), "utf8");
   const page = await readFile(new URL("../js/pages/admin-page.js", import.meta.url), "utf8");
   const dashboard = await readFile(new URL("../js/admin/admin-dashboard.js", import.meta.url), "utf8");
-  const version = "20260906-payments";
+  const version = "20260907-student-colors";
   assert.match(html, new RegExp(`admin-page\\.js\\?v=${version}`));
   assert.match(page, new RegExp(`admin-dashboard\\.js\\?v=${version}`));
   assert.match(dashboard, new RegExp(`calendar\\.js\\?v=${version}`));
@@ -117,6 +118,12 @@ test("Week starts on Monday and includes the full 09:00–20:00 working range", 
 test("Existing student selection migrates its calendar color to the bright palette", () => {
   const color = calendarColorForEntity({ id: "student-1", name: "Vera", color: "#7ea3bd" });
   assert.equal(color, "#3f91d2");
+});
+
+test("student calendar palette offers thirty distinct named colors", () => {
+  assert.equal(CALENDAR_COLORS.length, 30);
+  assert.equal(new Set(CALENDAR_COLORS.map(({ value }) => value.toLowerCase())).size, 30);
+  assert.equal(new Set(CALENDAR_COLORS.map(({ name }) => name.toLowerCase())).size, 30);
 });
 
 test("Existing group selection is a valid calendar participant", () => {

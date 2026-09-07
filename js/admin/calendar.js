@@ -20,7 +20,7 @@ import {
   calendarOccurrences,
   isCalendarPaletteColor,
   startOfCalendarWeek,
-} from "../domain/calendar.js?v=20260905-calendar-organizer";
+} from "../domain/calendar.js?v=20260907-student-colors";
 
 const MONTH_FORMAT = new Intl.DateTimeFormat("en", { month: "short" });
 const MONTH_YEAR_FORMAT = new Intl.DateTimeFormat("en", { month: "long", year: "numeric" });

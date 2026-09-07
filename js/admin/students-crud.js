@@ -19,8 +19,8 @@ import {
   CALENDAR_COLORS,
   calendarColorForEntity,
   calendarColorUsage,
-} from "../domain/calendar.js?v=20260905-calendar-organizer";
-import { createCalendarColorPicker } from "../ui/calendar-color-picker.js";
+} from "../domain/calendar.js?v=20260907-student-colors";
+import { createCalendarColorPicker } from "../ui/calendar-color-picker.js?v=20260907-student-colors";
 import {
   closeDialog,
   field,
