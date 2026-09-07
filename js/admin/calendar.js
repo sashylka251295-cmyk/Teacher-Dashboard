@@ -18,9 +18,10 @@ import {
   calendarDateKey,
   calendarEndTime,
   calendarOccurrences,
+  calendarOccurrenceMovePatch,
   isCalendarPaletteColor,
   startOfCalendarWeek,
-} from "../domain/calendar.js?v=20260907-student-colors";
+} from "../domain/calendar.js?v=20260907-calendar-drag-copy";
 
 const MONTH_FORMAT = new Intl.DateTimeFormat("en", { month: "short" });
 const MONTH_YEAR_FORMAT = new Intl.DateTimeFormat("en", { month: "long", year: "numeric" });
@@ -48,7 +49,10 @@ let calendarNotes = [];
 let editingEvent = null;
 let editingOccurrence = null;
 let editorMode = "create";
+let copyingEvent = null;
 let selectedParticipantValue = "";
+let draggedOccurrence = null;
+let suppressEventClick = false;
 
 function createOption(value, label) {
   const option = document.createElement("option");
@@ -305,14 +309,20 @@ function selectExistingParticipant(event) {
 }
 
 function openEditor(occurrence = null, mode = "edit", preset = null) {
-  editingOccurrence = occurrence;
-  editingEvent = occurrence ? events.find(({ id }) => id === occurrence.id) ?? occurrence : null;
-  editorMode = occurrence ? mode : "create";
+  const isCopy = Boolean(occurrence && mode === "copy");
+  copyingEvent = isCopy ? occurrence : null;
+  editingOccurrence = isCopy ? null : occurrence;
+  editingEvent = !isCopy && occurrence ? events.find(({ id }) => id === occurrence.id) ?? occurrence : null;
+  editorMode = isCopy ? "copy" : occurrence ? mode : "create";
   resetEditor();
-  elements.editorTitle.textContent = editorMode === "create"
+  elements.editorTitle.textContent = editorMode === "copy"
+    ? "Copy lesson"
+    : editorMode === "create"
     ? "Add lesson"
     : editorMode === "reschedule" ? "Reschedule lesson" : "Edit lesson";
-  elements.editorSave.textContent = editorMode === "create"
+  elements.editorSave.textContent = editorMode === "copy"
+    ? "Create copy"
+    : editorMode === "create"
     ? "Add lesson"
     : editorMode === "reschedule" ? "Save new time" : "Save changes";
 
@@ -321,14 +331,15 @@ function openEditor(occurrence = null, mode = "edit", preset = null) {
     elements.form.elements.startTime.value = toTimeInput(preset.startAt);
   }
 
-  if (editingEvent) {
-    const source = editorMode === "reschedule" ? occurrence : editingEvent;
-    const manual = editingEvent.participantType === "manual";
+  const formSource = copyingEvent ?? editingEvent;
+  if (formSource) {
+    const source = editorMode === "reschedule" ? occurrence : formSource;
+    const manual = formSource.participantType === "manual";
     elements.form.elements.audienceMode.value = manual ? "manual" : "existing";
     syncAudienceMode();
     if (manual) {
-      elements.form.elements.manualTitle.value = editingEvent.manualTitle || editingEvent.displayName || "";
-    } else selectExistingParticipant(editingEvent);
+      elements.form.elements.manualTitle.value = formSource.manualTitle || formSource.displayName || "";
+    } else selectExistingParticipant(formSource);
     elements.form.elements.lessonDate.value = toDateInput(source.startAt);
     elements.form.elements.startTime.value = toTimeInput(source.startAt);
     const duration = String(source.durationMinutes || 60);
@@ -337,17 +348,17 @@ function openEditor(occurrence = null, mode = "edit", preset = null) {
       elements.form.elements.duration.value = "custom";
       elements.form.elements.customDuration.value = duration;
     }
-    populateCourses(editingEvent.courseId);
-    elements.form.elements.repeat.value = editingEvent.recurrence?.frequency ?? "none";
-    elements.form.elements.repeatInterval.value = editingEvent.recurrence?.intervalWeeks ?? 1;
-    elements.form.elements.repeatUntil.value = editingEvent.recurrence?.until ?? "";
-    elements.form.elements.notes.value = editingEvent.notes ?? "";
+    populateCourses(formSource.courseId);
+    elements.form.elements.repeat.value = isCopy ? "none" : formSource.recurrence?.frequency ?? "none";
+    elements.form.elements.repeatInterval.value = isCopy ? 1 : formSource.recurrence?.intervalWeeks ?? 1;
+    elements.form.elements.repeatUntil.value = isCopy ? "" : formSource.recurrence?.until ?? "";
+    elements.form.elements.notes.value = formSource.notes ?? "";
     syncDuration();
     syncRepeat();
   }
   elements.form.dataset.mode = editorMode;
   showDialog(elements.editorDialog);
-  if (editorMode === "create") elements.participantSearch.focus();
+  if (["create", "copy"].includes(editorMode)) elements.participantSearch.focus();
 }
 
 function collectEditorEvent() {
@@ -362,7 +373,8 @@ function collectEditorEvent() {
     : Number(elements.form.elements.duration.value);
   const repeat = elements.form.elements.repeat.value;
   const courseId = manual ? "" : elements.course.value;
-  const preserveExistingCurriculum = Boolean(editingEvent && courseId === (editingEvent.courseId ?? ""));
+  const curriculumSource = editingEvent ?? copyingEvent;
+  const preserveExistingCurriculum = Boolean(curriculumSource && courseId === (curriculumSource.courseId ?? ""));
   const payload = buildCalendarEvent({
     startAt,
     durationMinutes,
@@ -373,18 +385,18 @@ function collectEditorEvent() {
     displayName: manual ? elements.form.elements.manualTitle.value : participant?.entity.name,
     calendarColor: participant
       ? calendarColorForEntity(participant.entity)
-      : (editingEvent?.calendarColor || CALENDAR_COLORS[0].value),
+      : (curriculumSource?.calendarColor || CALENDAR_COLORS[0].value),
     courseId,
-    unitId: preserveExistingCurriculum ? editingEvent.unitId : "",
-    lessonId: preserveExistingCurriculum ? editingEvent.lessonId : "",
-    status: editingEvent?.status ?? "planned",
+    unitId: preserveExistingCurriculum ? curriculumSource.unitId : "",
+    lessonId: preserveExistingCurriculum ? curriculumSource.lessonId : "",
+    status: editorMode === "copy" ? "planned" : editingEvent?.status ?? "planned",
     notes: elements.form.elements.notes.value,
     recurrence: {
       frequency: repeat,
       intervalWeeks: elements.form.elements.repeatInterval.value,
       until: elements.form.elements.repeatUntil.value,
     },
-    occurrenceOverrides: editingEvent?.occurrenceOverrides,
+    occurrenceOverrides: editorMode === "copy" ? {} : editingEvent?.occurrenceOverrides,
   });
   if (payload.recurrence.until && payload.recurrence.until < calendarDateKey(payload.startAt)) {
     throw new Error("Repeat end date cannot be before the first lesson.");
@@ -421,7 +433,7 @@ async function saveEditor(event) {
     if (participant) {
       payload.calendarColor = await ensureParticipantColor(participant);
     }
-    if (editorMode === "create") await calendarEventsRepository.createEvent(payload, scheduleOptions(payload));
+    if (["create", "copy"].includes(editorMode)) await calendarEventsRepository.createEvent(payload, scheduleOptions(payload));
     else if (editorMode === "reschedule" && editingEvent && editingOccurrence?.isRecurring) {
       await updateEventWithStudentSchedules(editingEvent.id, {
         occurrenceOverrides: {
@@ -490,6 +502,48 @@ function formatRange(range) {
   return `${firstLabel} – ${lastLabel}, ${finalDay.getFullYear()}`;
 }
 
+function canMoveOccurrence(occurrence) {
+  return ["planned", "rescheduled"].includes(occurrence?.status);
+}
+
+async function moveOccurrence(occurrence, newStartAt) {
+  if (!canMoveOccurrence(occurrence)) return;
+  const sourceEvent = events.find(({ id }) => id === occurrence.id);
+  if (!sourceEvent) return setState("Unable to find the lesson to move.", true);
+  const destination = calendarDate(newStartAt);
+  if (!destination || destination.getTime() === occurrence.startAt.getTime()) return;
+  setState("Moving lesson…");
+  try {
+    const patch = calendarOccurrenceMovePatch(sourceEvent, occurrence, destination);
+    await updateEventWithStudentSchedules(sourceEvent.id, patch, sourceEvent);
+    await refreshCalendar();
+  } catch (error) {
+    console.error("Unable to move the calendar lesson.", error);
+    setState(error instanceof Error ? error.message : "Unable to move the lesson. Please try again.", true);
+  }
+}
+
+function enableDropTarget(target, destinationForOccurrence) {
+  target.addEventListener("dragover", (event) => {
+    if (!canMoveOccurrence(draggedOccurrence)) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    target.dataset.dropActive = "true";
+  });
+  target.addEventListener("dragleave", (event) => {
+    if (!target.contains(event.relatedTarget)) delete target.dataset.dropActive;
+  });
+  target.addEventListener("drop", (event) => {
+    if (!canMoveOccurrence(draggedOccurrence)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    delete target.dataset.dropActive;
+    const occurrence = draggedOccurrence;
+    draggedOccurrence = null;
+    void moveOccurrence(occurrence, destinationForOccurrence(occurrence, event));
+  });
+}
+
 function eventCard(occurrence) {
   const card = document.createElement("button");
   const name = document.createElement("strong");
@@ -500,6 +554,8 @@ function eventCard(occurrence) {
   card.dataset.calendarEvent = occurrence.id;
   card.dataset.calendarOccurrence = occurrence.occurrenceKey;
   card.dataset.status = occurrence.status;
+  card.draggable = canMoveOccurrence(occurrence);
+  if (card.draggable) card.title = "Drag to move this lesson";
   card.style.setProperty("--event-color", eventDisplayColor(occurrence));
   const linkedParticipant = occurrence.participantType === "student"
     ? students.find(({ id }) => id === occurrence.studentId)
@@ -507,7 +563,24 @@ function eventCard(occurrence) {
   name.textContent = linkedParticipant?.name || occurrence.displayName || occurrence.manualTitle || "Lesson";
   time.textContent = `${TIME_FORMAT.format(occurrence.startAt)} – ${end ? TIME_FORMAT.format(end) : "—"}`;
   card.append(name, time);
-  card.addEventListener("click", () => openDetails(occurrence));
+  card.addEventListener("dragstart", (event) => {
+    if (!canMoveOccurrence(occurrence)) return event.preventDefault();
+    draggedOccurrence = occurrence;
+    suppressEventClick = true;
+    card.dataset.dragging = "true";
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", `${occurrence.id}:${occurrence.occurrenceKey}`);
+  });
+  card.addEventListener("dragend", () => {
+    draggedOccurrence = null;
+    delete card.dataset.dragging;
+    document.querySelectorAll("[data-drop-active]").forEach((target) => delete target.dataset.dropActive);
+    window.setTimeout(() => { suppressEventClick = false; }, 0);
+  });
+  card.addEventListener("click", (event) => {
+    if (suppressEventClick) return event.preventDefault();
+    openDetails(occurrence);
+  });
   return card;
 }
 
@@ -524,6 +597,7 @@ function timeSlot(day, minutesFromStart, totalMinutes) {
   button.title = `Add lesson at ${toTimeInput(startAt)}`;
   button.setAttribute("aria-label", `Add lesson on ${LONG_DATE_FORMAT.format(startAt)} at ${toTimeInput(startAt)}`);
   button.addEventListener("click", () => openEditor(null, "create", { startAt }));
+  enableDropTarget(button, () => new Date(startAt));
   return button;
 }
 
@@ -560,6 +634,19 @@ function renderSchedule(range, occurrences) {
     column.className = "calendar-day-column";
     column.dataset.today = dayKey === calendarDateKey(new Date()) ? "true" : "false";
     const totalMinutes = (CALENDAR_DAY_END_HOUR - CALENDAR_DAY_START_HOUR) * 60;
+    enableDropTarget(column, (occurrence, dropEvent) => {
+      const bounds = column.getBoundingClientRect();
+      const ratio = Math.max(0, Math.min(0.999, (dropEvent.clientY - bounds.top) / bounds.height));
+      const snappedMinutes = Math.floor((ratio * totalMinutes) / CALENDAR_SLOT_MINUTES) * CALENDAR_SLOT_MINUTES;
+      const destination = new Date(day);
+      destination.setHours(
+        CALENDAR_DAY_START_HOUR + Math.floor(snappedMinutes / 60),
+        snappedMinutes % 60,
+        0,
+        0,
+      );
+      return destination;
+    });
     for (let minutes = 0; minutes < totalMinutes; minutes += CALENDAR_SLOT_MINUTES) {
       column.append(timeSlot(day, minutes, totalMinutes));
     }
@@ -591,6 +678,11 @@ function renderMonth(range, occurrences) {
     const dayEvents = occurrences.filter((event) => calendarDateKey(event.startAt) === dayKey);
     cell.dataset.outsideMonth = String(day.getMonth() !== anchorDate.getMonth());
     cell.dataset.today = String(dayKey === calendarDateKey(new Date()));
+    enableDropTarget(cell, (occurrence) => {
+      const destination = new Date(day);
+      destination.setHours(occurrence.startAt.getHours(), occurrence.startAt.getMinutes(), 0, 0);
+      return destination;
+    });
     dateButton.type = "button";
     dateButton.textContent = String(day.getDate());
     dateButton.addEventListener("click", () => {
@@ -603,9 +695,28 @@ function renderMonth(range, occurrences) {
       const item = document.createElement("button");
       item.type = "button";
       item.className = "calendar-month-event";
+      item.draggable = canMoveOccurrence(event);
+      if (item.draggable) item.title = "Drag to another day to move this lesson";
       item.style.setProperty("--event-color", eventDisplayColor(event));
       item.textContent = `${toTimeInput(event.startAt)} ${event.displayName}`;
-      item.addEventListener("click", () => openDetails(event));
+      item.addEventListener("dragstart", (dragEvent) => {
+        if (!canMoveOccurrence(event)) return dragEvent.preventDefault();
+        draggedOccurrence = event;
+        suppressEventClick = true;
+        item.dataset.dragging = "true";
+        dragEvent.dataTransfer.effectAllowed = "move";
+        dragEvent.dataTransfer.setData("text/plain", `${event.id}:${event.occurrenceKey}`);
+      });
+      item.addEventListener("dragend", () => {
+        draggedOccurrence = null;
+        delete item.dataset.dragging;
+        document.querySelectorAll("[data-drop-active]").forEach((target) => delete target.dataset.dropActive);
+        window.setTimeout(() => { suppressEventClick = false; }, 0);
+      });
+      item.addEventListener("click", (clickEvent) => {
+        if (suppressEventClick) return clickEvent.preventDefault();
+        openDetails(event);
+      });
       cell.append(item);
     });
     if (dayEvents.length > 3) {
@@ -972,6 +1083,7 @@ function initialize() {
     detailsNotes: detailsDialog.querySelector("[data-calendar-details-notes]"),
     detailsMessage: detailsDialog.querySelector("[data-calendar-details-message]"),
     complete: detailsDialog.querySelector("[data-calendar-complete]"),
+    copy: detailsDialog.querySelector("[data-calendar-copy]"),
     edit: detailsDialog.querySelector("[data-calendar-edit]"),
     reschedule: detailsDialog.querySelector("[data-calendar-reschedule]"),
     cancelLesson: detailsDialog.querySelector("[data-calendar-cancel]"),
@@ -1007,6 +1119,11 @@ function initialize() {
   elements.form.elements.repeat.addEventListener("change", syncRepeat);
   elements.detailsClose.addEventListener("click", () => closeDialog(detailsDialog));
   elements.complete.addEventListener("click", completeLesson);
+  elements.copy.addEventListener("click", () => {
+    const occurrence = editingOccurrence;
+    closeDialog(detailsDialog);
+    if (occurrence) openEditor(occurrence, "copy");
+  });
   elements.cancelLesson.addEventListener("click", cancelLesson);
   elements.edit.addEventListener("click", () => {
     closeDialog(detailsDialog);

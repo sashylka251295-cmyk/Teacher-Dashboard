@@ -7,7 +7,7 @@ import { unitsRepository } from "../data/repositories/units-repository.js";
 import { OBJECTIVE_STATUS_LABELS } from "../domain/constants.js";
 import { ENTITY_IMAGE_CONFIG, ENTITY_IMAGE_TYPES } from "../domain/entity-images.js";
 import { overallObjectiveStatus } from "../domain/learning-objectives.js";
-import { initializeCalendar, invalidateCalendar, showCalendar } from "./calendar.js?v=20260907-billing-filters";
+import { initializeCalendar, invalidateCalendar, showCalendar } from "./calendar.js?v=20260907-calendar-drag-copy";
 import { initializeAdminCrud } from "./admin-crud.js?v=20260907-billing-filters";
 import { initializePayments, showPayments } from "./payments.js?v=20260907-billing-filters";
 import { clearStudentAccess } from "./student-access.js";

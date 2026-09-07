@@ -2088,6 +2088,13 @@ dialog:not(:has(> form)) > button {
   gap: 1rem;
 }
 
+.calendar-drag-hint {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.72rem;
+  text-align: center;
+}
+
 .calendar-period-navigation {
   display: flex;
   align-items: center;
@@ -2421,6 +2428,12 @@ dialog:not(:has(> form)) > button {
   background-color: rgb(231 239 226 / 22%);
 }
 
+.calendar-day-column[data-drop-active="true"] {
+  outline: 2px solid var(--color-green-dark);
+  outline-offset: -2px;
+  background-color: rgb(225 238 218 / 46%);
+}
+
 .calendar-time-slot {
   position: absolute;
   z-index: 0;
@@ -2465,6 +2478,13 @@ dialog:not(:has(> form)) > button {
   background: rgb(255 253 248 / 72%);
 }
 
+.calendar-time-slot[data-drop-active="true"]::after {
+  border-color: var(--color-green-dark);
+  color: var(--color-green-dark);
+  background: rgb(225 238 218 / 88%);
+  content: "Move here";
+}
+
 .calendar-event-card {
   position: absolute;
   z-index: 2;
@@ -2494,6 +2514,11 @@ dialog:not(:has(> form)) > button {
   background: color-mix(in srgb, var(--event-color) 21%, #fffdf8);
   transform: translateY(-1px);
 }
+
+.calendar-event-card[draggable="true"] { cursor: grab; }
+.calendar-event-card[draggable="true"]:active { cursor: grabbing; }
+.calendar-event-card[data-dragging="true"],
+.calendar-month-event[data-dragging="true"] { opacity: 0.48; }
 
 .calendar-event-card strong {
   flex: 0 0 auto;
@@ -2566,6 +2591,12 @@ dialog:not(:has(> form)) > button {
   background: var(--color-green-soft);
 }
 
+.calendar-month-grid article[data-drop-active="true"] {
+  outline: 2px solid var(--color-green-dark);
+  outline-offset: -2px;
+  background: #e8f1e2;
+}
+
 .calendar-month-grid article > button:first-child {
   align-self: flex-start;
   width: 1.5rem;
@@ -2591,6 +2622,8 @@ dialog:not(:has(> form)) > button {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.calendar-month-event[draggable="true"] { cursor: grab; }
 
 /* Shared calm palette used by Calendar, Student and Group editors. */
 .calendar-color-field {
@@ -3095,6 +3128,8 @@ dialog:not(:has(> form)) > button {
     align-items: stretch;
     flex-direction: column;
   }
+
+  .calendar-drag-hint { display: none; }
 
   .calendar-period-navigation,
   .calendar-filter-controls {

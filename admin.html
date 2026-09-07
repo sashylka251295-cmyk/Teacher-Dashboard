@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Teacher Dashboard — Student Progress Tracker</title>
     <link rel="stylesheet" href="./css/styles.css?v=20260828-route-decor">
-    <link rel="stylesheet" href="./css/admin.css?v=20260907-billing-filters">
+    <link rel="stylesheet" href="./css/admin.css?v=20260907-calendar-drag-copy">
   </head>
   <body>
     <main class="teacher-shell" data-protected-content hidden>
@@ -124,6 +124,7 @@
             <strong data-calendar-range>Current week</strong>
             <button type="button" data-calendar-next aria-label="Next period">→</button>
           </div>
+          <p class="calendar-drag-hint">Drag a planned lesson to move it. Open a lesson to make a copy.</p>
           <div class="calendar-filter-controls" aria-label="Lesson type filter">
             <button type="button" data-calendar-filter="all" aria-pressed="true">All</button>
             <button type="button" data-calendar-filter="student">Individual</button>
@@ -939,6 +940,7 @@
         <p data-calendar-details-message role="status" aria-live="polite"></p>
         <footer>
           <button class="button-primary" type="button" data-calendar-complete>Complete lesson</button>
+          <button type="button" data-calendar-copy>Copy lesson</button>
           <button type="button" data-calendar-edit>Edit</button>
           <button type="button" data-calendar-reschedule>Reschedule</button>
           <button type="button" data-calendar-cancel>Cancel lesson</button>
@@ -1390,6 +1392,6 @@
     </main>
 
     <p data-page-status role="status" aria-live="polite">Проверка доступа…</p>
-    <script type="module" src="./js/pages/admin-page.js?v=20260907-billing-filters"></script>
+    <script type="module" src="./js/pages/admin-page.js?v=20260907-calendar-drag-copy"></script>
   </body>
 </html>

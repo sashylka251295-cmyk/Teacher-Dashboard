@@ -276,6 +276,30 @@ export function calendarEndTime(event) {
   return start ? new Date(start.getTime() + (Number(event.durationMinutes) || 0) * 60000) : null;
 }
 
+export function calendarOccurrenceMovePatch(event, occurrence, newStartAt) {
+  const startAt = calendarDate(newStartAt);
+  if (!event?.id || !occurrence?.occurrenceKey || !startAt) {
+    throw new Error("A calendar move needs an event, occurrence and destination time.");
+  }
+  if (!["planned", "rescheduled"].includes(occurrence.status)) {
+    throw new Error("Only planned lessons can be moved.");
+  }
+  if (occurrence.isRecurring) {
+    return {
+      occurrenceOverrides: {
+        ...(event.occurrenceOverrides ?? {}),
+        [occurrence.occurrenceKey]: {
+          ...(event.occurrenceOverrides?.[occurrence.occurrenceKey] ?? {}),
+          startAt,
+          durationMinutes: Number(occurrence.durationMinutes) || Number(event.durationMinutes),
+          status: "rescheduled",
+        },
+      },
+    };
+  }
+  return { startAt, status: "rescheduled" };
+}
+
 function safeOccurrenceOverrides(overrides = {}) {
   if (!overrides || typeof overrides !== "object") return {};
   return Object.fromEntries(Object.entries(overrides).map(([key, override]) => {

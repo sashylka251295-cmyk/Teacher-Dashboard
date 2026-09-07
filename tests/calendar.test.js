@@ -10,6 +10,7 @@ import {
   buildStudentScheduleEntry,
   calendarColorForEntity,
   calendarColorUsage,
+  calendarOccurrenceMovePatch,
   calendarOccurrences,
   nextCalendarOccurrence,
   startOfCalendarWeek,
@@ -83,7 +84,7 @@ test("Calendar cache version is propagated through the complete admin module cha
   const html = await readFile(new URL("../admin.html", import.meta.url), "utf8");
   const page = await readFile(new URL("../js/pages/admin-page.js", import.meta.url), "utf8");
   const dashboard = await readFile(new URL("../js/admin/admin-dashboard.js", import.meta.url), "utf8");
-  const version = "20260907-billing-filters";
+  const version = "20260907-calendar-drag-copy";
   assert.match(html, new RegExp(`admin-page\\.js\\?v=${version}`));
   assert.match(page, new RegExp(`admin-dashboard\\.js\\?v=${version}`));
   assert.match(dashboard, new RegExp(`calendar\\.js\\?v=${version}`));
@@ -185,6 +186,63 @@ test("Weekly recurrence stays in one event and expands for the visible range", (
   assert.equal(occurrences.length, 4);
   assert.equal(event.recurrence.frequency, "weekly");
   assert.equal(event.occurrenceOverrides && Object.keys(event.occurrenceOverrides).length, 0);
+});
+
+test("Moving a single lesson changes its start time without creating a second event", () => {
+  const event = { id: "event-1", ...sampleEvent() };
+  const [occurrence] = calendarOccurrences([event], new Date(2026, 8, 1), new Date(2026, 8, 2));
+  const destination = new Date(2026, 8, 1, 18, 30);
+  assert.deepEqual(calendarOccurrenceMovePatch(event, occurrence, destination), {
+    startAt: destination,
+    status: "rescheduled",
+  });
+});
+
+test("Moving one recurring lesson preserves the series and changes only that occurrence", () => {
+  const event = {
+    id: "event-1",
+    ...sampleEvent({
+      recurrence: { frequency: "weekly", until: "2026-09-30" },
+      occurrenceOverrides: {
+        "2026-09-08": { status: "completed" },
+      },
+    }),
+  };
+  const [occurrence] = calendarOccurrences([event], new Date(2026, 8, 1), new Date(2026, 8, 2));
+  const destination = new Date(2026, 8, 2, 17, 0);
+  const patch = calendarOccurrenceMovePatch(event, occurrence, destination);
+  assert.deepEqual(patch.occurrenceOverrides["2026-09-08"], { status: "completed" });
+  assert.deepEqual(patch.occurrenceOverrides[occurrence.occurrenceKey], {
+    startAt: destination,
+    durationMinutes: 60,
+    status: "rescheduled",
+  });
+  assert.equal(event.recurrence.frequency, "weekly");
+});
+
+test("Completed and cancelled lessons cannot be moved", () => {
+  const event = { id: "event-1", ...sampleEvent() };
+  const destination = new Date(2026, 8, 2, 17, 0);
+  for (const status of ["completed", "cancelled"]) {
+    assert.throws(() => calendarOccurrenceMovePatch(event, {
+      ...event,
+      occurrenceKey: "2026-09-01",
+      status,
+    }, destination), /Only planned lessons can be moved/);
+  }
+});
+
+test("Calendar lessons can be dragged to a new slot or copied from details", async () => {
+  const html = await readFile(new URL("../admin.html", import.meta.url), "utf8");
+  const source = await readFile(new URL("../js/admin/calendar.js", import.meta.url), "utf8");
+  assert.match(html, /data-calendar-copy[^>]*>Copy lesson/);
+  assert.match(source, /card\.draggable = canMoveOccurrence\(occurrence\)/);
+  assert.match(source, /addEventListener\("dragstart"/);
+  assert.match(source, /addEventListener\("drop"/);
+  assert.match(source, /calendarOccurrenceMovePatch/);
+  assert.match(source, /updateEventWithStudentSchedules\(sourceEvent\.id, patch, sourceEvent\)/);
+  assert.match(source, /openEditor\(occurrence, "copy"\)/);
+  assert.match(source, /\["create", "copy"\]\.includes\(editorMode\)/);
 });
 
 test("Completed and cancelled lessons remain visible in occurrence history", () => {
