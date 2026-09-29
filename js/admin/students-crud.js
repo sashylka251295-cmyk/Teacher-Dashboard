@@ -76,6 +76,7 @@ function setGroupCreatorOpen(isOpen) {
   elements.newGroupName.value = "";
   elements.newGroupYear.value = "";
   elements.newGroupMode.value = "online";
+  elements.newGroupRate.value = "";
   elements.newGroupActive.checked = true;
   setMessage(elements.groupCreatorMessage, "");
 }
@@ -97,6 +98,8 @@ async function createGroupForStudent() {
   const name = elements.newGroupName.value.trim();
   const courseId = elements.course.value;
   const lessonMode = elements.newGroupMode.value;
+  const lessonRateValue = elements.newGroupRate.value;
+  const lessonRate = lessonRateValue === "" ? null : Number(lessonRateValue);
   if (!isNonEmptyText(name)) {
     setMessage(elements.groupCreatorMessage, "Group name is required.");
     return;
@@ -107,6 +110,10 @@ async function createGroupForStudent() {
   }
   if (!["online", "offline"].includes(lessonMode)) {
     setMessage(elements.groupCreatorMessage, "Select a lesson format.");
+    return;
+  }
+  if (lessonMode === "offline" && (lessonRate === null || !(lessonRate >= 0) || !Number.isFinite(lessonRate))) {
+    setMessage(elements.groupCreatorMessage, "Enter the fixed price for this offline group.");
     return;
   }
 
@@ -120,6 +127,7 @@ async function createGroupForStudent() {
       active: elements.newGroupActive.checked,
       lessonMode,
       color: firstAvailableGroupColor(),
+      billing: { lessonRate: lessonMode === "offline" ? lessonRate : null, standardDuration: 60 },
     };
     const id = await groupsRepository.create(payload);
     const group = { id, ...payload };
@@ -259,6 +267,11 @@ async function openForm(studentId = null, initialValues = {}) {
       calendarColorPicker.setValue(calendarColorForEntity(student));
       field(elements.form, "status").value = studentStatus(student);
       field(elements.form, "lessonMode").value = student.lessonMode === "offline" ? "offline" : "online";
+      const storedLessonRate = student.billing?.lessonRate ?? student.billingOverride?.lessonRate;
+      field(elements.form, "lessonRate").value = storedLessonRate !== null
+        && storedLessonRate !== undefined
+        && Number.isFinite(Number(storedLessonRate))
+        ? String(storedLessonRate) : "";
       elements.visualTheme.value = isStudentVisualTheme(student.visualTheme)
         ? (student.visualTheme === "neutral" ? "adult" : student.visualTheme)
         : DEFAULT_STUDENT_VISUAL_THEME;
@@ -292,6 +305,8 @@ async function saveStudent(event) {
   const color = field(elements.form, "color").value;
   const status = field(elements.form, "status").value;
   const lessonMode = field(elements.form, "lessonMode").value;
+  const lessonRateValue = field(elements.form, "lessonRate").value;
+  const lessonRate = lessonRateValue === "" ? null : Number(lessonRateValue);
   const visualTheme = elements.visualTheme.value;
   const group = availableGroups.find((candidate) => candidate.id === groupId);
   const course = availableCourses.find((candidate) => candidate.id === courseId);
@@ -320,11 +335,16 @@ async function saveStudent(event) {
     setMessage(elements.message, "Select a lesson format.");
     return;
   }
+  if (lessonRate !== null && (!(lessonRate >= 0) || !Number.isFinite(lessonRate))) {
+    setMessage(elements.message, "Enter a fixed lesson rate of zero or more.");
+    return;
+  }
   if (!isStudentVisualTheme(visualTheme)) {
     setMessage(elements.message, "Select a valid student interface.");
     return;
   }
 
+  const currentStudent = availableStudents.find(({ id }) => id === editingStudentId);
   const payload = {
     name,
     groupId,
@@ -332,6 +352,13 @@ async function saveStudent(event) {
     color,
     status,
     lessonMode,
+    billing: {
+      ...(currentStudent?.billing ?? {}),
+      lessonRate,
+      lessonFormat: currentStudent?.billing?.lessonFormat ?? (groupId ? "group" : "individual"),
+      standardDuration: currentStudent?.billing?.standardDuration ?? 60,
+    },
+    billingOverride: {},
     active: status === "active",
     visualTheme,
   };
@@ -441,6 +468,7 @@ export function initializeStudentsCrud(options) {
     newGroupName: dashboard?.querySelector("[data-student-new-group-name]"),
     newGroupYear: dashboard?.querySelector("[data-student-new-group-year]"),
     newGroupMode: dashboard?.querySelector("[data-student-new-group-mode]"),
+    newGroupRate: dashboard?.querySelector("[data-student-new-group-rate]"),
     newGroupActive: dashboard?.querySelector("[data-student-new-group-active]"),
     createGroup: dashboard?.querySelector("[data-student-group-create]"),
     cancelGroupCreation: dashboard?.querySelector("[data-student-group-create-cancel]"),

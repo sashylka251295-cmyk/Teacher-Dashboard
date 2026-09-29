@@ -12,6 +12,7 @@ import {
   calendarColorUsage,
   calendarOccurrenceMovePatch,
   calendarOccurrences,
+  completedCalendarOccurrences,
   nextCalendarOccurrence,
   startOfCalendarWeek,
 } from "../js/domain/calendar.js";
@@ -84,7 +85,7 @@ test("Calendar cache version is propagated through the complete admin module cha
   const html = await readFile(new URL("../admin.html", import.meta.url), "utf8");
   const page = await readFile(new URL("../js/pages/admin-page.js", import.meta.url), "utf8");
   const dashboard = await readFile(new URL("../js/admin/admin-dashboard.js", import.meta.url), "utf8");
-  const version = "20260907-calendar-drag-copy";
+  const version = "20260929-lesson-billing";
   assert.match(html, new RegExp(`admin-page\\.js\\?v=${version}`));
   assert.match(page, new RegExp(`admin-dashboard\\.js\\?v=${version}`));
   assert.match(dashboard, new RegExp(`calendar\\.js\\?v=${version}`));
@@ -251,6 +252,23 @@ test("Completed and cancelled lessons remain visible in occurrence history", () 
     { id: "cancelled", ...sampleEvent({ status: "cancelled", startAt: new Date(2026, 8, 2, 16) }) },
   ], new Date(2026, 8, 1), new Date(2026, 8, 3));
   assert.deepEqual(occurrences.map(({ status }) => status), ["completed", "cancelled"]);
+});
+
+test("completed lesson extraction includes individual recurring occurrences", () => {
+  const recurring = {
+    id: "recurring",
+    ...sampleEvent({
+      recurrence: { frequency: "weekly", until: "2026-09-30" },
+      occurrenceOverrides: {
+        "2026-09-01": { status: "completed" },
+        "2026-09-08": { status: "cancelled" },
+        "2026-09-15": { status: "completed", startAt: new Date(2026, 8, 16, 17, 0) },
+      },
+    }),
+  };
+  const completed = completedCalendarOccurrences([recurring]);
+  assert.deepEqual(completed.map(({ occurrenceKey }) => occurrenceKey), ["2026-09-01", "2026-09-15"]);
+  assert.equal(completed[1].startAt.getDate(), 16);
 });
 
 test("Student schedule projection excludes private calendar fields", () => {

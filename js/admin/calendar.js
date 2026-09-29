@@ -3,6 +3,7 @@ import { calendarNotesRepository } from "../data/repositories/calendar-notes-rep
 import { coursesRepository } from "../data/repositories/courses-repository.js";
 import { groupsRepository } from "../data/repositories/groups-repository.js";
 import { lessonsRepository } from "../data/repositories/lessons-repository.js";
+import { paymentTransactionsRepository } from "../data/repositories/payment-transactions-repository.js?v=20260929-lesson-billing";
 import { studentsRepository } from "../data/repositories/students-repository.js";
 import { unitsRepository } from "../data/repositories/units-repository.js";
 import {
@@ -19,9 +20,15 @@ import {
   calendarEndTime,
   calendarOccurrences,
   calendarOccurrenceMovePatch,
+  completedCalendarOccurrences,
   isCalendarPaletteColor,
   startOfCalendarWeek,
-} from "../domain/calendar.js?v=20260907-calendar-drag-copy";
+} from "../domain/calendar.js?v=20260929-lesson-billing";
+import {
+  billingTargetsForCalendarOccurrence,
+  lessonChargeForTarget,
+  lessonPaymentSummary,
+} from "../domain/payments.js?v=20260929-lesson-billing";
 
 const MONTH_FORMAT = new Intl.DateTimeFormat("en", { month: "short" });
 const MONTH_YEAR_FORMAT = new Intl.DateTimeFormat("en", { month: "long", year: "numeric" });
@@ -46,6 +53,7 @@ let units = [];
 let lessons = [];
 let events = [];
 let calendarNotes = [];
+let paymentTransactions = [];
 let editingEvent = null;
 let editingOccurrence = null;
 let editorMode = "create";
@@ -493,6 +501,17 @@ function eventDisplayColor(event) {
     : (event.calendarColor || CALENDAR_COLORS[0].value);
 }
 
+function occurrencePayment(occurrence) {
+  return lessonPaymentSummary(occurrence, paymentTransactions, students, groups);
+}
+
+function paymentLabel(summary) {
+  if (!summary) return "";
+  return summary.totalCount > 1
+    ? `${summary.label} · ${summary.paidCount}/${summary.totalCount}`
+    : summary.label;
+}
+
 function formatRange(range) {
   if (view === "today") return LONG_DATE_FORMAT.format(range.start);
   if (view === "month") return new Intl.DateTimeFormat("en", { month: "long", year: "numeric" }).format(anchorDate);
@@ -563,6 +582,15 @@ function eventCard(occurrence) {
   name.textContent = linkedParticipant?.name || occurrence.displayName || occurrence.manualTitle || "Lesson";
   time.textContent = `${TIME_FORMAT.format(occurrence.startAt)} – ${end ? TIME_FORMAT.format(end) : "—"}`;
   card.append(name, time);
+  const payment = occurrencePayment(occurrence);
+  if (payment) {
+    card.dataset.paymentStatus = payment.status;
+    const badge = document.createElement("span");
+    badge.className = "calendar-payment-badge";
+    badge.dataset.paymentStatus = payment.status;
+    badge.textContent = paymentLabel(payment);
+    card.append(badge);
+  }
   card.addEventListener("dragstart", (event) => {
     if (!canMoveOccurrence(occurrence)) return event.preventDefault();
     draggedOccurrence = occurrence;
@@ -698,7 +726,9 @@ function renderMonth(range, occurrences) {
       item.draggable = canMoveOccurrence(event);
       if (item.draggable) item.title = "Drag to another day to move this lesson";
       item.style.setProperty("--event-color", eventDisplayColor(event));
-      item.textContent = `${toTimeInput(event.startAt)} ${event.displayName}`;
+      const payment = occurrencePayment(event);
+      item.dataset.paymentStatus = payment?.status ?? "";
+      item.textContent = `${toTimeInput(event.startAt)} ${event.displayName}${payment ? ` · ${payment.label}` : ""}`;
       item.addEventListener("dragstart", (dragEvent) => {
         if (!canMoveOccurrence(event)) return dragEvent.preventDefault();
         draggedOccurrence = event;
@@ -906,10 +936,12 @@ async function loadCalendarData(force = false) {
   lessonsRepository.list(),
   calendarEventsRepository.list(),
     calendarNotesRepository.list(),
+    paymentTransactionsRepository.list(),
   ]).then(async (data) => {
-    [students, groups, courses, units, lessons, events, calendarNotes] = data;
+    [students, groups, courses, units, lessons, events, calendarNotes, paymentTransactions] = data;
     await Promise.all(events.map((event) =>
       calendarEventsRepository.reconcileStudentSchedules(event, scheduleStudentIds(event))));
+    await reconcileOccurrenceCharges(completedCalendarOccurrences(events));
     loaded = true;
     elements.add.disabled = false;
     setState("");
@@ -934,6 +966,7 @@ async function refreshCalendar() {
 function openDetails(occurrence) {
   editingOccurrence = occurrence;
   editingEvent = events.find(({ id }) => id === occurrence.id) ?? occurrence;
+  const payment = occurrencePayment(occurrence);
   const rows = [
     ["Date", LONG_DATE_FORMAT.format(occurrence.startAt)],
     ["Time", `${TIME_FORMAT.format(occurrence.startAt)} – ${TIME_FORMAT.format(calendarEndTime(occurrence))}`],
@@ -942,6 +975,7 @@ function openDetails(occurrence) {
     ["Unit", unitName(occurrence.unitId) || "No specific unit"],
     ["Lesson", lessonName(occurrence.lessonId) || "No specific lesson"],
     ["Repeat", occurrence.isRecurring ? "Recurring lesson" : "Doesn’t repeat"],
+    ...(payment ? [["Payment", paymentLabel(payment)]] : []),
   ];
   elements.detailsTitle.textContent = occurrence.displayName || occurrence.manualTitle || "Lesson";
   elements.detailsStatus.textContent = CALENDAR_STATUS_LABELS[occurrence.status] ?? "Planned";
@@ -959,8 +993,38 @@ function openDetails(occurrence) {
   elements.detailsNotes.hidden = !occurrence.notes;
   elements.detailsMessage.textContent = "";
   elements.complete.disabled = occurrence.status === "completed";
-  elements.cancelLesson.disabled = occurrence.status === "cancelled";
+  elements.edit.disabled = occurrence.status === "completed";
+  elements.reschedule.disabled = occurrence.status === "completed";
+  elements.cancelLesson.disabled = ["cancelled", "completed"].includes(occurrence.status);
   showDialog(elements.detailsDialog);
+}
+
+async function reconcileOccurrenceCharges(occurrences) {
+  const pending = occurrences.flatMap((occurrence) =>
+    billingTargetsForCalendarOccurrence(occurrence, students, groups)
+      .filter((target) => target.lessonRate > 0
+        && !lessonChargeForTarget(paymentTransactions, occurrence, target))
+      .map((target) => ({ occurrence, target })));
+  if (!pending.length) return;
+  await Promise.all(pending.map(({ occurrence, target }) => paymentTransactionsRepository.createLessonCharge({
+    accountType: target.accountType,
+    accountId: target.accountId,
+    amount: target.lessonRate,
+    date: occurrence.startAt,
+    lessonEventId: occurrence.id,
+    lessonOccurrenceKey: occurrence.occurrenceKey,
+    lessonId: occurrence.lessonId,
+    courseId: occurrence.courseId,
+    unitId: occurrence.unitId,
+    groupId: occurrence.groupId,
+    lessonLabel: occurrence.displayName || occurrence.manualTitle || "Completed lesson",
+    attendanceBillingReason: "completed",
+  })));
+  paymentTransactions = await paymentTransactionsRepository.list();
+}
+
+async function createOccurrenceCharges(occurrence) {
+  await reconcileOccurrenceCharges([occurrence]);
 }
 
 async function updateOccurrenceStatus(status) {
@@ -1001,6 +1065,7 @@ async function completeLesson() {
   const occurrence = editingOccurrence;
   try {
     await updateOccurrenceStatus("completed");
+    await createOccurrenceCharges({ ...occurrence, status: "completed" });
     closeDialog(elements.detailsDialog);
     await refreshCalendar();
     launchProgressUpdate(occurrence);
@@ -1132,6 +1197,10 @@ function initialize() {
   elements.reschedule.addEventListener("click", () => {
     closeDialog(detailsDialog);
     openEditor(editingOccurrence, "reschedule");
+  });
+  window.addEventListener("teacher:billing-changed", () => {
+    loaded = false;
+    if (!elements.root.hidden) void loadCalendarData(true);
   });
   return true;
 }

@@ -3,13 +3,20 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
+  PAYMENT_ACCOUNT_TYPES,
   PAYMENT_TRANSACTION_TYPES,
+  accountLessonPaymentStates,
+  billingTargetsForCalendarOccurrence,
+  buildGroupBillingUpdate,
   buildStudentBillingUpdate,
   buildTransaction,
+  calculateAccountBalance,
   calculateStudentBalance,
+  effectiveGroupBilling,
   effectiveStudentBilling,
   filterPaymentRows,
   formatRubles,
+  lessonPaymentSummary,
   numericAmount,
   paymentsSummary,
   signedTransactionAmount,
@@ -61,17 +68,17 @@ test("balance is derived only from one student's ledger", () => {
   assert.equal(calculateStudentBalance([payment("a", 5000), charge("a", 2000), payment("b", 9000)], "a"), 3000);
 });
 
-test("student billing override wins over group and student rates", () => {
+test("a student's fixed rate wins over legacy override and group rates", () => {
   const billing = effectiveStudentBilling(
     { groupId: "g", billing: { lessonRate: 2500 }, billingOverride: { lessonRate: 1800 } },
     { billing: { lessonRate: 1400 } },
   );
-  assert.deepEqual([billing.lessonRate, billing.rateSource], [1800, "override"]);
+  assert.deepEqual([billing.lessonRate, billing.rateSource], [2500, "student"]);
 });
 
-test("group rate wins when no student override exists", () => {
-  const billing = effectiveStudentBilling({ groupId: "g", billing: { lessonRate: 2500 } }, { billing: { lessonRate: 1400 } });
-  assert.deepEqual([billing.lessonRate, billing.rateSource], [1400, "group"]);
+test("a group rate never replaces a student's missing fixed rate", () => {
+  const billing = effectiveStudentBilling({ groupId: "g", billing: { lessonRate: null } }, { billing: { lessonRate: 1400 } });
+  assert.deepEqual([billing.lessonRate, billing.rateSource], [null, "none"]);
 });
 
 test("individual student rate is used without a group", () => {
@@ -91,12 +98,19 @@ test("billing update saves format, duration and an individual rate", () => {
   });
 });
 
-test("group billing choice avoids storing a duplicate student rate", () => {
-  const update = buildStudentBillingUpdate({ hasGroup: true, useGroupRate: true, lessonFormat: "group", standardDuration: 60, lessonRate: "" });
+test("grouped online students still store their own fixed rate", () => {
+  const update = buildStudentBillingUpdate({ hasGroup: true, lessonFormat: "group", standardDuration: 60, lessonRate: 1900 });
   assert.deepEqual(update, {
-    billing: { lessonFormat: "group", standardDuration: 60, lessonRate: null },
+    billing: { lessonFormat: "group", standardDuration: 60, lessonRate: 1900 },
     billingOverride: {},
   });
+});
+
+test("offline groups keep one shared fixed rate", () => {
+  assert.deepEqual(buildGroupBillingUpdate({ standardDuration: 60, lessonRate: 5000 }), {
+    billing: { standardDuration: 60, lessonRate: 5000 },
+  });
+  assert.equal(effectiveGroupBilling({ billing: { lessonRate: 5000 } }).lessonRate, 5000);
 });
 
 test("missing rate remains not configured", () => {
@@ -115,6 +129,62 @@ test("adjustments require a teacher note", () => {
 test("buildTransaction preserves optional future charge references", () => {
   const record = buildTransaction({ studentId: "a", type: "CHARGE", amount: 1000, date: "2026-09-05", lessonEventId: "event", lessonId: "lesson", courseId: "course", unitId: "unit", groupId: "group", attendanceBillingReason: "attended" });
   assert.deepEqual([record.lessonEventId, record.lessonId, record.courseId, record.unitId, record.groupId, record.attendanceBillingReason], ["event", "lesson", "course", "unit", "group", "attended"]);
+});
+
+test("group payments belong to one group billing account", () => {
+  const transaction = buildTransaction({
+    accountType: PAYMENT_ACCOUNT_TYPES.GROUP,
+    accountId: "group-a",
+    type: "PAYMENT",
+    amount: 6000,
+    date: "2026-09-05",
+  });
+  assert.deepEqual([transaction.accountType, transaction.accountId, transaction.groupId], ["group", "group-a", "group-a"]);
+  assert.equal(calculateAccountBalance([{ ...transaction, id: "payment" }], "group", "group-a"), 6000);
+});
+
+test("offline group lessons create one group target while online groups charge each student", () => {
+  const occurrence = { participantType: "group", groupId: "g", displayName: "Group", id: "event", occurrenceKey: "2026-09-05" };
+  const students = [
+    { id: "a", groupId: "g", name: "Alice", billing: { lessonRate: 1500 } },
+    { id: "b", groupId: "g", name: "Bob", billing: { lessonRate: 1700 } },
+  ];
+  const offline = billingTargetsForCalendarOccurrence(occurrence, students, [{ id: "g", lessonMode: "offline", billing: { lessonRate: 5000 } }]);
+  const online = billingTargetsForCalendarOccurrence(occurrence, students, [{ id: "g", lessonMode: "online", billing: { lessonRate: 4000 } }]);
+  assert.deepEqual(offline.map(({ accountType, accountId, lessonRate }) => [accountType, accountId, lessonRate]), [["group", "g", 5000]]);
+  assert.deepEqual(online.map(({ accountType, accountId, lessonRate }) => [accountType, accountId, lessonRate]), [["student", "a", 1500], ["student", "b", 1700]]);
+});
+
+test("one advance payment covers several completed lessons in account order", () => {
+  const transactions = [
+    { id: "c1", accountType: "student", accountId: "a", studentId: "a", type: "CHARGE", amount: 2000, date: "2026-09-01" },
+    { id: "c2", accountType: "student", accountId: "a", studentId: "a", type: "CHARGE", amount: 2000, date: "2026-09-08" },
+    { id: "p1", accountType: "student", accountId: "a", studentId: "a", type: "PAYMENT", amount: 5000, date: "2026-08-30" },
+  ];
+  const states = accountLessonPaymentStates(transactions, "student", "a");
+  assert.equal(states.get("c1").status, "paid");
+  assert.equal(states.get("c2").status, "paid");
+  assert.equal(calculateAccountBalance(transactions, "student", "a"), 1000);
+});
+
+test("an explicitly allocated payment marks its completed calendar lesson paid", () => {
+  const occurrence = { id: "event", occurrenceKey: "2026-09-05", status: "completed", participantType: "student", studentId: "a" };
+  const charge = { id: "charge", accountType: "student", accountId: "a", studentId: "a", type: "CHARGE", amount: 2000, date: "2026-09-05", lessonEventId: "event", lessonOccurrenceKey: "2026-09-05" };
+  const paymentRecord = { id: "payment", accountType: "student", accountId: "a", studentId: "a", type: "PAYMENT", amount: 2000, date: "2026-09-05", allocations: [{ chargeId: "charge", amount: 2000 }] };
+  const summary = lessonPaymentSummary(occurrence, [charge, paymentRecord], [{ id: "a", billing: { lessonRate: 2000 } }], []);
+  assert.deepEqual([summary.status, summary.label], ["paid", "Paid"]);
+});
+
+test("lesson allocations can never spend more than the payment amount", () => {
+  const transactions = [
+    { id: "c1", studentId: "a", type: "CHARGE", amount: 2000, date: "2026-09-01" },
+    { id: "c2", studentId: "a", type: "CHARGE", amount: 2000, date: "2026-09-08" },
+    { id: "p1", studentId: "a", type: "PAYMENT", amount: 2500, date: "2026-09-09", allocations: [{ chargeId: "c1", amount: 2000 }, { chargeId: "c2", amount: 2000 }] },
+  ];
+  const states = accountLessonPaymentStates(transactions, "student", "a");
+  assert.equal(states.get("c1").status, "paid");
+  assert.equal(states.get("c2").paidAmount, 500);
+  assert.equal(states.get("c2").status, "partial");
 });
 
 test("payment validation rejects an invalid date", () => {
@@ -175,6 +245,19 @@ test("Payments defaults to the online student view", () => {
   assert.match(source, /let activeMode = "online"/);
 });
 
+test("lesson billing cache version reaches payments, profiles and student editing", () => {
+  const admin = readFileSync(new URL("../admin.html", import.meta.url), "utf8");
+  const page = readFileSync(new URL("../js/pages/admin-page.js", import.meta.url), "utf8");
+  const dashboard = readFileSync(new URL("../js/admin/admin-dashboard.js", import.meta.url), "utf8");
+  const crud = readFileSync(new URL("../js/admin/admin-crud.js", import.meta.url), "utf8");
+  const version = "20260929-lesson-billing";
+  assert.match(admin, new RegExp(`admin-page\\.js\\?v=${version}`));
+  assert.match(page, new RegExp(`admin-dashboard\\.js\\?v=${version}`));
+  assert.match(dashboard, new RegExp(`payments\\.js\\?v=${version}`));
+  assert.match(dashboard, new RegExp(`student-profile\\.js\\?v=${version}`));
+  assert.match(crud, new RegExp(`students-crud\\.js\\?v=${version}`));
+});
+
 test("teacher student profiles show the effective rate and ledger balance", () => {
   const admin = readFileSync(new URL("../admin.html", import.meta.url), "utf8");
   const profile = readFileSync(new URL("../js/admin/student-profile.js", import.meta.url), "utf8");
@@ -191,10 +274,28 @@ test("Firestore keeps paymentTransactions teacher-only", () => {
   const paymentRule = rules.slice(rules.indexOf("match /paymentTransactions"), rules.indexOf("match /studentScheduleEntries"));
   assert.match(paymentRule, /allow read, delete: if isAdmin\(\)/);
   assert.doesNotMatch(paymentRule, /isOwnStudent/);
+  assert.match(rules, /function hasValidBillingAccount/);
+  assert.match(paymentRule, /hasValidBillingAccount\(request\.resource\.data\)/);
 });
 
-test("payment UI does not create automatic calendar charges", () => {
+test("payment UI reconciles completed lessons and allows one payment to cover several", () => {
   const source = readFileSync(new URL("../js/admin/payments.js", import.meta.url), "utf8");
-  assert.doesNotMatch(source, /calendarEventsRepository/);
-  assert.match(source, /type: PAYMENT_TRANSACTION_TYPES\.PAYMENT/);
+  const calendar = readFileSync(new URL("../js/admin/calendar.js", import.meta.url), "utf8");
+  const admin = readFileSync(new URL("../admin.html", import.meta.url), "utf8");
+  assert.match(source, /calendarEventsRepository/);
+  assert.match(source, /reconcileCompletedLessonCharges/);
+  assert.match(source, /selectedAllocations/);
+  assert.match(calendar, /createOccurrenceCharges/);
+  assert.match(calendar, /calendar-payment-badge/);
+  assert.match(admin, /data-payment-lessons/);
+  assert.match(admin, /id="student-lesson-rate"/);
+});
+
+test("student and offline-group editors persist the correct fixed rate", () => {
+  const studentsSource = readFileSync(new URL("../js/admin/students-crud.js", import.meta.url), "utf8");
+  const groupsSource = readFileSync(new URL("../js/admin/groups-crud.js", import.meta.url), "utf8");
+  assert.match(studentsSource, /billing:[\s\S]*?lessonRate/);
+  assert.match(studentsSource, /billingOverride: \{\}/);
+  assert.match(groupsSource, /lessonMode"\)\.value === "offline" && lessonRate === null/);
+  assert.match(groupsSource, /fixed price for this offline group/);
 });

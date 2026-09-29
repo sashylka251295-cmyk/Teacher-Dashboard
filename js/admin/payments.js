@@ -1,19 +1,30 @@
+import { calendarEventsRepository } from "../data/repositories/calendar-events-repository.js";
 import { groupsRepository } from "../data/repositories/groups-repository.js";
-import { paymentTransactionsRepository } from "../data/repositories/payment-transactions-repository.js?v=20260906-payments";
+import { paymentTransactionsRepository } from "../data/repositories/payment-transactions-repository.js?v=20260929-lesson-billing";
 import { studentsRepository } from "../data/repositories/students-repository.js";
+import { completedCalendarOccurrences } from "../domain/calendar.js?v=20260929-lesson-billing";
 import {
+  PAYMENT_ACCOUNT_TYPES,
   PAYMENT_METHODS,
   PAYMENT_TRANSACTION_TYPES,
-  calculateStudentBalance,
+  accountLessonPaymentStates,
+  accountTransactions,
+  billingTargetsForCalendarOccurrence,
+  buildGroupBillingUpdate,
   buildStudentBillingUpdate,
+  calculateAccountBalance,
+  effectiveGroupBilling,
   effectiveStudentBilling,
   filterPaymentRows,
   formatRubles,
+  lessonChargeForTarget,
+  paymentAccountKey,
   paymentsSummary,
   signedTransactionAmount,
   sortTransactionsNewestFirst,
+  transactionMatchesAccount,
   validateTransaction,
-} from "../domain/payments.js?v=20260907-billing-filters";
+} from "../domain/payments.js?v=20260929-lesson-billing";
 
 const DATE_FORMAT = new Intl.DateTimeFormat("en", { day: "numeric", month: "short", year: "numeric" });
 const METHOD_LABELS = Object.freeze({ bank_transfer: "Bank transfer", cash: "Cash", other: "Other" });
@@ -24,11 +35,12 @@ let elements;
 let initialized = false;
 let students = [];
 let groups = [];
+let calendarEvents = [];
 let transactions = [];
 let rows = [];
 let activeFilter = "all";
 let activeMode = "online";
-let selectedStudentId = "";
+let selectedAccountKey = "";
 
 function toDate(value) {
   if (value?.toDate) return value.toDate();
@@ -42,26 +54,58 @@ function todayInputValue() {
   return local.toISOString().slice(0, 10);
 }
 
-function studentTransactions(studentId) {
-  return sortTransactionsNewestFirst(transactions.filter((transaction) => transaction.studentId === studentId));
+function rowKey(row) {
+  return paymentAccountKey(row.accountType, row.accountId);
 }
 
-function lastPayment(studentId) {
-  return studentTransactions(studentId).find(({ type }) => type === PAYMENT_TRANSACTION_TYPES.PAYMENT) ?? null;
+function findRow(key) {
+  return rows.find((row) => rowKey(row) === key) ?? null;
+}
+
+function rowTransactions(row) {
+  return sortTransactionsNewestFirst(accountTransactions(transactions, row.accountType, row.accountId));
+}
+
+function lastPayment(row) {
+  return rowTransactions(row).find(({ type }) => type === PAYMENT_TRANSACTION_TYPES.PAYMENT) ?? null;
 }
 
 function buildRows() {
   const groupsById = new Map(groups.map((group) => [group.id, group]));
-  rows = students.map((student) => {
-    const group = groupsById.get(student.groupId) ?? null;
-    return {
-      student,
-      group,
-      billing: effectiveStudentBilling(student, group),
-      balance: calculateStudentBalance(transactions, student.id),
-      lastPayment: lastPayment(student.id),
-    };
-  }).sort((first, second) => String(first.student.name).localeCompare(String(second.student.name)));
+  const offlineGroupIds = new Set(groups.filter(({ lessonMode }) => lessonMode === "offline").map(({ id }) => id));
+  const studentRows = students
+    .filter((student) => !offlineGroupIds.has(student.groupId))
+    .map((student) => {
+      const group = groupsById.get(student.groupId) ?? null;
+      const lessonMode = group?.lessonMode === "offline" || student.lessonMode === "offline" ? "offline" : "online";
+      return {
+        accountType: PAYMENT_ACCOUNT_TYPES.STUDENT,
+        accountId: student.id,
+        accountName: student.name || "Unnamed student",
+        accountMeta: group?.name || "Individual",
+        color: student.color || "#7da67b",
+        lessonMode,
+        student,
+        group,
+        billing: effectiveStudentBilling(student, group),
+      };
+    });
+  const groupRows = groups.filter(({ lessonMode }) => lessonMode === "offline").map((group) => ({
+    accountType: PAYMENT_ACCOUNT_TYPES.GROUP,
+    accountId: group.id,
+    accountName: group.name || "Unnamed group",
+    accountMeta: "Offline group account",
+    color: group.color || "#7da67b",
+    lessonMode: "offline",
+    student: null,
+    group,
+    billing: effectiveGroupBilling(group),
+  }));
+  rows = [...studentRows, ...groupRows].map((row) => ({
+    ...row,
+    balance: calculateAccountBalance(transactions, row.accountType, row.accountId),
+    lastPayment: lastPayment(row),
+  })).sort((first, second) => first.accountName.localeCompare(second.accountName));
 }
 
 function summaryText(key, value, detail) {
@@ -70,29 +114,26 @@ function summaryText(key, value, detail) {
 }
 
 function renderSummary() {
-  const scopedStudents = students.filter((student) => {
-    const mode = student.lessonMode === "offline" ? "offline" : "online";
-    return activeMode === "all" || mode === activeMode;
-  });
-  const scopedStudentIds = new Set(scopedStudents.map(({ id }) => id));
-  const scopedTransactions = transactions.filter(({ studentId }) => scopedStudentIds.has(studentId));
-  const summary = paymentsSummary(scopedTransactions, scopedStudents);
+  const scopedRows = rows.filter((row) => activeMode === "all" || row.lessonMode === activeMode);
+  const scopedTransactions = transactions.filter((transaction) => scopedRows.some((row) =>
+    transactionMatchesAccount(transaction, row.accountType, row.accountId)));
+  const summary = paymentsSummary(scopedTransactions, scopedRows);
   summaryText("received", summary.received, `${summary.receivedCount} ${summary.receivedCount === 1 ? "payment" : "payments"}`);
-  summaryText("expected", summary.expected, `${summary.chargeCount} recorded ${summary.chargeCount === 1 ? "charge" : "charges"}`);
-  summaryText("outstanding", summary.outstanding, `${summary.outstandingCount} ${summary.outstandingCount === 1 ? "student" : "students"}`);
-  summaryText("credit", summary.credit, `${summary.creditCount} ${summary.creditCount === 1 ? "student" : "students"}`);
+  summaryText("expected", summary.expected, `${summary.chargeCount} completed ${summary.chargeCount === 1 ? "lesson" : "lessons"}`);
+  summaryText("outstanding", summary.outstanding, `${summary.outstandingCount} ${summary.outstandingCount === 1 ? "account" : "accounts"}`);
+  summaryText("credit", summary.credit, `${summary.creditCount} ${summary.creditCount === 1 ? "account" : "accounts"}`);
 }
 
-function createStudentCell(row) {
+function createAccountCell(row) {
   const cell = document.createElement("span");
   cell.className = "payments-student-cell";
   const marker = document.createElement("i");
-  marker.style.backgroundColor = row.student.color || "#7da67b";
+  marker.style.backgroundColor = row.color;
   const identity = document.createElement("span");
   const name = document.createElement("strong");
   const meta = document.createElement("small");
-  name.textContent = row.student.name || "Unnamed student";
-  meta.textContent = row.group?.name || "Individual";
+  name.textContent = row.accountName;
+  meta.textContent = row.accountMeta;
   identity.append(name, meta);
   cell.append(marker, identity);
   return cell;
@@ -102,10 +143,9 @@ function createPaymentRow(row) {
   const button = document.createElement("button");
   button.type = "button";
   button.className = "payments-table__row";
-  button.dataset.paymentStudent = row.student.id;
+  button.dataset.paymentAccount = rowKey(row);
   button.setAttribute("role", "row");
-  button.append(createStudentCell(row));
-
+  button.append(createAccountCell(row));
   const format = document.createElement("span");
   format.dataset.label = "Format";
   const formatName = document.createElement("strong");
@@ -113,17 +153,14 @@ function createPaymentRow(row) {
   formatName.textContent = FORMAT_LABELS[row.billing.lessonFormat];
   duration.textContent = `${row.billing.standardDuration} min`;
   format.append(formatName, duration);
-
   const rate = document.createElement("span");
   rate.dataset.label = "Lesson rate";
   rate.textContent = formatRubles(row.billing.lessonRate);
-
   const balance = document.createElement("span");
   balance.dataset.label = "Balance";
   balance.className = "payment-balance";
   balance.dataset.balance = row.balance > 0 ? "credit" : row.balance < 0 ? "outstanding" : "zero";
   balance.textContent = formatRubles(row.balance, { signed: true });
-
   const last = document.createElement("span");
   last.dataset.label = "Last payment";
   if (row.lastPayment) {
@@ -146,7 +183,7 @@ function renderRows() {
   const visible = filterPaymentRows(rows, activeFilter, elements.search.value, activeMode);
   elements.rows.replaceChildren(...visible.map(createPaymentRow));
   elements.empty.hidden = visible.length > 0;
-  elements.count.textContent = `Showing ${visible.length} of ${modeRows.length} students`;
+  elements.count.textContent = `Showing ${visible.length} of ${modeRows.length} accounts`;
 }
 
 function renderPage() {
@@ -165,8 +202,9 @@ function createLedgerItem(transaction) {
   const meta = document.createElement("small");
   const amount = document.createElement("b");
   const date = toDate(transaction.date ?? transaction.createdAt);
+  const lessonCount = Array.isArray(transaction.allocations) ? transaction.allocations.length : 0;
   heading.textContent = date ? DATE_FORMAT.format(date) : "Date unavailable";
-  meta.textContent = [TYPE_LABELS[transaction.type], METHOD_LABELS[transaction.paymentMethod], transaction.note]
+  meta.textContent = [TYPE_LABELS[transaction.type], lessonCount ? `${lessonCount} ${lessonCount === 1 ? "lesson" : "lessons"}` : "", transaction.lessonLabel, METHOD_LABELS[transaction.paymentMethod], transaction.note]
     .filter(Boolean).join(" · ");
   amount.textContent = formatRubles(signedTransactionAmount(transaction), { signed: true });
   body.append(heading, meta);
@@ -174,62 +212,62 @@ function createLedgerItem(transaction) {
   return item;
 }
 
-function openDrawer(studentId) {
-  const row = rows.find(({ student }) => student.id === studentId);
+function openDrawer(key) {
+  const row = findRow(key);
   if (!row) return;
-  selectedStudentId = studentId;
+  selectedAccountKey = key;
   const content = document.createDocumentFragment();
   const header = document.createElement("header");
   const marker = document.createElement("span");
   marker.className = "payment-drawer__avatar";
-  marker.style.backgroundColor = row.student.color || "#7da67b";
-  marker.textContent = String(row.student.name || "S").charAt(0).toUpperCase();
+  marker.style.backgroundColor = row.color;
+  marker.textContent = row.accountName.charAt(0).toUpperCase();
   const identity = document.createElement("div");
   const title = document.createElement("h2");
   const subtitle = document.createElement("p");
   title.id = "payment-drawer-heading";
-  title.textContent = row.student.name || "Student";
-  subtitle.textContent = `${FORMAT_LABELS[row.billing.lessonFormat]} · ${row.billing.standardDuration} min`;
+  title.textContent = row.accountName;
+  subtitle.textContent = `${row.accountMeta} · ${FORMAT_LABELS[row.billing.lessonFormat]} · ${row.billing.standardDuration} min`;
   identity.append(title, subtitle);
   header.append(marker, identity);
-
   const balance = document.createElement("section");
   balance.className = "payment-drawer__balance";
   const balanceLabel = document.createElement("span");
   const balanceValue = document.createElement("strong");
   const balanceHelp = document.createElement("small");
-  balanceLabel.textContent = "Balance";
+  balanceLabel.textContent = "Account balance";
   balanceValue.textContent = formatRubles(row.balance, { signed: true });
   balanceValue.dataset.balance = row.balance > 0 ? "credit" : row.balance < 0 ? "outstanding" : "zero";
-  balanceHelp.textContent = "Calculated from payments, lesson charges and adjustments.";
+  const lessonStates = accountLessonPaymentStates(transactions, row.accountType, row.accountId);
+  const unpaidCount = [...lessonStates.values()].filter(({ status }) => status !== "paid").length;
+  balanceHelp.textContent = unpaidCount
+    ? `${unpaidCount} completed ${unpaidCount === 1 ? "lesson is" : "lessons are"} not fully paid.`
+    : row.balance > 0 ? "Credit will cover the next completed lessons." : "All completed lessons are covered.";
   balance.append(balanceLabel, balanceValue, balanceHelp);
-
   const rate = document.createElement("div");
   rate.className = "payment-drawer__rate";
   const rateLabel = document.createElement("span");
   const rateValue = document.createElement("strong");
-  rateLabel.textContent = "Lesson rate";
+  rateLabel.textContent = "Fixed lesson rate";
   rateValue.textContent = formatRubles(row.billing.lessonRate);
   rate.append(rateLabel, rateValue);
-
   const actions = document.createElement("div");
   actions.className = "payment-drawer__actions";
   const add = document.createElement("button");
   const edit = document.createElement("button");
   add.type = edit.type = "button";
   add.className = "button-primary";
-  add.dataset.drawerAddPayment = studentId;
+  add.dataset.drawerAddPayment = key;
   add.textContent = "+ Add payment";
-  edit.dataset.drawerEditBilling = studentId;
-  edit.textContent = "Edit billing";
+  edit.dataset.drawerEditBilling = key;
+  edit.textContent = "Edit fixed rate";
   actions.append(add, edit);
-
   const history = document.createElement("section");
   history.className = "payment-ledger";
   const historyTitle = document.createElement("h3");
-  historyTitle.textContent = "Payment history";
+  historyTitle.textContent = "Account history";
   const list = document.createElement("ol");
-  const ledger = studentTransactions(studentId);
+  const ledger = rowTransactions(row);
   if (ledger.length) list.append(...ledger.map(createLedgerItem));
   else {
     const empty = document.createElement("p");
@@ -243,39 +281,102 @@ function openDrawer(studentId) {
   if (!elements.drawer.open) elements.drawer.showModal();
 }
 
-function populateStudentSelect(selectedId = "") {
-  elements.paymentStudent.replaceChildren();
+function populateAccountSelect(selectedKey = "") {
+  elements.paymentAccount.replaceChildren();
   const prompt = document.createElement("option");
   prompt.value = "";
-  prompt.textContent = "Select student";
-  elements.paymentStudent.append(prompt);
-  [...students].sort((a, b) => String(a.name).localeCompare(String(b.name))).forEach((student) => {
-    const option = document.createElement("option");
-    option.value = student.id;
-    option.textContent = student.name;
-    elements.paymentStudent.append(option);
+  prompt.textContent = "Select student or offline group";
+  elements.paymentAccount.append(prompt);
+  ["online", "offline"].forEach((mode) => {
+    const matching = rows.filter((row) => row.lessonMode === mode);
+    if (!matching.length) return;
+    const section = document.createElement("optgroup");
+    section.label = mode === "online" ? "Online students" : "Offline students and groups";
+    matching.forEach((row) => {
+      const option = document.createElement("option");
+      option.value = rowKey(row);
+      option.textContent = `${row.accountName} — ${row.accountMeta}`;
+      section.append(option);
+    });
+    elements.paymentAccount.append(section);
   });
-  elements.paymentStudent.value = selectedId;
+  elements.paymentAccount.value = selectedKey;
 }
 
-function openPaymentDialog(studentId = "") {
+function outstandingLessons(row) {
+  if (!row) return [];
+  const states = accountLessonPaymentStates(transactions, row.accountType, row.accountId);
+  return [...states.values()].filter(({ outstandingAmount }) => outstandingAmount > 0.005).sort((first, second) => {
+    const firstDate = toDate(first.charge.date ?? first.charge.createdAt)?.getTime() ?? 0;
+    const secondDate = toDate(second.charge.date ?? second.charge.createdAt)?.getTime() ?? 0;
+    return firstDate - secondDate;
+  });
+}
+
+function syncPaymentSelection() {
+  const selected = [...elements.paymentLessons.querySelectorAll("input:checked")];
+  const total = selected.reduce((sum, input) => sum + Number(input.dataset.outstanding || 0), 0);
+  elements.paymentSelection.textContent = selected.length
+    ? `${selected.length} ${selected.length === 1 ? "lesson" : "lessons"} selected · ${formatRubles(total)}`
+    : "No lessons selected — the payment will remain as account credit.";
+  if (selected.length) elements.paymentForm.elements.amount.value = String(total);
+}
+
+function renderPaymentLessons() {
+  const row = findRow(elements.paymentAccount.value);
+  const lessons = outstandingLessons(row);
+  elements.paymentLessons.replaceChildren(...lessons.map(({ charge, outstandingAmount, status }) => {
+    const label = document.createElement("label");
+    const checkbox = document.createElement("input");
+    const body = document.createElement("span");
+    const title = document.createElement("strong");
+    const meta = document.createElement("small");
+    const date = toDate(charge.date ?? charge.createdAt);
+    checkbox.type = "checkbox";
+    checkbox.value = charge.id;
+    checkbox.dataset.outstanding = String(outstandingAmount);
+    title.textContent = charge.lessonLabel || "Completed lesson";
+    meta.textContent = `${date ? DATE_FORMAT.format(date) : "Date unavailable"} · ${status === "partial" ? "Remaining" : "Due"} ${formatRubles(outstandingAmount)}`;
+    body.append(title, meta);
+    label.append(checkbox, body);
+    return label;
+  }));
+  elements.paymentLessonsEmpty.hidden = lessons.length > 0;
+  syncPaymentSelection();
+}
+
+function openPaymentDialog(key = "") {
   elements.paymentForm.reset();
-  populateStudentSelect(studentId);
+  populateAccountSelect(key);
   elements.paymentForm.elements.date.value = todayInputValue();
   elements.paymentMessage.textContent = "";
+  renderPaymentLessons();
   elements.paymentDialog.showModal();
+}
+
+function selectedAllocations(amount) {
+  let remaining = amount;
+  return [...elements.paymentLessons.querySelectorAll("input:checked")].map((input) => {
+    const allocation = Math.min(remaining, Number(input.dataset.outstanding || 0));
+    remaining -= allocation;
+    return { chargeId: input.value, amount: allocation };
+  }).filter(({ amount: allocation }) => allocation > 0);
 }
 
 async function savePayment(event) {
   event.preventDefault();
   const form = elements.paymentForm;
+  const row = findRow(elements.paymentAccount.value);
+  const amount = Number(form.elements.amount.value);
   const input = {
-    studentId: form.elements.studentId.value,
+    accountType: row?.accountType,
+    accountId: row?.accountId,
     type: PAYMENT_TRANSACTION_TYPES.PAYMENT,
     amount: form.elements.amount.value,
     date: `${form.elements.date.value}T12:00:00`,
     paymentMethod: form.elements.method.value,
     note: form.elements.note.value,
+    allocations: selectedAllocations(amount),
   };
   const error = validateTransaction(input);
   if (error || !PAYMENT_METHODS.includes(input.paymentMethod) && input.paymentMethod !== "") {
@@ -287,9 +388,10 @@ async function savePayment(event) {
   try {
     await paymentTransactionsRepository.createTransaction(input);
     transactions = await paymentTransactionsRepository.list();
+    window.dispatchEvent(new CustomEvent("teacher:billing-changed"));
     renderPage();
     elements.paymentDialog.close();
-    if (selectedStudentId === input.studentId && elements.drawer.open) openDrawer(input.studentId);
+    if (selectedAccountKey === rowKey(row) && elements.drawer.open) openDrawer(rowKey(row));
   } catch (saveError) {
     console.error("Unable to save payment.", saveError);
     elements.paymentMessage.textContent = "Unable to save payment. Please try again.";
@@ -298,24 +400,18 @@ async function savePayment(event) {
   }
 }
 
-function openBillingDialog(studentId) {
-  const row = rows.find(({ student }) => student.id === studentId);
+function openBillingDialog(key) {
+  const row = findRow(key);
   if (!row) return;
-  selectedStudentId = studentId;
+  selectedAccountKey = key;
   const form = elements.billingForm;
   form.reset();
-  form.dataset.studentId = studentId;
+  form.dataset.accountKey = key;
   form.elements.lessonFormat.value = row.billing.lessonFormat;
+  form.elements.lessonFormat.disabled = row.accountType === PAYMENT_ACCOUNT_TYPES.GROUP;
   form.elements.standardDuration.value = String(row.billing.standardDuration);
-  elements.billingStudentName.textContent = row.student.name;
-  const hasGroup = Boolean(row.group);
-  elements.billingRateChoice.hidden = !hasGroup;
-  elements.billingGroupRate.textContent = row.group
-    ? `(${formatRubles(row.group.billing?.lessonRate)})` : "";
-  const usesGroup = row.billing.rateSource === "group";
-  if (hasGroup) form.elements.rateChoice.value = usesGroup ? "group" : "custom";
-  form.elements.lessonRate.value = usesGroup || row.billing.lessonRate === null ? "" : row.billing.lessonRate;
-  elements.billingRateField.hidden = hasGroup && usesGroup;
+  form.elements.lessonRate.value = row.billing.lessonRate ?? "";
+  elements.billingStudentName.textContent = `${row.accountName} · ${row.accountMeta}`;
   elements.billingMessage.textContent = "";
   elements.billingDialog.showModal();
 }
@@ -323,23 +419,14 @@ function openBillingDialog(studentId) {
 async function saveBilling(event) {
   event.preventDefault();
   const form = elements.billingForm;
-  const student = students.find(({ id }) => id === form.dataset.studentId);
-  if (!student) return;
-  const format = form.elements.lessonFormat.value;
-  const duration = Number(form.elements.standardDuration.value);
-  const group = groups.find(({ id }) => id === student.groupId);
-  const useGroupRate = Boolean(group) && form.elements.rateChoice.value === "group";
-  const rateValue = form.elements.lessonRate.value;
+  const key = form.dataset.accountKey;
+  const row = findRow(key);
+  if (!row) return;
   let patch;
   try {
-    patch = buildStudentBillingUpdate({
-      currentBilling: student.billing,
-      hasGroup: Boolean(group),
-      useGroupRate,
-      lessonFormat: format,
-      standardDuration: duration,
-      lessonRate: rateValue,
-    });
+    patch = row.accountType === PAYMENT_ACCOUNT_TYPES.GROUP
+      ? buildGroupBillingUpdate({ currentBilling: row.group.billing, standardDuration: form.elements.standardDuration.value, lessonRate: form.elements.lessonRate.value })
+      : buildStudentBillingUpdate({ currentBilling: row.student.billing, lessonFormat: form.elements.lessonFormat.value, standardDuration: form.elements.standardDuration.value, lessonRate: form.elements.lessonRate.value });
   } catch (validationError) {
     elements.billingMessage.textContent = validationError.message;
     return;
@@ -347,11 +434,18 @@ async function saveBilling(event) {
   elements.billingSave.disabled = true;
   elements.billingMessage.textContent = "Saving…";
   try {
-    await studentsRepository.update(student.id, patch);
-    Object.assign(student, patch);
+    if (row.accountType === PAYMENT_ACCOUNT_TYPES.GROUP) {
+      await groupsRepository.update(row.accountId, patch);
+      Object.assign(row.group, patch);
+    } else {
+      await studentsRepository.update(row.accountId, patch);
+      Object.assign(row.student, patch);
+    }
+    await reconcileCompletedLessonCharges();
+    window.dispatchEvent(new CustomEvent("teacher:billing-changed"));
     renderPage();
     elements.billingDialog.close();
-    if (elements.drawer.open) openDrawer(student.id);
+    if (elements.drawer.open) openDrawer(key);
   } catch (saveError) {
     console.error("Unable to save billing.", saveError);
     elements.billingMessage.textContent = "Unable to save billing. Please try again.";
@@ -360,14 +454,43 @@ async function saveBilling(event) {
   }
 }
 
+async function reconcileCompletedLessonCharges() {
+  const pending = [];
+  completedCalendarOccurrences(calendarEvents).forEach((occurrence) => {
+    billingTargetsForCalendarOccurrence(occurrence, students, groups).forEach((target) => {
+      if (!(target.lessonRate > 0) || lessonChargeForTarget(transactions, occurrence, target)) return;
+      pending.push(paymentTransactionsRepository.createLessonCharge({
+        accountType: target.accountType,
+        accountId: target.accountId,
+        amount: target.lessonRate,
+        date: occurrence.startAt,
+        lessonEventId: occurrence.id,
+        lessonOccurrenceKey: occurrence.occurrenceKey,
+        lessonId: occurrence.lessonId,
+        courseId: occurrence.courseId,
+        unitId: occurrence.unitId,
+        groupId: occurrence.groupId,
+        lessonLabel: occurrence.displayName || occurrence.manualTitle || "Completed lesson",
+        attendanceBillingReason: "completed",
+      }));
+    });
+  });
+  if (!pending.length) return false;
+  await Promise.all(pending);
+  transactions = await paymentTransactionsRepository.list();
+  return true;
+}
+
 export async function showPayments() {
   elements.state.hidden = false;
   elements.state.textContent = "Loading payments…";
   elements.content.hidden = true;
   try {
-    [students, groups, transactions] = await Promise.all([
-      studentsRepository.list(), groupsRepository.list(), paymentTransactionsRepository.list(),
+    [students, groups, calendarEvents, transactions] = await Promise.all([
+      studentsRepository.list(), groupsRepository.list(), calendarEventsRepository.list(), paymentTransactionsRepository.list(),
     ]);
+    const chargesCreated = await reconcileCompletedLessonCharges();
+    if (chargesCreated) window.dispatchEvent(new CustomEvent("teacher:billing-changed"));
     renderPage();
     elements.state.hidden = true;
     elements.content.hidden = false;
@@ -389,15 +512,14 @@ export function initializePayments() {
     rows: root.querySelector("[data-payment-rows]"), empty: root.querySelector("[data-payments-empty]"),
     count: root.querySelector("[data-payments-count]"), search: root.querySelector("[data-payment-search]"),
     drawer, drawerContent: drawer.querySelector("[data-payment-drawer-content]"), paymentDialog,
-    paymentForm: paymentDialog.querySelector("[data-payment-form]"), paymentStudent: paymentDialog.querySelector("[data-payment-student]"),
-    paymentMessage: paymentDialog.querySelector("[data-payment-form-message]"), paymentSave: paymentDialog.querySelector("[data-payment-save]"),
-    billingDialog, billingForm: billingDialog.querySelector("[data-billing-form]"),
-    billingStudentName: billingDialog.querySelector("[data-billing-student-name]"),
-    billingRateChoice: billingDialog.querySelector("[data-billing-rate-choice]"),
-    billingGroupRate: billingDialog.querySelector("[data-billing-group-rate]"),
-    billingRateField: billingDialog.querySelector("[data-billing-rate-field]"),
-    billingMessage: billingDialog.querySelector("[data-billing-form-message]"), billingSave: billingDialog.querySelector("[data-billing-save]"),
+    paymentForm: paymentDialog.querySelector("[data-payment-form]"), paymentAccount: paymentDialog.querySelector("[data-payment-account]"),
+    paymentLessons: paymentDialog.querySelector("[data-payment-lessons]"), paymentLessonsEmpty: paymentDialog.querySelector("[data-payment-lessons-empty]"),
+    paymentSelection: paymentDialog.querySelector("[data-payment-selection]"), paymentMessage: paymentDialog.querySelector("[data-payment-form-message]"),
+    paymentSave: paymentDialog.querySelector("[data-payment-save]"), billingDialog, billingForm: billingDialog.querySelector("[data-billing-form]"),
+    billingStudentName: billingDialog.querySelector("[data-billing-student-name]"), billingMessage: billingDialog.querySelector("[data-billing-form-message]"),
+    billingSave: billingDialog.querySelector("[data-billing-save]"),
   };
+  if (Object.values(elements).some((element) => !element)) return;
   root.querySelector("[data-payment-add]").addEventListener("click", () => openPaymentDialog());
   root.querySelectorAll("[data-payment-filter]").forEach((button) => button.addEventListener("click", () => {
     activeFilter = button.dataset.paymentFilter;
@@ -412,8 +534,8 @@ export function initializePayments() {
   }));
   elements.search.addEventListener("input", renderRows);
   elements.rows.addEventListener("click", (event) => {
-    const button = event.target.closest("[data-payment-student]");
-    if (button) openDrawer(button.dataset.paymentStudent);
+    const button = event.target.closest("[data-payment-account]");
+    if (button) openDrawer(button.dataset.paymentAccount);
   });
   drawer.querySelector("[data-payment-drawer-close]").addEventListener("click", () => drawer.close());
   drawer.addEventListener("click", (event) => {
@@ -422,12 +544,11 @@ export function initializePayments() {
     if (add) openPaymentDialog(add.dataset.drawerAddPayment);
     if (edit) openBillingDialog(edit.dataset.drawerEditBilling);
   });
+  elements.paymentAccount.addEventListener("change", renderPaymentLessons);
+  elements.paymentLessons.addEventListener("change", syncPaymentSelection);
   elements.paymentForm.addEventListener("submit", savePayment);
   paymentDialog.querySelectorAll("[data-payment-dialog-close], [data-payment-dialog-cancel]").forEach((button) => button.addEventListener("click", () => paymentDialog.close()));
   elements.billingForm.addEventListener("submit", saveBilling);
-  elements.billingForm.addEventListener("change", (event) => {
-    if (event.target.name === "rateChoice") elements.billingRateField.hidden = event.target.value === "group";
-  });
   billingDialog.querySelectorAll("[data-billing-dialog-close], [data-billing-dialog-cancel]").forEach((button) => button.addEventListener("click", () => billingDialog.close()));
   initialized = true;
 }

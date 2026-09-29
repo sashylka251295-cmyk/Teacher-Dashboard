@@ -7,7 +7,7 @@ import { lessonsRepository } from "../data/repositories/lessons-repository.js";
 import { objectiveProgressRepository } from "../data/repositories/objective-progress-repository.js";
 import { progressRepository } from "../data/repositories/progress-repository.js";
 import { progressHistoryRepository } from "../data/repositories/progress-history-repository.js";
-import { paymentTransactionsRepository } from "../data/repositories/payment-transactions-repository.js?v=20260907-billing-filters";
+import { paymentTransactionsRepository } from "../data/repositories/payment-transactions-repository.js?v=20260929-lesson-billing";
 import { studentsRepository } from "../data/repositories/students-repository.js";
 import { unitsRepository } from "../data/repositories/units-repository.js";
 import {
@@ -37,10 +37,12 @@ import {
 import { isIndependentProgressEntry } from "../domain/independent-learning.js";
 import { lessonStopsForUnit } from "../domain/physical-progress.js";
 import {
-  calculateStudentBalance,
+  PAYMENT_ACCOUNT_TYPES,
+  calculateAccountBalance,
+  effectiveGroupBilling,
   effectiveStudentBilling,
   formatRubles,
-} from "../domain/payments.js?v=20260907-billing-filters";
+} from "../domain/payments.js?v=20260929-lesson-billing";
 import {
   cumulativeUnitTargets,
   unitPhysicalProgressFromHistory,
@@ -1180,11 +1182,16 @@ function renderProfile(root, data, onQuickUpdateSaved) {
   setText(root, "[data-profile-group]", student.groupId ? relatedName(group, "Unknown group") : "Individual");
   setText(root, "[data-profile-course]", student.courseId ? relatedName(course, "Unknown course") : "Independent learning");
   setText(root, "[data-profile-status]", displayValue(student.status ?? student.active));
-  const billing = effectiveStudentBilling(student, group);
+  const usesGroupAccount = group?.lessonMode === "offline";
+  const billing = usesGroupAccount ? effectiveGroupBilling(group) : effectiveStudentBilling(student, group);
   setText(root, "[data-profile-billing-rate]", formatRubles(billing.lessonRate));
   const balanceElement = select(root, "[data-profile-balance]");
   if (Array.isArray(paymentTransactions)) {
-    const balance = calculateStudentBalance(paymentTransactions, student.id);
+    const balance = calculateAccountBalance(
+      paymentTransactions,
+      usesGroupAccount ? PAYMENT_ACCOUNT_TYPES.GROUP : PAYMENT_ACCOUNT_TYPES.STUDENT,
+      usesGroupAccount ? group.id : student.id,
+    );
     balanceElement.textContent = formatRubles(balance, { signed: true });
     balanceElement.dataset.balance = balance > 0 ? "credit" : balance < 0 ? "outstanding" : "zero";
   } else {
@@ -1253,7 +1260,14 @@ async function loadProfileData(studentId) {
     loadProfilePart("legacy progress", progressRepository.listByStudent(studentId), [], loadWarnings),
     loadProfilePart("goals", goalsRepository.listByStudent(studentId), [], loadWarnings),
     loadProfilePart("feedback drafts", feedbackDraftsRepository.listByStudent(studentId), [], loadWarnings),
-    loadProfilePart("payments", paymentTransactionsRepository.listByStudent(studentId), null, loadWarnings),
+    loadProfilePart(
+      "payments",
+      group?.lessonMode === "offline"
+        ? paymentTransactionsRepository.listByAccount(PAYMENT_ACCOUNT_TYPES.GROUP, group.id)
+        : paymentTransactionsRepository.listByStudent(studentId),
+      null,
+      loadWarnings,
+    ),
   ]);
   return { student: effectiveStudent, group, course, units, lessons, objectiveProgress, homeworkAssignments, progressHistory, legacyProgress, goals, feedbackDrafts, paymentTransactions, loadWarnings };
 }

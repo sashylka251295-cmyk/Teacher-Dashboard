@@ -28,6 +28,25 @@ service cloud.firestore {
       return isStudent() && currentStudentId() == studentId;
     }
 
+    function hasValidBillingAccount(data) {
+      let accountType = data.get("accountType", "");
+      let accountId = data.get("accountId", "");
+      return (
+        accountType in ["student", "group"]
+        && accountId is string
+        && accountId.size() > 0
+        && (
+          (accountType == "student" && data.get("studentId", "") == accountId)
+          || (accountType == "group" && data.get("groupId", "") == accountId)
+        )
+      ) || (
+        // Backwards compatibility for ledger entries created before accounts.
+        accountType == ""
+        && data.get("studentId", "") is string
+        && data.get("studentId", "").size() > 0
+      );
+    }
+
     function hasValidStudentAvatar(data) {
       let path = data.get("avatarImagePath", "");
       let url = data.get("avatarImageUrl", "");
@@ -233,8 +252,7 @@ service cloud.firestore {
     match /paymentTransactions/{transactionId} {
       allow read, delete: if isAdmin();
       allow create: if isAdmin()
-        && request.resource.data.studentId is string
-        && request.resource.data.studentId.size() > 0
+        && hasValidBillingAccount(request.resource.data)
         && request.resource.data.type in ["PAYMENT", "CHARGE", "ADJUSTMENT"]
         && request.resource.data.amount is number
         && request.resource.data.amount > 0
@@ -247,7 +265,7 @@ service cloud.firestore {
           )
         );
       allow update: if isAdmin()
-        && request.resource.data.studentId is string
+        && hasValidBillingAccount(request.resource.data)
         && request.resource.data.type in ["PAYMENT", "CHARGE", "ADJUSTMENT"]
         && request.resource.data.amount is number
         && request.resource.data.amount > 0

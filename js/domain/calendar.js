@@ -271,6 +271,27 @@ export function calendarOccurrences(events, rangeStart, rangeEnd) {
   return results.sort((first, second) => first.startAt - second.startAt);
 }
 
+export function completedCalendarOccurrences(events = []) {
+  const results = [];
+  events.forEach((event) => {
+    const baseStart = calendarDate(event?.startAt);
+    if (!event?.id || !baseStart) return;
+    const recurrence = normalizeCalendarRecurrence(event.recurrence);
+    if (recurrence.frequency === "none") {
+      if (event.status === "completed") {
+        results.push(occurrenceFrom(event, baseStart, calendarDateKey(baseStart)));
+      }
+      return;
+    }
+    Object.entries(event.occurrenceOverrides ?? {}).forEach(([occurrenceKey, override]) => {
+      if (override?.status !== "completed") return;
+      const scheduled = calendarDateFromKey(occurrenceKey, baseStart.getHours(), baseStart.getMinutes());
+      if (scheduled) results.push(occurrenceFrom(event, scheduled, occurrenceKey));
+    });
+  });
+  return results.sort((first, second) => first.startAt - second.startAt);
+}
+
 export function calendarEndTime(event) {
   const start = calendarDate(event?.startAt);
   return start ? new Date(start.getTime() + (Number(event.durationMinutes) || 0) * 60000) : null;

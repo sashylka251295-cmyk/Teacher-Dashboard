@@ -7,11 +7,11 @@ import { unitsRepository } from "../data/repositories/units-repository.js";
 import { OBJECTIVE_STATUS_LABELS } from "../domain/constants.js";
 import { ENTITY_IMAGE_CONFIG, ENTITY_IMAGE_TYPES } from "../domain/entity-images.js";
 import { overallObjectiveStatus } from "../domain/learning-objectives.js";
-import { initializeCalendar, invalidateCalendar, showCalendar } from "./calendar.js?v=20260907-calendar-drag-copy";
-import { initializeAdminCrud } from "./admin-crud.js?v=20260907-billing-filters";
-import { initializePayments, showPayments } from "./payments.js?v=20260907-billing-filters";
+import { initializeCalendar, invalidateCalendar, showCalendar } from "./calendar.js?v=20260929-lesson-billing";
+import { initializeAdminCrud } from "./admin-crud.js?v=20260929-lesson-billing";
+import { initializePayments, showPayments } from "./payments.js?v=20260929-lesson-billing";
 import { clearStudentAccess } from "./student-access.js";
-import { loadAdminStudentProfile } from "./student-profile.js?v=20260907-billing-filters";
+import { loadAdminStudentProfile } from "./student-profile.js?v=20260929-lesson-billing";
 
 const DEFAULT_SECTION = "overview";
 const STUDENT_PROFILE_SECTION = "student-profile";

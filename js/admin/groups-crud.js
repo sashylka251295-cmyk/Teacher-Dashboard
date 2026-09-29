@@ -271,6 +271,10 @@ async function saveGroup(event) {
   }
   const lessonRateValue = field(elements.form, "lessonRate").value;
   const lessonRate = lessonRateValue === "" ? null : Number(lessonRateValue);
+  if (field(elements.form, "lessonMode").value === "offline" && lessonRate === null) {
+    setMessage(elements.message, "Enter the fixed price for this offline group.");
+    return;
+  }
   if (lessonRate !== null && (!(lessonRate >= 0) || !Number.isFinite(lessonRate))) {
     setMessage(elements.message, "Enter a default lesson rate of zero or more.");
     return;
@@ -283,7 +287,7 @@ async function saveGroup(event) {
     active: field(elements.form, "active").checked,
     lessonMode: field(elements.form, "lessonMode").value,
     color: field(elements.form, "color").value,
-    billing: { lessonRate },
+    billing: { ...(availableGroups.find(({ id }) => id === editingGroupId)?.billing ?? {}), lessonRate },
   };
   elements.save.disabled = true;
   setMessage(elements.message, "Saving…");
