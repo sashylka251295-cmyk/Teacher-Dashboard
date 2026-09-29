@@ -7,7 +7,7 @@ import { lessonsRepository } from "../data/repositories/lessons-repository.js";
 import { objectiveProgressRepository } from "../data/repositories/objective-progress-repository.js";
 import { progressRepository } from "../data/repositories/progress-repository.js";
 import { progressHistoryRepository } from "../data/repositories/progress-history-repository.js";
-import { paymentTransactionsRepository } from "../data/repositories/payment-transactions-repository.js?v=20260929-lesson-billing";
+import { paymentTransactionsRepository } from "../data/repositories/payment-transactions-repository.js?v=20260929-legacy-credit";
 import { studentsRepository } from "../data/repositories/students-repository.js";
 import { unitsRepository } from "../data/repositories/units-repository.js";
 import {
@@ -42,7 +42,7 @@ import {
   effectiveGroupBilling,
   effectiveStudentBilling,
   formatRubles,
-} from "../domain/payments.js?v=20260929-lesson-billing";
+} from "../domain/payments.js?v=20260929-legacy-credit";
 import {
   cumulativeUnitTargets,
   unitPhysicalProgressFromHistory,

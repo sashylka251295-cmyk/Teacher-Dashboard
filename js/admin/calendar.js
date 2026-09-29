@@ -3,7 +3,7 @@ import { calendarNotesRepository } from "../data/repositories/calendar-notes-rep
 import { coursesRepository } from "../data/repositories/courses-repository.js";
 import { groupsRepository } from "../data/repositories/groups-repository.js";
 import { lessonsRepository } from "../data/repositories/lessons-repository.js";
-import { paymentTransactionsRepository } from "../data/repositories/payment-transactions-repository.js?v=20260929-lesson-billing";
+import { paymentTransactionsRepository } from "../data/repositories/payment-transactions-repository.js?v=20260929-legacy-credit";
 import { studentsRepository } from "../data/repositories/students-repository.js";
 import { unitsRepository } from "../data/repositories/units-repository.js";
 import {
@@ -23,12 +23,12 @@ import {
   completedCalendarOccurrences,
   isCalendarPaletteColor,
   startOfCalendarWeek,
-} from "../domain/calendar.js?v=20260929-lesson-billing";
+} from "../domain/calendar.js?v=20260929-legacy-credit";
 import {
   billingTargetsForCalendarOccurrence,
   lessonChargeForTarget,
   lessonPaymentSummary,
-} from "../domain/payments.js?v=20260929-lesson-billing";
+} from "../domain/payments.js?v=20260929-legacy-credit";
 
 const MONTH_FORMAT = new Intl.DateTimeFormat("en", { month: "short" });
 const MONTH_YEAR_FORMAT = new Intl.DateTimeFormat("en", { month: "long", year: "numeric" });

@@ -16,6 +16,7 @@ import {
   effectiveStudentBilling,
   filterPaymentRows,
   formatRubles,
+  legacyCreditSettlementAmount,
   lessonPaymentSummary,
   numericAmount,
   paymentsSummary,
@@ -167,6 +168,31 @@ test("one advance payment covers several completed lessons in account order", ()
   assert.equal(calculateAccountBalance(transactions, "student", "a"), 1000);
 });
 
+test("unused payments from the old screen are settled against past lessons", () => {
+  const transactions = [
+    { id: "old-payment", studentId: "a", type: "PAYMENT", amount: 5000, date: "2026-09-01" },
+    { id: "lesson", accountType: "student", accountId: "a", studentId: "a", type: "CHARGE", amount: 2000, date: "2026-09-08" },
+  ];
+  assert.equal(legacyCreditSettlementAmount(transactions, "student", "a"), 3000);
+});
+
+test("new account credit is preserved by the legacy settlement", () => {
+  const transactions = [
+    { id: "old-payment", studentId: "a", type: "PAYMENT", amount: 5000, date: "2026-09-01" },
+    { id: "lesson", accountType: "student", accountId: "a", studentId: "a", type: "CHARGE", amount: 3000, date: "2026-09-08" },
+    { id: "new-payment", accountType: "student", accountId: "a", studentId: "a", type: "PAYMENT", amount: 1800, date: "2026-09-29" },
+  ];
+  assert.equal(legacyCreditSettlementAmount(transactions, "student", "a"), 2000);
+});
+
+test("legacy credit settlement is idempotent", () => {
+  const transactions = [
+    { id: "old-payment", studentId: "a", type: "PAYMENT", amount: 5000, date: "2026-09-01" },
+    { id: "settlement", accountType: "student", accountId: "a", studentId: "a", type: "CHARGE", amount: 5000, source: "legacy-credit-settlement", date: "2026-09-28" },
+  ];
+  assert.equal(legacyCreditSettlementAmount(transactions, "student", "a"), 0);
+});
+
 test("an explicitly allocated payment marks its completed calendar lesson paid", () => {
   const occurrence = { id: "event", occurrenceKey: "2026-09-05", status: "completed", participantType: "student", studentId: "a" };
   const charge = { id: "charge", accountType: "student", accountId: "a", studentId: "a", type: "CHARGE", amount: 2000, date: "2026-09-05", lessonEventId: "event", lessonOccurrenceKey: "2026-09-05" };
@@ -245,12 +271,12 @@ test("Payments defaults to the online student view", () => {
   assert.match(source, /let activeMode = "online"/);
 });
 
-test("lesson billing cache version reaches payments, profiles and student editing", () => {
+test("legacy credit cache version reaches payments, profiles and student editing", () => {
   const admin = readFileSync(new URL("../admin.html", import.meta.url), "utf8");
   const page = readFileSync(new URL("../js/pages/admin-page.js", import.meta.url), "utf8");
   const dashboard = readFileSync(new URL("../js/admin/admin-dashboard.js", import.meta.url), "utf8");
   const crud = readFileSync(new URL("../js/admin/admin-crud.js", import.meta.url), "utf8");
-  const version = "20260929-lesson-billing";
+  const version = "20260929-legacy-credit";
   assert.match(admin, new RegExp(`admin-page\\.js\\?v=${version}`));
   assert.match(page, new RegExp(`admin-dashboard\\.js\\?v=${version}`));
   assert.match(dashboard, new RegExp(`payments\\.js\\?v=${version}`));

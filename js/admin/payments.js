@@ -1,6 +1,6 @@
 import { calendarEventsRepository } from "../data/repositories/calendar-events-repository.js";
 import { groupsRepository } from "../data/repositories/groups-repository.js";
-import { paymentTransactionsRepository } from "../data/repositories/payment-transactions-repository.js?v=20260929-lesson-billing";
+import { paymentTransactionsRepository } from "../data/repositories/payment-transactions-repository.js?v=20260929-legacy-credit";
 import { studentsRepository } from "../data/repositories/students-repository.js";
 import { completedCalendarOccurrences } from "../domain/calendar.js?v=20260929-lesson-billing";
 import {
@@ -17,6 +17,7 @@ import {
   effectiveStudentBilling,
   filterPaymentRows,
   formatRubles,
+  legacyCreditSettlementAmount,
   lessonChargeForTarget,
   paymentAccountKey,
   paymentsSummary,
@@ -24,7 +25,7 @@ import {
   sortTransactionsNewestFirst,
   transactionMatchesAccount,
   validateTransaction,
-} from "../domain/payments.js?v=20260929-lesson-billing";
+} from "../domain/payments.js?v=20260929-legacy-credit";
 
 const DATE_FORMAT = new Intl.DateTimeFormat("en", { day: "numeric", month: "short", year: "numeric" });
 const METHOD_LABELS = Object.freeze({ bank_transfer: "Bank transfer", cash: "Cash", other: "Other" });
@@ -481,6 +482,24 @@ async function reconcileCompletedLessonCharges() {
   return true;
 }
 
+async function settleLegacyCreditBalances() {
+  buildRows();
+  const pending = rows.map((row) => ({
+    row,
+    amount: legacyCreditSettlementAmount(transactions, row.accountType, row.accountId),
+  })).filter(({ amount }) => amount > 0.005).map(({ row, amount }) =>
+    paymentTransactionsRepository.createLegacyCreditSettlement({
+      accountType: row.accountType,
+      accountId: row.accountId,
+      amount,
+      date: "2026-09-28T23:59:00",
+    }));
+  if (!pending.length) return false;
+  await Promise.all(pending);
+  transactions = await paymentTransactionsRepository.list();
+  return true;
+}
+
 export async function showPayments() {
   elements.state.hidden = false;
   elements.state.textContent = "Loading payments…";
@@ -490,7 +509,8 @@ export async function showPayments() {
       studentsRepository.list(), groupsRepository.list(), calendarEventsRepository.list(), paymentTransactionsRepository.list(),
     ]);
     const chargesCreated = await reconcileCompletedLessonCharges();
-    if (chargesCreated) window.dispatchEvent(new CustomEvent("teacher:billing-changed"));
+    const legacyCreditsSettled = await settleLegacyCreditBalances();
+    if (chargesCreated || legacyCreditsSettled) window.dispatchEvent(new CustomEvent("teacher:billing-changed"));
     renderPage();
     elements.state.hidden = true;
     elements.content.hidden = false;

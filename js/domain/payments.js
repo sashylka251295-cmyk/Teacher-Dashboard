@@ -12,6 +12,7 @@ export const PAYMENT_ACCOUNT_TYPES = Object.freeze({
 export const BILLING_FORMATS = Object.freeze(["individual", "pair", "group"]);
 export const BILLING_DURATIONS = Object.freeze([30, 45, 60, 90]);
 export const PAYMENT_METHODS = Object.freeze(["bank_transfer", "cash", "other"]);
+export const LEGACY_CREDIT_SETTLEMENT_SOURCE = "legacy-credit-settlement";
 
 const RUB_NUMBER = new Intl.NumberFormat("ru-RU", {
   style: "currency",
@@ -82,6 +83,29 @@ export function calculateAccountBalance(transactions, accountType, accountId) {
 
 export function calculateStudentBalance(transactions, studentId) {
   return calculateAccountBalance(transactions, PAYMENT_ACCOUNT_TYPES.STUDENT, studentId);
+}
+
+export function legacyCreditSettlementAmount(transactions, accountType, accountId) {
+  const scoped = transactions.filter((transaction) =>
+    transactionMatchesAccount(transaction, accountType, accountId));
+  if (scoped.some(({ source }) => source === LEGACY_CREDIT_SETTLEMENT_SOURCE)) return 0;
+
+  // Payments saved by the old screen have a studentId, but no explicit billing account.
+  // New payments always include accountType/accountId and remain available as real credit.
+  const legacyPayments = scoped
+    .filter((transaction) => transaction.type === PAYMENT_TRANSACTION_TYPES.PAYMENT
+      && !transaction.accountType
+      && !transaction.accountId)
+    .reduce((total, transaction) => total + Math.max(0, numericAmount(transaction.amount) || 0), 0);
+  if (legacyPayments <= 0) return 0;
+
+  const existingDebits = scoped.reduce((total, transaction) => {
+    const signedAmount = signedTransactionAmount(transaction);
+    return signedAmount < 0 ? total + Math.abs(signedAmount) : total;
+  }, 0);
+  const unusedLegacyCredit = Math.max(0, legacyPayments - existingDebits);
+  const currentCredit = Math.max(0, calculateAccountBalance(scoped, accountType, accountId));
+  return Math.round(Math.min(unusedLegacyCredit, currentCredit) * 100) / 100;
 }
 
 export function effectiveStudentBilling(student = {}, group = null) {
@@ -216,6 +240,12 @@ export function buildTransaction(input, now = new Date()) {
 
 export function lessonChargeDocumentId(accountType, accountId, lessonEventId, occurrenceKey) {
   return ["lesson-charge", accountType, accountId, lessonEventId, occurrenceKey]
+    .map((part) => encodeURIComponent(String(part || "")))
+    .join("__");
+}
+
+export function legacyCreditSettlementDocumentId(accountType, accountId) {
+  return [LEGACY_CREDIT_SETTLEMENT_SOURCE, "2026-09-29", accountType, accountId]
     .map((part) => encodeURIComponent(String(part || "")))
     .join("__");
 }

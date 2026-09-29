@@ -5,10 +5,12 @@ import { createRepository } from "../firestore-repository.js";
 import {
   PAYMENT_ACCOUNT_TYPES,
   PAYMENT_TRANSACTION_TYPES,
+  LEGACY_CREDIT_SETTLEMENT_SOURCE,
   buildTransaction,
+  legacyCreditSettlementDocumentId,
   lessonChargeDocumentId,
   transactionMatchesAccount,
-} from "../../domain/payments.js?v=20260929-lesson-billing";
+} from "../../domain/payments.js?v=20260929-legacy-credit";
 
 const repository = createRepository(COLLECTIONS.PAYMENT_TRANSACTIONS);
 
@@ -39,6 +41,18 @@ export const paymentTransactionsRepository = Object.freeze({
       ...input,
       type: PAYMENT_TRANSACTION_TYPES.CHARGE,
       source: "calendar",
+    }));
+    return id;
+  },
+  async createLegacyCreditSettlement(input) {
+    const id = legacyCreditSettlementDocumentId(input.accountType, input.accountId);
+    if (await repository.getById(id)) return id;
+    await repository.createWithId(id, firestoreTransaction({
+      ...input,
+      type: PAYMENT_TRANSACTION_TYPES.CHARGE,
+      source: LEGACY_CREDIT_SETTLEMENT_SOURCE,
+      lessonLabel: "Past lessons before payment tracking",
+      note: "Opening settlement for lessons completed before 29 Sep 2026.",
     }));
     return id;
   },

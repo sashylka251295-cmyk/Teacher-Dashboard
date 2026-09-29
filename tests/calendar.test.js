@@ -85,7 +85,7 @@ test("Calendar cache version is propagated through the complete admin module cha
   const html = await readFile(new URL("../admin.html", import.meta.url), "utf8");
   const page = await readFile(new URL("../js/pages/admin-page.js", import.meta.url), "utf8");
   const dashboard = await readFile(new URL("../js/admin/admin-dashboard.js", import.meta.url), "utf8");
-  const version = "20260929-lesson-billing";
+  const version = "20260929-legacy-credit";
   assert.match(html, new RegExp(`admin-page\\.js\\?v=${version}`));
   assert.match(page, new RegExp(`admin-dashboard\\.js\\?v=${version}`));
   assert.match(dashboard, new RegExp(`calendar\\.js\\?v=${version}`));
